@@ -13,6 +13,7 @@ import { baixarCsv } from "@/lib/format";
 export default function RelatoriosPage() {
   const { mostrarToast } = useToast();
   const [gerando, setGerando] = useState<string | null>(null);
+  const [gerandoXml, setGerandoXml] = useState<string | null>(null);
   const [buscaIndividual, setBuscaIndividual] = useState("");
 
   async function comFeedback(id: string, tarefa: () => Promise<void>) {
@@ -22,6 +23,19 @@ export default function RelatoriosPage() {
     } finally {
       setGerando(null);
     }
+  }
+
+  /**
+   * XML vem pronto do servidor (relatorio/exportarXml.php). Montar XML
+   * no navegador concatenando string é como se produz aquele arquivo
+   * ".xml" que na verdade não abre em lugar nenhum: faltaria escapar &,
+   * < e aspas vindos de nomes e observações.
+   */
+  async function baixarXml(relatorio: "alertas" | "alunos" | "acompanhamentos" | "ocorrencias") {
+    setGerandoXml(relatorio);
+    const resultado = await Api.baixarRelatorioXml(relatorio);
+    setGerandoXml(null);
+    mostrarToast(resultado.mensagem, !resultado.sucesso);
   }
 
   async function relatorioAlertas() {
@@ -127,16 +141,22 @@ export default function RelatoriosPage() {
     mostrarToast("Relatório individual baixado.");
   }
 
-  const relatorios = [
-    { id: "alertas", titulo: "Alertas pendentes", desc: "Todos os alunos com alerta ativo, sua prioridade e motivo.", executar: relatorioAlertas },
-    { id: "acompanhamento", titulo: "Histórico de acompanhamentos", desc: "Todos os contatos registrados com responsáveis.", executar: relatorioAcompanhamento },
-    { id: "evolucao", titulo: "Evolução mensal da frequência", desc: "Frequência geral da rede nos últimos 6 meses.", executar: relatorioEvolucao },
-    { id: "turmas", titulo: "Frequência por turma", desc: "Frequência atual de cada turma cadastrada.", executar: relatorioTurmas },
+  // xml: null quando aquele relatório existe só em CSV (os dois são
+  // montados a partir de agregados do dashboard, que não têm uma
+  // listagem correspondente no servidor).
+  const relatorios: {
+    id: string; titulo: string; desc: string; executar: () => Promise<void>;
+    xml: "alertas" | "alunos" | "acompanhamentos" | "ocorrencias" | null;
+  }[] = [
+    { id: "alertas", titulo: "Alertas pendentes", desc: "Todos os alunos com alerta ativo, sua prioridade e motivo.", executar: relatorioAlertas, xml: "alertas" },
+    { id: "acompanhamento", titulo: "Histórico de acompanhamentos", desc: "Todos os contatos registrados com responsáveis.", executar: relatorioAcompanhamento, xml: "acompanhamentos" },
+    { id: "evolucao", titulo: "Evolução mensal da frequência", desc: "Frequência geral da rede nos últimos 6 meses.", executar: relatorioEvolucao, xml: null },
+    { id: "turmas", titulo: "Frequência por turma", desc: "Frequência atual de cada turma cadastrada.", executar: relatorioTurmas, xml: null },
   ];
 
   return (
     <>
-      <Topbar titulo="Relatórios" subtitulo="Exporte dados da coordenação em CSV." />
+      <Topbar titulo="Relatórios" subtitulo="Exporte dados da coordenação em CSV ou XML." />
 
       <div className="panel report-list">
         {relatorios.map((relatorio) => (
@@ -148,16 +168,50 @@ export default function RelatoriosPage() {
               <div className="report-title">{relatorio.titulo}</div>
               <div className="report-desc">{relatorio.desc}</div>
             </div>
+            <div className="report-acoes">
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => comFeedback(relatorio.id, relatorio.executar)}
+                disabled={gerando === relatorio.id}
+              >
+                {gerando === relatorio.id ? "Gerando…" : "CSV"}
+              </button>
+              {relatorio.xml && (
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => baixarXml(relatorio.xml!)}
+                  disabled={gerandoXml === relatorio.xml}
+                >
+                  {gerandoXml === relatorio.xml ? "Gerando…" : "XML"}
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+
+        <div className="report-item">
+          <div className="report-icon">
+            <Icon name="inbox" />
+          </div>
+          <div className="report-body">
+            <div className="report-title">Ocorrências enviadas pelo aplicativo</div>
+            <div className="report-desc">
+              Todos os envios dos alunos, com motivo, observação e a decisão da coordenação.
+            </div>
+          </div>
+          <div className="report-acoes">
             <button
               type="button"
               className="btn btn-primary btn-sm"
-              onClick={() => comFeedback(relatorio.id, relatorio.executar)}
-              disabled={gerando === relatorio.id}
+              onClick={() => baixarXml("ocorrencias")}
+              disabled={gerandoXml === "ocorrencias"}
             >
-              {gerando === relatorio.id ? "Gerando…" : "Baixar CSV"}
+              {gerandoXml === "ocorrencias" ? "Gerando…" : "XML"}
             </button>
           </div>
-        ))}
+        </div>
 
         <div className="report-item">
           <div className="report-icon">

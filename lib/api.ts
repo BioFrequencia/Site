@@ -9,6 +9,7 @@
 
 import type {
   Alerta,
+  Ocorrencia,
   CanalAcompanhamento,
   CheckinPendente,
   Coordenacao,
@@ -245,6 +246,69 @@ export const Api = {
     post<ListaNotificacoes>("notificacao/listarNotificacoes.php", { status, pagina, por_pagina: 20 }),
   marcarNotificacaoEnviada: (idNotificacao: number) =>
     post<null>("notificacao/marcarEnviada.php", { id_notificacao: idNotificacao }),
+
+  // Ocorrências enviadas pelo app do aluno (aguardando decisão)
+  listarOcorrencias: (status: "pendente" | "aprovado" | "rejeitado" | "todos" = "pendente") =>
+    post<{ ocorrencias: Ocorrencia[]; total: number }>("ocorrencia/listarPendentes.php", { status }),
+  revisarOcorrencia: (
+    idOcorrencia: number,
+    decisao: "aprovar" | "rejeitar",
+    opcoes: { justificado?: boolean; observacaoRevisao?: string } = {}
+  ) =>
+    post<{ id_ocorrencia: number; status: string }>("ocorrencia/revisarOcorrencia.php", {
+      id_ocorrencia: idOcorrencia,
+      decisao,
+      justificado: !!opcoes.justificado,
+      observacao_revisao: opcoes.observacaoRevisao ?? null,
+    }),
+
+  /**
+   * Baixa um relatório em XML. Diferente dos demais: o XML é montado no
+   * servidor (relatorio/exportarXml.php) porque escapar &, < e aspas
+   * concatenando string no cliente é exatamente como se produz um
+   * arquivo .xml inválido. Aqui só se dispara o download do blob.
+   */
+  baixarRelatorioXml: async (
+    relatorio: "alertas" | "alunos" | "acompanhamentos" | "ocorrencias"
+  ): Promise<{ sucesso: boolean; mensagem: string }> => {
+    const token = obterToken();
+    if (!token) {
+      aoSessaoExpirar?.();
+      return { sucesso: false, mensagem: "Sessão expirada. Faça login novamente." };
+    }
+    try {
+      const resposta = await fetch(obterBaseUrl() + "relatorio/exportarXml.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ relatorio }),
+      });
+      if (resposta.status === 401) {
+        aoSessaoExpirar?.();
+        return { sucesso: false, mensagem: "Sessão expirada. Faça login novamente." };
+      }
+      if (!resposta.ok) {
+        return { sucesso: false, mensagem: "Não foi possível gerar o relatório." };
+      }
+      const blob = await resposta.blob();
+      // Usa o nome vindo do Content-Disposition do servidor; sem ele o
+      // navegador salvaria com um nome genérico.
+      const disposicao = resposta.headers.get("Content-Disposition") ?? "";
+      const nome =
+        /filename="?([^"]+)"?/.exec(disposicao)?.[1] ??
+        `biofrequencia_${relatorio}_${new Date().toISOString().slice(0, 10)}.xml`;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = nome;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      return { sucesso: true, mensagem: "Relatório XML baixado." };
+    } catch {
+      return { sucesso: false, mensagem: "Não foi possível conectar ao servidor." };
+    }
+  },
 
   // Biometria digital (check-ins do app do aluno)
   gerarCodigoVinculo: (idAluno: number) =>

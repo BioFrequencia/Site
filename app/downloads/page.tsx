@@ -36,63 +36,79 @@ export default function DownloadsPage() {
             <div className="report-icon">
               <Icon name="desktop" />
             </div>
-            <h3>Software desktop (Windows)</h3>
+            <h3>
+              Software desktop (Windows)
+              <span className="selo-em-breve">Em breve</span>
+            </h3>
             <p>
               Aplicativo WPF (.NET) para a coordenação: dashboard, alertas, turmas, acompanhamento,
-              relatórios, responsáveis, notificações e biometria facial. Distribuído como código-fonte —
-              abra a solução no Visual Studio 2022+ (.NET 10) e compile para gerar o executável.
+              relatórios, responsáveis, notificações e biometria facial. O instalador ainda não está
+              disponível para download — enquanto isso, todas essas funções já funcionam pelo painel
+              web, nesta mesma conta.
             </p>
-            <a href="/downloads/biofrequencia-desktop-fonte.zip" className="btn btn-primary" download>
-              <Icon name="download" /> Baixar código-fonte (.zip)
-            </a>
+            {/* Sem link: oferecer um download que não existe (ou um .zip
+                que não é o instalador) é pior que dizer que ainda não
+                está pronto. */}
+            <button type="button" className="btn" disabled>
+              <Icon name="download" /> Indisponível no momento
+            </button>
           </div>
 
           <div className="download-card">
             <div className="report-icon">
               <Icon name="smartphone" />
             </div>
-            <h3>App do aluno (Android/iOS)</h3>
+            <h3>App do aluno (Android)</h3>
             <p>
-              App em React Native/Expo para o check-in biométrico do aluno (biometria local do celular +
-              assinatura do dispositivo). Distribuído como código-fonte — veja o passo a passo abaixo para
-              rodar com o Expo Go, sem precisar instalar Android Studio ou Xcode.
+              Aplicativo para o aluno confirmar a chegada e justificar faltas e atrasos com a
+              biometria do próprio celular. O arquivo abaixo é gerado automaticamente a cada
+              atualização do sistema — é sempre a versão mais recente.
             </p>
-            <a href="/downloads/biofrequencia-app-fonte.zip" className="btn btn-primary" download>
-              <Icon name="download" /> Baixar código-fonte (.zip)
+            {/* Aponta para a release fixa que o workflow do Android
+                republica a cada build (.github/workflows/android.yml),
+                em vez de um arquivo colocado à mão no servidor. */}
+            <a
+              href="https://github.com/jvvvv780/mobile-app/releases/latest/download/app-release.apk"
+              className="btn btn-primary"
+              rel="noopener"
+            >
+              <Icon name="download" /> Baixar APK
             </a>
+            <p className="download-nota">
+              Para instalar, o celular precisa permitir aplicativos de fora da Play Store:
+              Ajustes &rsaquo; Segurança &rsaquo; Instalar apps desconhecidos.
+            </p>
           </div>
         </div>
 
         <div className="downloads-note">
-          <b>Como usar o app do aluno (passo a passo):</b>
+          <b>Como usar o app do aluno:</b>
           <br />
-          1. Baixe e extraia o .zip acima e, com Node.js instalado, rode <code>npm install</code> dentro da
-          pasta <code>mobile-app</code>.
+          1. Baixe o APK acima no celular do aluno e instale (o Android vai pedir permissão para
+          instalar um app de fora da Play Store).
           <br />
-          2. Rode <code>npx expo start</code> — vai abrir um QR code no terminal.
-          <br />
-          3. No celular do aluno, instale o app <b>Expo Go</b> (Play Store/App Store) e escaneie o QR code
-          com ele — o app abre direto, sem precisar publicar em loja.
-          <br />
-          4. Na coordenação, gere um código de vínculo para o aluno na tela do aluno (em{" "}
+          2. Na coordenação, gere o código de vínculo do aluno em{" "}
           <Link href="/turmas" style={{ color: "var(--indigo)", fontWeight: 700 }}>
             Turmas e alunos
           </Link>{" "}
-          → aluno → &quot;Gerar código&quot;) e digite esse código no app para vincular o celular ao
-          cadastro do aluno.
+          &rsaquo; aluno &rsaquo; &quot;Gerar código&quot;. O código vale 15 minutos e serve uma vez só.
           <br />
-          5. A partir daí, o aluno confirma presença/atraso pelo app usando a biometria local do próprio
-          celular; cada check-in aparece em{" "}
+          3. No app, o aluno digita esse código uma única vez. Não é preciso informar endereço de
+          servidor nem token — isso já vem configurado no aplicativo.
+          <br />
+          4. A partir daí o aluno confirma a chegada com a biometria do próprio celular, e os
+          check-ins aparecem em{" "}
           <Link href="/checkins" style={{ color: "var(--indigo)", fontWeight: 700 }}>
             Check-ins
           </Link>{" "}
-          aguardando a confirmação da coordenação antes de virar falta/atraso oficial.
+          para a coordenação confirmar.
           <br />
-          <br />
-          O app não vem pré-instalado em nenhuma loja: como é um projeto acadêmico (TCC), rodar pelo Expo
-          Go evita o processo de publicação em loja e o custo de uma conta de desenvolvedor, mantendo o
-          mesmo app real (biometria do celular + assinatura HMAC do check-in) que a coordenação usa em
-          produção.
+          5. Para justificar uma falta ou atraso, o aluno usa &quot;Registrar falta ou atraso&quot;:
+          confirma a biometria, escreve o motivo e se o responsável está ciente. O envio aparece em{" "}
+          <Link href="/ocorrencias" style={{ color: "var(--indigo)", fontWeight: 700 }}>
+            Ocorrências do app
+          </Link>{" "}
+          e <b>só vira falta depois que a coordenação aprova</b>.
         </div>
       </div>
     </>

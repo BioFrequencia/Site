@@ -1153,29 +1153,67 @@ svg {
   width: auto;
 }
 
-.toast {
+/* A pilha é que fica fixa na tela; cada aviso é um item normal dentro
+   dela. Antes cada .toast era position:fixed no mesmo ponto, então dois
+   avisos simultâneos ficavam exatamente um por cima do outro. */
+.toast-pilha {
   position: fixed;
   bottom: 26px;
   left: 50%;
   transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  width: min(92vw, 560px);
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   background: var(--ink-900);
   color: #fff;
-  padding: 12px 22px;
+  padding: 12px 14px 12px 22px;
   border-radius: 999px;
   font-size: 13.5px;
   font-weight: 600;
-  z-index: 200;
+  max-width: 100%;
+  pointer-events: auto;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.25);
   animation: toastIn 0.2s ease;
 }
+.toast span {
+  flex: 1;
+  min-width: 0;
+}
+.toast-fechar {
+  flex-shrink: 0;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.7;
+  padding: 0 6px;
+  border-radius: 50%;
+}
+.toast-fechar:hover { opacity: 1; }
+.toast-fechar:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 @keyframes toastIn {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(20px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(0);
   }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
 }
 .toast.error {
   background: var(--danger-dark);
@@ -1467,3 +1505,151 @@ svg {
     animation: none !important;
   }
 }
+
+/* ---------------------------------------------------------------- */
+/* Estados de carregamento e vazio                                   */
+/* Antes cada tela resolvia isso do seu jeito: algumas mostravam uma */
+/* tabela vazia sem explicação, outras ficavam em branco enquanto    */
+/* carregavam, e não dava para saber se tinha travado ou se não      */
+/* havia dados. Agora é o mesmo componente visual em todas.          */
+.estado-vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--ink-300);
+}
+.estado-vazio svg { width: 34px; height: 34px; opacity: 0.45; }
+.estado-vazio p { margin: 0; font-weight: 600; color: var(--ink-500, #475569); }
+.estado-vazio span { font-size: 13px; max-width: 420px; }
+
+.spinner {
+  width: 26px;
+  height: 26px;
+  border: 3px solid var(--mist-200, #e2e8f0);
+  border-top-color: var(--indigo, #4f46e5);
+  border-radius: 50%;
+  animation: girar 0.7s linear infinite;
+}
+@keyframes girar { to { transform: rotate(360deg); } }
+
+/* Respeita quem pediu menos animação no sistema operacional. */
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation-duration: 2.4s; }
+}
+
+.filtros-linha {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+/* ---------------------------------------------------------------- */
+/* Ocorrências enviadas pelo aplicativo                              */
+.lista-ocorrencias {
+  display: grid;
+  gap: 14px;
+}
+.ocorrencia-card {
+  border: 1px solid var(--mist-200, #e2e8f0);
+  border-radius: var(--radius-sm, 10px);
+  padding: 16px 18px;
+  background: #fff;
+}
+.ocorrencia-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.ocorrencia-topo strong { display: block; font-size: 15px; }
+.ocorrencia-turma { font-size: 13px; color: var(--ink-300); }
+.ocorrencia-dados {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px 20px;
+  margin: 0 0 14px;
+}
+.ocorrencia-dados dt {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-300);
+  margin-bottom: 2px;
+}
+.ocorrencia-dados dd { margin: 0; font-size: 14px; }
+.ocorrencia-acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid var(--mist-100, #f1f5f9);
+  padding-top: 12px;
+}
+.ocorrencia-decidida {
+  border-top: 1px solid var(--mist-100, #f1f5f9);
+  padding-top: 12px;
+  font-size: 13px;
+  color: var(--ink-300);
+}
+
+/* Em telas pequenas os botões de decisão ocupam a largura toda: com   */
+/* eles lado a lado ficavam estreitos demais para acertar com o dedo.  */
+@media (max-width: 480px) {
+  .ocorrencia-acoes { flex-direction: column-reverse; }
+  .ocorrencia-acoes .btn { width: 100%; }
+}
+
+/* ---------- Responsáveis ---------- */
+.aviso-inline {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-sm, 10px);
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  font-size: 13.5px;
+  color: #78350f;
+}
+.aviso-inline svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+.lista-responsaveis { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.lista-responsaveis li { display: grid; }
+.lista-responsaveis span { font-size: 12.5px; color: var(--ink-300); }
+
+/* Tabelas largas não devem empurrar a página inteira para o lado no
+   celular: quem rola é a tabela, não o layout. */
+.tabela-rolavel { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.tabela-rolavel .table { min-width: 620px; }
+
+/* Os relatórios passaram a ter dois formatos: os botões ficam juntos,
+   e em telas estreitas empilham para não espremer o texto. */
+.report-acoes { display: flex; gap: 8px; flex-shrink: 0; }
+@media (max-width: 560px) {
+  .report-item { flex-wrap: wrap; }
+  .report-acoes { width: 100%; }
+  .report-acoes .btn { flex: 1; }
+}
+
+/* Selo "Em breve" do software desktop, que ainda não tem instalador. */
+.selo-em-breve {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--mist-100, #f1f5f9);
+  border: 1px solid var(--mist-200, #e2e8f0);
+  color: var(--ink-300);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+.download-card .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.download-nota { font-size: 12.5px; color: var(--ink-300); margin-top: 10px; }

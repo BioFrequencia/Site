@@ -9,7 +9,7 @@ import { Sidebar } from "@/components/Sidebar";
 export default function PainelLayout({ children }: { children: ReactNode }) {
   const { autenticado, carregando } = useAuth();
   const router = useRouter();
-  const [contadores, setContadores] = useState({ alertas: 0, notificacoes: 0, checkins: 0 });
+  const [contadores, setContadores] = useState({ alertas: 0, notificacoes: 0, checkins: 0, ocorrencias: 0 });
 
   // Só redireciona daqui quem chegou numa tela do painel SEM nunca ter
   // tido sessão nesta visita (ex.: acessou a URL direto, sem estar
@@ -44,10 +44,13 @@ export default function PainelLayout({ children }: { children: ReactNode }) {
       if (!ativo) return;
       const checkins = await Api.listarCheckinsPendentes();
       if (!ativo) return;
+      const ocorrencias = await Api.listarOcorrencias("pendente");
+      if (!ativo) return;
       setContadores({
         alertas: dashboard.dados?.alertas_ativos ?? 0,
         notificacoes: notificacoes.dados?.total_registros ?? 0,
         checkins: checkins.dados?.length ?? 0,
+        ocorrencias: ocorrencias.dados?.total ?? 0,
       });
     }
     carregarContadores();

@@ -7,9 +7,16 @@ import { iniciais } from "@/lib/format";
 import { useAuth } from "@/lib/auth";
 
 const ITENS = [
-  { href: "/dashboard", label: "Dashboard", icone: "home" as const, badge: undefined as "alertas" | "notificacoes" | "checkins" | undefined },
+  { href: "/dashboard", label: "Dashboard", icone: "home" as const, badge: undefined as "alertas" | "notificacoes" | "checkins" | "ocorrencias" | undefined },
   { href: "/alertas", label: "Alertas", icone: "alert" as const, badge: "alertas" as const },
   { href: "/turmas", label: "Turmas e alunos", icone: "users" as const, badge: undefined },
+  // Os envios do aplicativo ficam logo abaixo de alertas porque são a
+  // outra fila que exige decisão da coordenação.
+  { href: "/ocorrencias", label: "Ocorrências do app", icone: "inbox" as const, badge: "ocorrencias" as const },
+  // Responsáveis existia só dentro da ficha do aluno, sem entrada no
+  // menu - a coordenação não encontrava e achava que o sistema não
+  // cadastrava responsáveis.
+  { href: "/responsaveis", label: "Responsáveis", icone: "shield" as const, badge: undefined },
   { href: "/acompanhamento", label: "Acompanhamento", icone: "activity" as const, badge: undefined },
   { href: "/relatorios", label: "Relatórios", icone: "fileText" as const, badge: undefined },
   { href: "/notificacoes", label: "Notificações", icone: "bell" as const, badge: "notificacoes" as const },
@@ -20,7 +27,7 @@ const ITENS = [
 export function Sidebar({
   contadores,
 }: {
-  contadores: { alertas: number; notificacoes: number; checkins: number };
+  contadores: { alertas: number; notificacoes: number; checkins: number; ocorrencias: number };
 }) {
   const pathname = usePathname();
   const { coordenacao, logout } = useAuth();

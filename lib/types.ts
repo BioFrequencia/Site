@@ -171,3 +171,20 @@ export interface CheckinPendente {
 }
 
 export const GENEROS_ALUNO = ["Feminino", "Masculino"] as const;
+
+/** Ocorrência enviada pelo app do aluno, aguardando decisão da coordenação. */
+export interface Ocorrencia {
+  id_ocorrencia: number;
+  id_aluno: number;
+  nome_aluno: string;
+  turma: string | null;
+  tipo: "falta" | "atraso";
+  motivo: string | null;
+  observacao: string | null;
+  responsavel_ciente: boolean;
+  status: "pendente" | "aprovado" | "rejeitado";
+  criado_em: string;
+  revisado_em: string | null;
+  revisado_por: string | null;
+  observacao_revisao: string | null;
+}
