@@ -48,6 +48,7 @@ export interface Alerta {
   id_alerta: string;
   id_aluno: number;
   nome_aluno: string;
+  id_sala?: number;
   turma: string | null;
   tipo: TipoAlerta;
   prioridade: PrioridadeAlerta;
@@ -67,6 +68,7 @@ export interface EvolucaoMensal {
 }
 
 export interface TurmaResumo {
+  id_sala?: number;
   nome_sala: string;
   total_alunos: number;
   frequencia: number;
@@ -127,7 +129,14 @@ export interface ListaAcompanhamento {
   total_registros: number;
 }
 
-export const GENEROS_RESPONSAVEL = ["Feminino", "Masculino", "Outro"] as const;
+// Valores aceitos pelo banco (restrição chk_genero_responsavel). O site
+// oferecia "Outro", que o banco recusava (erro 500 no cadastro).
+export const GENEROS_RESPONSAVEL = ["Feminino", "Masculino", "Indefinido"] as const;
+export const ROTULOS_GENERO_RESPONSAVEL: Record<(typeof GENEROS_RESPONSAVEL)[number], string> = {
+  Feminino: "Feminino",
+  Masculino: "Masculino",
+  Indefinido: "Outro / prefere não informar",
+};
 
 export interface Responsavel {
   id_responsavel: number;
@@ -138,7 +147,8 @@ export interface Responsavel {
   genero_responsavel: (typeof GENEROS_RESPONSAVEL)[number];
 }
 
-export type StatusNotificacao = "pendente" | "enviada";
+// "erro": o envio automático (provedor de WhatsApp/email) falhou.
+export type StatusNotificacao = "pendente" | "enviada" | "erro";
 
 export interface Notificacao {
   id_notificacao: number;
@@ -151,6 +161,8 @@ export interface Notificacao {
   mensagem: string;
   status_notificacao: StatusNotificacao;
   data_envio_notificacao: string | null;
+  canal?: string | null;
+  nivel_alerta?: number | null;
 }
 
 export interface ListaNotificacoes {
