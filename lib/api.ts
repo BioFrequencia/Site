@@ -3,10 +3,10 @@
 // nenhum endpoint novo foi criado para o site, ele consome exatamente a
 // mesma API.
 //
-// Base URL configurável (não fica fixa no código): guardada no
-// localStorage, editável na tela de login. Sem valor salvo, cai no padrão
-// abaixo (ambiente de desenvolvimento local).
+// Endereço da API: ver lib/config.ts. Em produção vem do build
+// (NEXT_PUBLIC_API_URL); só em desenvolvimento é editável na tela de login.
 
+import { apiUrlDoBuild, resolverApiUrl } from "./config";
 import type {
   Alerta,
   Ocorrencia,
@@ -24,25 +24,57 @@ import type {
   StatusNotificacao,
 } from "./types";
 
-const API_BASE_URL_PADRAO = "http://localhost/BioFrequenciaApi/";
 const CHAVE_BASE_URL = "biofreq_api_base_url";
 const CHAVE_TOKEN = "biofreq_token";
 const CHAVE_COORDENACAO = "biofreq_coordenacao";
+
+// process.env.NEXT_PUBLIC_API_URL escrito por extenso: é assim que o Next
+// substitui o valor no build.
+const API_URL_DO_BUILD = apiUrlDoBuild(process.env.NEXT_PUBLIC_API_URL);
+const PRODUCAO = process.env.NODE_ENV === "production";
+
+// A API gratuita do Render "dorme" sem uso e leva até ~1 minuto para
+// acordar: com 15 s de limite, o primeiro login do dia sempre falhava por
+// tempo esgotado.
+const TEMPO_LIMITE_MS = 70_000;
+
+const MENSAGEM_SEM_API =
+  "Endereço da API não configurado neste site (variável NEXT_PUBLIC_API_URL no deploy). Avise quem administra o sistema.";
 
 export interface RespostaApi<T> {
   sucesso: boolean;
   mensagem: string;
   dados: T | null;
   naoAutenticado?: boolean;
+  /** Código HTTP quando o servidor respondeu (ex.: 409 = já existe). */
+  status?: number;
 }
 
-function obterBaseUrl(): string {
-  if (typeof window === "undefined") return API_BASE_URL_PADRAO;
-  return localStorage.getItem(CHAVE_BASE_URL) || API_BASE_URL_PADRAO;
+/** URL base efetiva da API, ou null se o deploy não tem NEXT_PUBLIC_API_URL. */
+function obterBaseUrl(): string | null {
+  const salva = typeof window === "undefined" ? null : localStorage.getItem(CHAVE_BASE_URL);
+  return resolverApiUrl(API_URL_DO_BUILD, salva, PRODUCAO);
+}
+
+/** Só em desenvolvimento a URL pode ser trocada pela tela de login. */
+function urlEditavel(): boolean {
+  return API_URL_DO_BUILD === null && !PRODUCAO;
 }
 
 function definirBaseUrl(url: string): void {
+  if (!urlEditavel()) return;
   localStorage.setItem(CHAVE_BASE_URL, url.trim().replace(/\/+$/, "") + "/");
+}
+
+/**
+ * Acorda a API (health check) sem esperar a resposta na tela. A tela de
+ * login chama isto ao abrir: enquanto a pessoa digita email e senha, o
+ * servidor gratuito já está subindo.
+ */
+function aquecerServidor(): void {
+  const base = obterBaseUrl();
+  if (!base) return;
+  fetch(base + "health.php", { method: "GET", cache: "no-store" }).catch(() => undefined);
 }
 
 function obterToken(): string | null {
@@ -97,8 +129,13 @@ async function post<T>(
   corpo: Record<string, unknown>,
   { autenticado = true }: { autenticado?: boolean } = {}
 ): Promise<RespostaApi<T>> {
+  const base = obterBaseUrl();
+  if (!base) {
+    return { sucesso: false, mensagem: MENSAGEM_SEM_API, dados: null };
+  }
+
   const controlador = new AbortController();
-  const timeoutId = setTimeout(() => controlador.abort(), 15000);
+  const timeoutId = setTimeout(() => controlador.abort(), TEMPO_LIMITE_MS);
 
   const cabecalhos: Record<string, string> = { "Content-Type": "application/json" };
   if (autenticado) {
@@ -118,7 +155,7 @@ async function post<T>(
 
   let resposta: Response;
   try {
-    resposta = await fetch(obterBaseUrl() + caminho, {
+    resposta = await fetch(base + caminho, {
       method: "POST",
       headers: cabecalhos,
       body: JSON.stringify(corpo || {}),
@@ -135,7 +172,9 @@ async function post<T>(
     }
     return {
       sucesso: false,
-      mensagem: "Não foi possível conectar ao servidor. Verifique o endereço da API (configurações) e sua conexão.",
+      mensagem: urlEditavel()
+        ? "Não foi possível conectar ao servidor. Verifique o endereço da API (abaixo) e sua conexão."
+        : "Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.",
       dados: null,
     };
   }
@@ -145,9 +184,15 @@ async function post<T>(
   try {
     json = await resposta.json();
   } catch {
-    return { sucesso: false, mensagem: "O servidor retornou uma resposta em formato inesperado.", dados: null };
+    // Ex.: página HTML de erro do provedor durante um deploy (502/503).
+    return {
+      sucesso: false,
+      mensagem: `O servidor retornou uma resposta em formato inesperado (HTTP ${resposta.status}). Tente de novo em instantes.`,
+      dados: null,
+    };
   }
 
+  json.status = resposta.status;
   if (resposta.status === 401 && autenticado) {
     json.naoAutenticado = true;
     aoSessaoExpirar?.();
@@ -158,6 +203,8 @@ async function post<T>(
 export const Api = {
   obterBaseUrl,
   definirBaseUrl,
+  urlEditavel,
+  aquecerServidor,
   obterToken,
   obterCoordenacao,
   iniciarSessao,
@@ -169,8 +216,8 @@ export const Api = {
     post<Coordenacao & { token: string }>("user/selectCoord.php", { email, senha }, { autenticado: false }),
   emailExiste: (email: string) =>
     post<{ email_coordenacao: string } | null>("user/verificarEmail.php", { email }, { autenticado: false }),
-  cadastrarCoordenacao: (nome: string, email: string, senha: string) =>
-    post<null>("user/addCoord.php", { nome, email, senha }, { autenticado: false }),
+  cadastrarCoordenacao: (nome: string, email: string, senha: string, codigoAcesso: string) =>
+    post<null>("user/addCoord.php", { nome, email, senha, codigo_acesso: codigoAcesso }, { autenticado: false }),
 
   // Alunos / turmas
   listarSalas: () => post<Sala[]>("user/listarSalas.php", {}),
@@ -190,12 +237,14 @@ export const Api = {
       observacao_falta: observacao,
       justificado_falta: !!justificado,
     }),
-  marcarAtraso: (idAluno: number, motivo: string | null, observacao: string | null, justificado: boolean) =>
+  /** dataLocal (opcional): "AAAA-MM-DD HH:MM" no horário da escola; sem ela, agora. */
+  marcarAtraso: (idAluno: number, motivo: string | null, observacao: string | null, justificado: boolean, dataLocal?: string) =>
     post<{ id_atraso: number; dta_atraso: string }>("user/marcarAtraso.php", {
       id_aluno: idAluno,
       motivo_atraso: motivo,
       observacao_atraso: observacao,
       justificado_atraso: !!justificado,
+      ...(dataLocal ? { dta_atraso: dataLocal } : {}),
     }),
   historicoAluno: (idAluno: number, dataInicio?: string, dataFim?: string) =>
     post<HistoricoAluno>("user/historicoAluno.php", { id_aluno: idAluno, data_inicio: dataInicio, data_fim: dataFim }),
@@ -276,8 +325,12 @@ export const Api = {
       aoSessaoExpirar?.();
       return { sucesso: false, mensagem: "Sessão expirada. Faça login novamente." };
     }
+    const base = obterBaseUrl();
+    if (!base) {
+      return { sucesso: false, mensagem: MENSAGEM_SEM_API };
+    }
     try {
-      const resposta = await fetch(obterBaseUrl() + "relatorio/exportarXml.php", {
+      const resposta = await fetch(base + "relatorio/exportarXml.php", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ relatorio }),
