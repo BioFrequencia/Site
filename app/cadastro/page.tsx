@@ -14,6 +14,7 @@ export default function CadastroPage() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
+  const [codigoAcesso, setCodigoAcesso] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState(false);
   const [enviando, setEnviando] = useState(false);
@@ -30,6 +31,10 @@ export default function CadastroPage() {
       setErro("Preencha nome, email e senha.");
       return;
     }
+    if (!codigoAcesso.trim()) {
+      setErro("Informe o código de acesso da escola.");
+      return;
+    }
     if (senha.length < 6) {
       setErro("A senha deve ter pelo menos 6 caracteres.");
       return;
@@ -40,7 +45,7 @@ export default function CadastroPage() {
     }
 
     setEnviando(true);
-    const resposta = await Api.cadastrarCoordenacao(nome.trim(), email.trim(), senha);
+    const resposta = await Api.cadastrarCoordenacao(nome.trim(), email.trim(), senha, codigoAcesso.trim());
     setEnviando(false);
 
     if (!resposta.sucesso) {
@@ -76,6 +81,7 @@ export default function CadastroPage() {
             id="email"
             type="email"
             autoComplete="username"
+            autoCapitalize="none"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -98,6 +104,20 @@ export default function CadastroPage() {
             autoComplete="new-password"
             value={confirmarSenha}
             onChange={(e) => setConfirmarSenha(e.target.value)}
+            required
+          />
+
+          {/* Sem o código, qualquer pessoa criava uma conta e via os dados
+              de todos os alunos da escola. Quem administra o sistema
+              repassa o código (CADASTRO_CODIGO_ACESSO na API). */}
+          <label htmlFor="codigoAcesso">Código de acesso da escola</label>
+          <input
+            id="codigoAcesso"
+            type="text"
+            autoComplete="off"
+            autoCapitalize="none"
+            value={codigoAcesso}
+            onChange={(e) => setCodigoAcesso(e.target.value)}
             required
           />
 
