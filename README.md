@@ -70,7 +70,8 @@ Numa rodada anterior, também foi rodado um
 smoke test end-to-end de verdade com Playwright + Chromium, contra a API
 PHP real (`php -S`) e um Postgres real com dados de teste: login,
 dashboard (gauge com frequência real), alertas, listagem/filtro de
-alunos, abertura de um aluno, geração de código de vínculo biométrico,
+alunos, abertura de um aluno, geração de código de vínculo biométrico
+(hoje substituído pela conta que o aluno cria no app),
 notificações, check-ins, cadastro de acompanhamento (com busca de aluno
 e gravação real), exportação de CSV em Relatórios, página pública de
 downloads e logout — e também os fluxos de escrita: cadastro de aluno,

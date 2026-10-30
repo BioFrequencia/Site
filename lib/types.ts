@@ -97,7 +97,15 @@ export interface RegistroFalta {
 }
 
 export interface HistoricoAluno {
-  aluno: { id_aluno: number; nome_aluno: string; nome_sala: string | null };
+  aluno: {
+    id_aluno: number;
+    nome_aluno: string;
+    nome_sala: string | null;
+    /** Conta que o aluno criou no app (null: ainda não criou). */
+    email_app: string | null;
+    conta_app_desde: string | null;
+    celulares_ativos: number;
+  };
   periodo: { inicio: string; fim: string };
   faltas: RegistroFalta[];
   atrasos: RegistroFalta[];
