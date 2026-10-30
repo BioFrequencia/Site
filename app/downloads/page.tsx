@@ -79,14 +79,16 @@ export default function DownloadsPage() {
           1. Baixe o APK acima no celular do aluno e instale (o Android vai pedir permissão para
           instalar um app de fora da Play Store).
           <br />
-          2. Na coordenação, gere o código de vínculo do aluno em{" "}
+          2. O aluno precisa estar cadastrado pela coordenação em{" "}
           <Link href="/turmas" style={{ color: "var(--indigo)", fontWeight: 700 }}>
             Turmas e alunos
-          </Link>{" "}
-          &rsaquo; aluno &rsaquo; &quot;Gerar código&quot;. O código vale 15 minutos e serve uma vez só.
+          </Link>
+          .
           <br />
-          3. No app, o aluno digita esse código uma única vez. Não é preciso informar endereço de
-          servidor nem token — isso já vem configurado no aplicativo.
+          3. No primeiro acesso, o aluno toca em &quot;Criar conta&quot; e informa o nome e a data de
+          nascimento iguais aos do cadastro da escola, um e-mail e uma senha. Nas próximas vezes, ou
+          em outro celular, é só &quot;Entrar&quot;. Não é preciso informar endereço de servidor nem
+          código nenhum — isso já vem configurado no aplicativo.
           <br />
           4. A partir daí o aluno confirma a chegada com a biometria do próprio celular, e os
           check-ins aparecem em{" "}

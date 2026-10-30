@@ -363,13 +363,14 @@ export const Api = {
     }
   },
 
-  // Biometria digital (check-ins do app do aluno)
-  gerarCodigoVinculo: (idAluno: number) =>
-    post<{ codigo: string; expira_em: string }>("digital/gerarCodigoVinculo.php", { id_aluno: idAluno }),
+  // App do aluno: check-ins, celular conectado e conta (o aluno cria a
+  // conta no próprio app - não existe mais código de vínculo)
   listarCheckinsPendentes: () => post<CheckinPendente[]>("digital/listarCheckinsPendentes.php", {}),
   confirmarCheckin: (idCheckin: number) => post<null>("digital/confirmarCheckin.php", { id_checkin: idCheckin }),
   revogarDispositivo: (idAluno: number) =>
     post<{ quantidade: number }>("digital/revogarDispositivo.php", { id_aluno: idAluno }),
+  removerContaApp: (idAluno: number) =>
+    post<{ celulares_desconectados: number }>("aluno/removerConta.php", { id_aluno: idAluno }),
 };
 
 export type { Alerta };

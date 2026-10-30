@@ -34,9 +34,8 @@ export default function AlunoDetalhePage() {
   const [modalFalta, setModalFalta] = useState<"falta" | "atraso" | null>(null);
   const [modalResponsavel, setModalResponsavel] = useState(false);
   const [modalAcompanhamento, setModalAcompanhamento] = useState(false);
-  const [codigoVinculo, setCodigoVinculo] = useState<{ codigo: string; expira_em: string } | null>(null);
-  const [gerandoCodigo, setGerandoCodigo] = useState(false);
   const [revogando, setRevogando] = useState(false);
+  const [removendoConta, setRemovendoConta] = useState(false);
 
   async function carregarTudo() {
     setCarregando(true);
@@ -61,17 +60,6 @@ export default function AlunoDetalhePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idAluno]);
 
-  async function gerarCodigo() {
-    setGerandoCodigo(true);
-    const resposta = await Api.gerarCodigoVinculo(idAluno);
-    setGerandoCodigo(false);
-    if (!resposta.sucesso || !resposta.dados) {
-      mostrarToast(resposta.mensagem, true);
-      return;
-    }
-    setCodigoVinculo(resposta.dados);
-  }
-
   async function revogarDispositivo() {
     setRevogando(true);
     const resposta = await Api.revogarDispositivo(idAluno);
@@ -82,8 +70,30 @@ export default function AlunoDetalhePage() {
     }
     mostrarToast(
       resposta.dados && resposta.dados.quantidade > 0
-        ? `${resposta.dados.quantidade} dispositivo(s) revogado(s).`
-        : "Nenhum dispositivo ativo para revogar."
+        ? "Celular desconectado. O aluno entra de novo no app com o e-mail e a senha."
+        : "Nenhum celular conectado."
+    );
+    setHistorico((atual) => (atual ? { ...atual, aluno: { ...atual.aluno, celulares_ativos: 0 } } : atual));
+  }
+
+  async function removerContaApp() {
+    const email = historico?.aluno.email_app;
+    if (!email) return;
+    // Para conta criada por outra pessoa com os dados do aluno, ou e-mail
+    // perdido: depois disso o aluno cria uma conta nova no app.
+    if (!confirm(`Remover a conta do app ${email}? O aluno vai precisar criar uma conta nova no app.`)) return;
+    setRemovendoConta(true);
+    const resposta = await Api.removerContaApp(idAluno);
+    setRemovendoConta(false);
+    if (!resposta.sucesso) {
+      mostrarToast(resposta.mensagem, true);
+      return;
+    }
+    mostrarToast("Conta do app removida.");
+    setHistorico((atual) =>
+      atual
+        ? { ...atual, aluno: { ...atual.aluno, email_app: null, conta_app_desde: null, celulares_ativos: 0 } }
+        : atual
     );
   }
 
@@ -164,25 +174,36 @@ export default function AlunoDetalhePage() {
 
             <div className="panel">
               <div className="panel-head">
-                <h2>Biometria digital</h2>
+                <h2>App do aluno</h2>
               </div>
-              <p className="results-caption">
-                Gere um código de vínculo para o app do aluno registrar check-ins biométricos automaticamente.
-              </p>
-              {codigoVinculo && (
+              {historico.aluno.email_app ? (
                 <div className="modal-summary">
-                  Código: <b>{codigoVinculo.codigo}</b>
+                  Conta: <b>{historico.aluno.email_app}</b>
                   <br />
-                  Válido até {formatarDataHora(codigoVinculo.expira_em)}
+                  Criada em {formatarData(historico.aluno.conta_app_desde)}
+                  {" · "}
+                  {historico.aluno.celulares_ativos > 0 ? "celular conectado" : "nenhum celular conectado"}
                 </div>
+              ) : (
+                <p className="results-caption">
+                  O aluno ainda não criou a conta no app. No primeiro acesso ele toca em &quot;Criar conta&quot; e
+                  usa o nome e a data de nascimento deste cadastro, mais um e-mail e uma senha.
+                </p>
               )}
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button type="button" className="btn btn-primary btn-sm" onClick={gerarCodigo} disabled={gerandoCodigo}>
-                  {gerandoCodigo ? "Gerando…" : "Gerar código"}
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={revogarDispositivo}
+                  disabled={revogando || historico.aluno.celulares_ativos === 0}
+                >
+                  {revogando ? "Desconectando…" : "Desconectar celular"}
                 </button>
-                <button type="button" className="btn btn-sm" onClick={revogarDispositivo} disabled={revogando}>
-                  {revogando ? "Revogando…" : "Revogar dispositivo"}
-                </button>
+                {historico.aluno.email_app && (
+                  <button type="button" className="btn btn-sm" onClick={removerContaApp} disabled={removendoConta}>
+                    {removendoConta ? "Removendo…" : "Remover conta do app"}
+                  </button>
+                )}
               </div>
               <p className="panel-meta" style={{ marginTop: 14 }}>
                 Check-ins pendentes de revisão aparecem em{" "}
