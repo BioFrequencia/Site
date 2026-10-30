@@ -6,7 +6,7 @@ import { Api } from "@/lib/api";
 import { Topbar } from "@/components/Topbar";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
-import { formatarDataHora, iniciais } from "@/lib/format";
+import { formatarDataHora, horarioLocalEscola, iniciais } from "@/lib/format";
 import type { CheckinPendente } from "@/lib/types";
 
 // Mesma lógica de BioFrequencia/Windows/CheckinsPendentes.xaml.cs: a
@@ -41,19 +41,37 @@ export default function CheckinsPage() {
     if (!confirm(`Confirmar o check-in de ${checkin.nome_aluno} e registrar como ${rotuloTipo} oficial?`)) return;
 
     setConfirmando(checkin.id_checkin);
+
+    // O atraso é lançado ANTES de marcar o check-in como confirmado: se o
+    // lançamento falhar, o check-in continua na fila para tentar de novo
+    // (antes ficava confirmado sem atraso nenhum). E é do horário do
+    // check-in, não de quando a coordenação confirmou - confirmar no dia
+    // seguinte lançava o atraso no dia errado.
+    let aviso = "Check-in confirmado.";
+    if (checkin.tipo === "atraso") {
+      const resposta = await Api.marcarAtraso(
+        checkin.id_aluno,
+        "Confirmado via check-in biométrico do dispositivo do aluno",
+        null,
+        false,
+        horarioLocalEscola(checkin.data_checkin) ?? undefined
+      );
+      if (resposta.status === 409) {
+        aviso = "Check-in confirmado. O atraso desse dia já estava lançado.";
+      } else if (!resposta.sucesso) {
+        setConfirmando(null);
+        mostrarToast(`O atraso não foi lançado: ${resposta.mensagem}`, true);
+        return;
+      }
+    }
+
     const respostaConfirmacao = await Api.confirmarCheckin(checkin.id_checkin);
+    setConfirmando(null);
     if (!respostaConfirmacao.sucesso) {
-      setConfirmando(null);
       mostrarToast(respostaConfirmacao.mensagem, true);
       return;
     }
-
-    if (checkin.tipo === "atraso") {
-      await Api.marcarAtraso(checkin.id_aluno, "Confirmado via check-in biométrico do dispositivo do aluno", null, false);
-    }
-
-    setConfirmando(null);
-    mostrarToast("Check-in confirmado.");
+    mostrarToast(aviso);
     setCheckins((atual) => atual.filter((c) => c.id_checkin !== checkin.id_checkin));
   }
 

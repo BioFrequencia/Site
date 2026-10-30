@@ -5,7 +5,7 @@ import { Api } from "@/lib/api";
 import { Topbar } from "@/components/Topbar";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
-import { baixarCsv } from "@/lib/format";
+import { baixarCsv, formatarData, formatarDataHora, hojeNaEscola } from "@/lib/format";
 
 // Mesmos 5 relatórios do desktop (Windows/Relatorios.xaml.cs) - mesma
 // fonte de dados, só troca SaveFileDialog+File.WriteAllText por um
@@ -47,7 +47,7 @@ export default function RelatoriosPage() {
     baixarCsv(
       `alertas_pendentes_${dataHoje()}.csv`,
       ["Aluno", "Turma", "Tipo", "Prioridade", "Frequência", "Motivo", "Data de referência"],
-      resposta.dados.alertas.map((a) => [a.nome_aluno, a.turma ?? "", a.tipo, a.prioridade, `${a.frequencia}%`, a.motivo, a.dta_referencia])
+      resposta.dados.alertas.map((a) => [a.nome_aluno, a.turma ?? "", a.tipo, a.prioridade, `${a.frequencia}%`, a.motivo, formatarData(a.dta_referencia)])
     );
     mostrarToast("Relatório de alertas baixado.");
   }
@@ -70,7 +70,7 @@ export default function RelatoriosPage() {
     baixarCsv(
       `historico_acompanhamentos_${dataHoje()}.csv`,
       ["Data", "Aluno", "Turma", "Canal", "Observação", "Registrado por"],
-      todos.map((r) => [r.data_registro, r.nome_aluno, r.nome_sala ?? "", r.canal, r.observacao ?? "", r.nome_coordenacao])
+      todos.map((r) => [formatarDataHora(r.data_registro), r.nome_aluno, r.nome_sala ?? "", r.canal, r.observacao ?? "", r.nome_coordenacao])
     );
     mostrarToast("Relatório de acompanhamentos baixado.");
   }
@@ -84,7 +84,7 @@ export default function RelatoriosPage() {
     baixarCsv(
       `evolucao_mensal_frequencia_${dataHoje()}.csv`,
       ["Mês", "Frequência da rede"],
-      resposta.dados.evolucao_mensal.map((m) => [m.mes, `${m.frequencia.toFixed(1)}%`])
+      resposta.dados.evolucao_mensal.map((m) => [m.mes.slice(0, 7), `${m.frequencia.toFixed(1)}%`])
     );
     mostrarToast("Relatório de evolução baixado.");
   }
@@ -119,19 +119,23 @@ export default function RelatoriosPage() {
       return;
     }
     const aluno = buscaAlunos.dados.alunos[0];
-    const hoje = new Date();
-    const tresMesesAtras = new Date(hoje);
-    tresMesesAtras.setMonth(hoje.getMonth() - 3);
-    const historico = await Api.historicoAluno(aluno.id_aluno, isoData(tresMesesAtras), isoData(hoje));
+    const hoje = dataHoje();
+    const [ano, mes, dia] = hoje.split("-").map(Number);
+    // Mesmo dia, três meses antes (no calendário da escola).
+    const tresMesesAtras = new Date(Date.UTC(ano, mes - 1 - 3, dia)).toISOString().slice(0, 10);
+    const historico = await Api.historicoAluno(aluno.id_aluno, tresMesesAtras, hoje);
     if (!historico.sucesso || !historico.dados) {
       mostrarToast(historico.mensagem, true);
       return;
     }
 
+    // Ordena pelo horário original (texto ISO) e só depois formata.
     const linhas = [
-      ...historico.dados.faltas.map((f) => [f.data, "Falta", f.motivo ?? "", f.justificado ? "Sim" : "Não", f.observacao ?? ""]),
-      ...historico.dados.atrasos.map((a) => [a.data, "Atraso", a.motivo ?? "", a.justificado ? "Sim" : "Não", a.observacao ?? ""]),
-    ].sort((a, b) => (a[0] < b[0] ? 1 : -1));
+      ...historico.dados.faltas.map((f) => ({ ...f, tipo: "Falta" })),
+      ...historico.dados.atrasos.map((a) => ({ ...a, tipo: "Atraso" })),
+    ]
+      .sort((a, b) => (a.data < b.data ? 1 : -1))
+      .map((r) => [formatarDataHora(r.data), r.tipo, r.motivo ?? "", r.justificado ? "Sim" : "Não", r.observacao ?? ""]);
 
     baixarCsv(
       `historico_${aluno.nome_aluno.replace(/\s+/g, "_")}_${dataHoje()}.csv`,
@@ -249,10 +253,8 @@ export default function RelatoriosPage() {
   );
 }
 
+// Data da escola, não a data em UTC: depois das 21h o toISOString() já
+// dava o dia seguinte (nome do arquivo e período do relatório errados).
 function dataHoje(): string {
-  return isoData(new Date());
-}
-
-function isoData(data: Date): string {
-  return data.toISOString().slice(0, 10);
+  return hojeNaEscola();
 }

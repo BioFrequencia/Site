@@ -1,26 +1,22 @@
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
+import { NavPublica } from "@/components/NavPublica";
+import { resolverApkUrl } from "@/lib/config";
 
 export const metadata = {
   title: "Downloads — Biofrequência",
 };
 
+// O link anterior apontava para github.com/jvvvv780/mobile-app, um
+// repositório que não existe mais publicamente (404). O endereço vem de
+// NEXT_PUBLIC_APK_URL, ou da release fixa que o workflow do app publica
+// (ver lib/config.ts).
+const APK_URL = resolverApkUrl(process.env.NEXT_PUBLIC_APK_URL);
+
 export default function DownloadsPage() {
   return (
     <>
-      <nav className="top-public-nav">
-        <Link href="/" style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 17 }}>
-          Biofrequência
-        </Link>
-        <div style={{ display: "flex", gap: 10 }}>
-          <Link href="/login" className="btn btn-sm">
-            Entrar
-          </Link>
-          <Link href="/cadastro" className="btn btn-primary btn-sm">
-            Cadastrar coordenação
-          </Link>
-        </div>
-      </nav>
+      <NavPublica />
 
       <div className="downloads-shell">
         <div className="downloads-header">
@@ -67,11 +63,7 @@ export default function DownloadsPage() {
             {/* Aponta para a release fixa que o workflow do Android
                 republica a cada build (.github/workflows/android.yml),
                 em vez de um arquivo colocado à mão no servidor. */}
-            <a
-              href="https://github.com/jvvvv780/mobile-app/releases/latest/download/app-release.apk"
-              className="btn btn-primary"
-              rel="noopener"
-            >
+            <a href={APK_URL} className="btn btn-primary" rel="noopener">
               <Icon name="download" /> Baixar APK
             </a>
             <p className="download-nota">

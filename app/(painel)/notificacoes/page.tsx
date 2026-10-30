@@ -62,6 +62,7 @@ export default function NotificacoesPage() {
       <div className="pill-group" style={{ marginBottom: 22 }}>
         {[
           { valor: "pendente" as const, rotulo: "Pendentes" },
+          { valor: "erro" as const, rotulo: "Com falha no envio" },
           { valor: "enviada" as const, rotulo: "Enviadas" },
           { valor: "" as const, rotulo: "Todas" },
         ].map((opcao) => (
@@ -113,17 +114,19 @@ export default function NotificacoesPage() {
                         {notificacao.email_responsavel ? ` · ${notificacao.email_responsavel}` : ""}
                       </div>
                     </td>
-                    <td style={{ maxWidth: 320 }}>{notificacao.mensagem}</td>
+                    <td style={{ maxWidth: 320 }}>
+                      <MensagemNotificacao mensagem={notificacao.mensagem} />
+                    </td>
                     <td>
                       <span className={`badge badge--${notificacao.status_notificacao === "enviada" ? "enviada" : "pendente"}`}>
-                        {notificacao.status_notificacao}
+                        {notificacao.status_notificacao === "erro" ? "falha no envio" : notificacao.status_notificacao}
                       </span>
                       {notificacao.data_envio_notificacao && (
                         <div className="panel-meta">{formatarDataHora(notificacao.data_envio_notificacao)}</div>
                       )}
                     </td>
                     <td>
-                      {notificacao.status_notificacao === "pendente" && (
+                      {notificacao.status_notificacao !== "enviada" && (
                         <button
                           type="button"
                           className="btn btn-sm"
@@ -160,6 +163,30 @@ export default function NotificacoesPage() {
           )}
         </div>
       )}
+    </>
+  );
+}
+
+/**
+ * Sem provedor de WhatsApp configurado, a API guarda a mensagem como um
+ * link wa.me pronto (helpers/contatoResponsavel.php). Mostrar a URL crua
+ * na tabela não ajudava ninguém: vira um botão que abre a conversa com o
+ * texto já preenchido, e o texto aparece legível embaixo.
+ */
+function MensagemNotificacao({ mensagem }: { mensagem: string }) {
+  if (!mensagem.startsWith("https://wa.me/")) return <>{mensagem}</>;
+  let texto = "";
+  try {
+    texto = new URL(mensagem).searchParams.get("text") ?? "";
+  } catch {
+    return <>{mensagem}</>;
+  }
+  return (
+    <>
+      <a href={mensagem} target="_blank" rel="noopener noreferrer" className="btn btn-sm">
+        Abrir no WhatsApp
+      </a>
+      {texto && <div className="panel-meta" style={{ marginTop: 6 }}>{texto}</div>}
     </>
   );
 }

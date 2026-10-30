@@ -9,7 +9,14 @@ import { Modal } from "@/components/Modal";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
 import { formatarCpf, formatarData, formatarDataHora, formatarTelefone } from "@/lib/format";
-import { CANAIS_ACOMPANHAMENTO, GENEROS_RESPONSAVEL, type Acompanhamento, type HistoricoAluno, type Responsavel } from "@/lib/types";
+import {
+  CANAIS_ACOMPANHAMENTO,
+  GENEROS_RESPONSAVEL,
+  ROTULOS_GENERO_RESPONSAVEL,
+  type Acompanhamento,
+  type HistoricoAluno,
+  type Responsavel,
+} from "@/lib/types";
 
 export default function AlunoDetalhePage() {
   const params = useParams<{ id: string }>();
@@ -219,6 +226,9 @@ export default function AlunoDetalhePage() {
                           type="button"
                           className="btn-text"
                           onClick={async () => {
+                            // Um clique sem querer desfazia o vínculo e a família
+                            // deixava de receber os avisos deste aluno.
+                            if (!confirm(`Remover ${responsavel.nome_responsavel} dos responsáveis deste aluno?`)) return;
                             const resposta = await Api.removerVinculoResponsavel(idAluno, responsavel.id_responsavel);
                             if (!resposta.sucesso) {
                               mostrarToast(resposta.mensagem, true);
@@ -480,7 +490,7 @@ function ModalResponsavel({
             <option key="" value="">Selecione…</option>
             {GENEROS_RESPONSAVEL.map((g) => (
               <option key={g} value={g}>
-                {g}
+                {ROTULOS_GENERO_RESPONSAVEL[g]}
               </option>
             ))}
           </select>

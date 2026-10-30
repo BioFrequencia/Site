@@ -1,17 +1,61 @@
 import type { PrioridadeAlerta, StatusFrequencia } from "./types";
 
+// Datas e horários: a API grava e devolve horários em UTC sem indicar o
+// fuso ("2026-10-29 13:45:00", padrão do Supabase). Antes o site lia isso
+// como horário local: tudo aparecia 3 horas adiantado (o código de vínculo
+// "valia até" 3 h depois do que valia de verdade) e o que foi lançado
+// depois das 21h aparecia no dia seguinte. Agora esses valores são lidos
+// como UTC e mostrados no fuso da escola, independente do fuso do
+// computador de quem abre o site.
+export const FUSO_ESCOLA = "America/Sao_Paulo";
+
+const SO_DATA = /^\d{4}-\d{2}-\d{2}$/;
+const HORARIO_SEM_FUSO = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}(?::\d{2})?)(\.\d+)?$/;
+
+/** Converte um horário da API em Date (UTC quando vier sem fuso). */
+export function lerHorarioApi(valor: string): Date | null {
+  const semFuso = HORARIO_SEM_FUSO.exec(valor.trim());
+  const texto = semFuso
+    ? `${semFuso[1]}T${semFuso[2]}${semFuso[3] ? semFuso[3].slice(0, 4) : ""}Z`
+    : valor.trim();
+  const data = new Date(texto);
+  return Number.isNaN(data.getTime()) ? null : data;
+}
+
 export function formatarData(iso: string | null | undefined): string {
   if (!iso) return "-";
-  const data = new Date(iso.includes("T") || iso.includes(" ") ? iso.replace(" ", "T") : iso + "T00:00:00");
-  if (Number.isNaN(data.getTime())) return iso;
-  return data.toLocaleDateString("pt-BR");
+  // Só a data (dia de calendário da escola): não passa por fuso nenhum.
+  if (SO_DATA.test(iso)) {
+    const [ano, mes, dia] = iso.split("-");
+    return `${dia}/${mes}/${ano}`;
+  }
+  const data = lerHorarioApi(iso);
+  if (!data) return iso;
+  return data.toLocaleDateString("pt-BR", { timeZone: FUSO_ESCOLA });
 }
 
 export function formatarDataHora(iso: string | null | undefined): string {
   if (!iso) return "-";
-  const data = new Date(iso.includes("T") ? iso : iso.replace(" ", "T"));
-  if (Number.isNaN(data.getTime())) return iso;
-  return data.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+  const data = lerHorarioApi(iso);
+  if (!data) return iso;
+  return data.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: FUSO_ESCOLA });
+}
+
+/** "AAAA-MM-DD HH:MM" no horário da escola - formato que a API aceita em dta_falta/dta_atraso. */
+export function horarioLocalEscola(valorApi: string): string | null {
+  const data = lerHorarioApi(valorApi);
+  if (!data) return null;
+  const partes = new Intl.DateTimeFormat("en-CA", {
+    timeZone: FUSO_ESCOLA, year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  }).formatToParts(data);
+  const p = (tipo: string) => partes.find((x) => x.type === tipo)?.value ?? "";
+  return `${p("year")}-${p("month")}-${p("day")} ${p("hour")}:${p("minute")}`;
+}
+
+/** Data de hoje (AAAA-MM-DD) no calendário da escola. */
+export function hojeNaEscola(agora: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: FUSO_ESCOLA, year: "numeric", month: "2-digit", day: "2-digit" }).format(agora);
 }
 
 export function iniciais(nome: string): string {

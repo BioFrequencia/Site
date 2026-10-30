@@ -1,15 +1,23 @@
 name: Site
 
-# Valida o site institucional (Next.js): tipos, lint e build de produção.
+# Valida o site (Next.js): testes, tipos, lint e build de produção.
+# Roda em push de qualquer branch (não só da principal), para uma branch
+# de trabalho já ficar validada antes do PR.
 on:
   push:
-    branches: [master, main]
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: site-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validar:
-    name: Tipos, lint e build
+    name: Testes, tipos, lint e build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,6 +33,11 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
+      # Regras de endereço da API, sessão expirada e datas/fuso
+      # (lib/*.test.ts, node --test, sem dependência extra).
+      - name: Testes
+        run: npm test
+
       - name: Verificação de tipos
         run: npx tsc --noEmit
 
@@ -33,8 +46,14 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # Build com um endereço de API de exemplo, como na Vercel. Confere
+      # que esse endereço foi embutido no JavaScript do site.
       - name: Build de produção
-        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: https://api-de-teste.example/
+        run: |
+          npm run build
+          grep -rq "api-de-teste.example" .next/static || { echo "::error::NEXT_PUBLIC_API_URL não foi embutida no build"; exit 1; }
 
       - name: Guardar o build
         uses: actions/upload-artifact@v4

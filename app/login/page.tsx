@@ -14,13 +14,21 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
+  const [urlEditavel, setUrlEditavel] = useState(false);
+  const [semApi, setSemApi] = useState(false);
   const [mostrarConfig, setMostrarConfig] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [demorando, setDemorando] = useState(false);
   const [avisoSessaoExpirada, setAvisoSessaoExpirada] = useState(false);
 
   useEffect(() => {
-    setBaseUrl(Api.obterBaseUrl());
+    const url = Api.obterBaseUrl();
+    setBaseUrl(url ?? "");
+    setSemApi(url === null);
+    setUrlEditavel(Api.urlEditavel());
+    // Acorda a API (plano gratuito do Render) enquanto a pessoa digita.
+    Api.aquecerServidor();
     const parametros = new URLSearchParams(window.location.search);
     if (parametros.get("motivo") === "expirada") setAvisoSessaoExpirada(true);
   }, []);
@@ -38,10 +46,14 @@ export default function LoginPage() {
       return;
     }
 
-    if (baseUrl.trim()) Api.definirBaseUrl(baseUrl);
+    if (urlEditavel && baseUrl.trim()) Api.definirBaseUrl(baseUrl);
 
     setEnviando(true);
+    // Primeiro acesso do dia: o servidor pode estar "acordando".
+    const aviso = setTimeout(() => setDemorando(true), 5000);
     const resposta = await Api.login(email.trim(), senha);
+    clearTimeout(aviso);
+    setDemorando(false);
     setEnviando(false);
 
     if (!resposta.sucesso || !resposta.dados) {
@@ -75,11 +87,19 @@ export default function LoginPage() {
             </div>
           )}
 
+          {semApi && (
+            <div className="error-block" style={{ marginBottom: 16 }}>
+              Este site foi publicado sem o endereço da API (variável NEXT_PUBLIC_API_URL). O login não vai
+              funcionar até isso ser configurado no deploy.
+            </div>
+          )}
+
           <label htmlFor="email">Email</label>
           <input
             id="email"
             type="email"
             autoComplete="username"
+            autoCapitalize="none"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -96,35 +116,50 @@ export default function LoginPage() {
           />
 
           {erro && <p className="field-error show">{erro}</p>}
+          {demorando && (
+            <p className="panel-meta" style={{ marginTop: 6 }}>
+              Conectando ao servidor… no primeiro acesso do dia isso pode levar até um minuto.
+            </p>
+          )}
 
-          <button type="submit" className="btn btn-primary" disabled={enviando}>
+          <button type="submit" className="btn btn-primary" disabled={enviando || semApi}>
             {enviando ? "Entrando…" : "Entrar"}
           </button>
 
           <p className="auth-switch">
             Ainda não tem conta? <Link href="/cadastro">Cadastre sua coordenação</Link>
           </p>
+          <p className="auth-switch" style={{ marginTop: 4 }}>
+            <Link href="/downloads">Baixar o app do aluno</Link>
+          </p>
 
-          <button
-            type="button"
-            className="btn-text"
-            style={{ marginTop: 14, fontSize: 12, display: "inline-flex", alignItems: "center", gap: 4 }}
-            onClick={() => setMostrarConfig((v) => !v)}
-          >
-            <Icon name="chevronDown" />
-            {mostrarConfig ? "Ocultar" : "Endereço da API"}
-          </button>
-          {mostrarConfig && (
-            <div className="modal-field" style={{ marginTop: 10 }}>
-              <label htmlFor="apiUrl">URL base da BioFrequenciaApi</label>
-              <input
-                id="apiUrl"
-                type="text"
-                value={baseUrl}
-                onChange={(e) => setBaseUrl(e.target.value)}
-                placeholder="http://localhost/BioFrequenciaApi/"
-              />
-            </div>
+          {/* Endereço da API editável só em desenvolvimento local; no site
+              publicado ele vem do deploy e não pode ficar "preso" num valor
+              antigo salvo no navegador. */}
+          {urlEditavel && (
+            <>
+              <button
+                type="button"
+                className="btn-text"
+                style={{ marginTop: 14, fontSize: 12, display: "inline-flex", alignItems: "center", gap: 4 }}
+                onClick={() => setMostrarConfig((v) => !v)}
+              >
+                <Icon name="chevronDown" />
+                {mostrarConfig ? "Ocultar" : "Endereço da API (desenvolvimento)"}
+              </button>
+              {mostrarConfig && (
+                <div className="modal-field" style={{ marginTop: 10 }}>
+                  <label htmlFor="apiUrl">URL base da BioFrequenciaApi</label>
+                  <input
+                    id="apiUrl"
+                    type="text"
+                    value={baseUrl}
+                    onChange={(e) => setBaseUrl(e.target.value)}
+                    placeholder="http://localhost/BioFrequenciaApi/"
+                  />
+                </div>
+              )}
+            </>
           )}
         </form>
       </div>
