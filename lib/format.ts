@@ -34,6 +34,14 @@ export function formatarData(iso: string | null | undefined): string {
   return data.toLocaleDateString("pt-BR", { timeZone: FUSO_ESCOLA });
 }
 
+/** Só a hora ("10:42") no fuso da escola - presenças do dia. */
+export function formatarHora(iso: string | null | undefined): string {
+  if (!iso) return "-";
+  const data = lerHorarioApi(iso);
+  if (!data) return iso;
+  return data.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: FUSO_ESCOLA });
+}
+
 export function formatarDataHora(iso: string | null | undefined): string {
   if (!iso) return "-";
   const data = lerHorarioApi(iso);

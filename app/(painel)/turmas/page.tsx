@@ -8,7 +8,7 @@ import { Modal } from "@/components/Modal";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
 import { classeBadgeStatus } from "@/lib/format";
-import { GENEROS_ALUNO, type AlunoFiltro, type Dashboard, type Sala } from "@/lib/types";
+import { GENEROS_ALUNO, PERIODOS_SALA, type AlunoFiltro, type Dashboard, type Sala } from "@/lib/types";
 
 export default function TurmasPage() {
   const router = useRouter();
@@ -28,16 +28,19 @@ export default function TurmasPage() {
   const [erro, setErro] = useState<string | null>(null);
 
   const [modalAberto, setModalAberto] = useState(false);
+  const [modalTurma, setModalTurma] = useState(false);
 
-  useEffect(() => {
+  async function carregarTurmas() {
     // Sequencial, não disparado junto - ver o mesmo comentário em
     // (painel)/layout.tsx sobre limite de conexões simultâneas do banco.
-    (async () => {
-      const salasResp = await Api.listarSalas();
-      if (salasResp.sucesso && salasResp.dados) setSalas(salasResp.dados);
-      const dashboardResp = await Api.dashboard();
-      if (dashboardResp.sucesso && dashboardResp.dados) setTurmasResumo(dashboardResp.dados.turmas);
-    })();
+    const salasResp = await Api.listarSalas();
+    if (salasResp.sucesso && salasResp.dados) setSalas(salasResp.dados);
+    const dashboardResp = await Api.dashboard();
+    if (dashboardResp.sucesso && dashboardResp.dados) setTurmasResumo(dashboardResp.dados.turmas);
+  }
+
+  useEffect(() => {
+    carregarTurmas();
   }, []);
 
   const idSalaSelecionada = turmaSelecionada
@@ -69,11 +72,28 @@ export default function TurmasPage() {
         titulo="Turmas e alunos"
         subtitulo={`${totalRegistros} aluno(s) cadastrado(s).`}
         acoes={
-          <button type="button" className="btn btn-primary" onClick={() => setModalAberto(true)}>
-            <Icon name="plus" /> Novo aluno
-          </button>
+          <>
+            <button type="button" className="btn" onClick={() => setModalTurma(true)}>
+              <Icon name="plus" /> Nova turma
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => (salas.length === 0 ? setModalTurma(true) : setModalAberto(true))}
+            >
+              <Icon name="plus" /> Novo aluno
+            </button>
+          </>
         }
       />
+
+      {salas.length === 0 && !carregando && (
+        <div className="panel" style={{ marginBottom: 20 }}>
+          <p className="results-caption">
+            Sua escola ainda não tem turmas. Comece por &quot;Nova turma&quot; e depois cadastre os alunos de cada uma.
+          </p>
+        </div>
+      )}
 
       <div className="turmas-grid">
         <div className="panel">
@@ -216,7 +236,87 @@ export default function TurmasPage() {
           carregar();
         }}
       />
+
+      <ModalNovaTurma
+        aberto={modalTurma}
+        onFechar={() => setModalTurma(false)}
+        onCriada={(nome) => {
+          setModalTurma(false);
+          mostrarToast(`Turma ${nome} cadastrada.`);
+          carregarTurmas();
+        }}
+      />
     </>
+  );
+}
+
+/** Cada coordenação cadastra as próprias turmas (antes só entravam direto no banco). */
+function ModalNovaTurma({
+  aberto,
+  onFechar,
+  onCriada,
+}: {
+  aberto: boolean;
+  onFechar: () => void;
+  onCriada: (nome: string) => void;
+}) {
+  const [nome, setNome] = useState("");
+  const [periodo, setPeriodo] = useState<string>("Matutino");
+  const [erro, setErro] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
+
+  useEffect(() => {
+    if (aberto) {
+      setNome("");
+      setPeriodo("Matutino");
+      setErro(null);
+    }
+  }, [aberto]);
+
+  async function aoEnviar(evento: FormEvent) {
+    evento.preventDefault();
+    if (!nome.trim()) {
+      setErro("Informe o nome da turma.");
+      return;
+    }
+    setEnviando(true);
+    const resposta = await Api.cadastrarTurma(nome.trim(), periodo);
+    setEnviando(false);
+    if (!resposta.sucesso || !resposta.dados) {
+      setErro(resposta.mensagem);
+      return;
+    }
+    onCriada(resposta.dados.nome_sala);
+  }
+
+  return (
+    <Modal titulo="Nova turma" aberto={aberto} onFechar={onFechar}>
+      <form onSubmit={aoEnviar}>
+        <div className="modal-field">
+          <label htmlFor="nomeTurma">Nome da turma</label>
+          <input id="nomeTurma" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: 1º A" maxLength={50} required />
+        </div>
+        <div className="modal-field">
+          <label htmlFor="periodoTurma">Período</label>
+          <select id="periodoTurma" value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
+            {PERIODOS_SALA.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </div>
+        {erro && <p className="field-error show">{erro}</p>}
+        <div className="modal-actions">
+          <button type="button" className="btn" onClick={onFechar}>
+            Cancelar
+          </button>
+          <button type="submit" className="btn btn-primary" disabled={enviando}>
+            {enviando ? "Salvando…" : "Cadastrar turma"}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

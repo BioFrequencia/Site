@@ -19,6 +19,7 @@ import type {
   ListaAlertas,
   ListaAlunos,
   ListaNotificacoes,
+  PresencasDoDia,
   Responsavel,
   Sala,
   StatusNotificacao,
@@ -216,11 +217,18 @@ export const Api = {
     post<Coordenacao & { token: string }>("user/selectCoord.php", { email, senha }, { autenticado: false }),
   emailExiste: (email: string) =>
     post<{ email_coordenacao: string } | null>("user/verificarEmail.php", { email }, { autenticado: false }),
-  cadastrarCoordenacao: (nome: string, email: string, senha: string, codigoAcesso: string) =>
-    post<null>("user/addCoord.php", { nome, email, senha, codigo_acesso: codigoAcesso }, { autenticado: false }),
+  // Cada coordenação é uma escola independente: o cadastro cria a escola.
+  cadastrarCoordenacao: (nome: string, email: string, senha: string, codigoAcesso: string, nomeEscola: string) =>
+    post<{ nome_escola: string }>(
+      "user/addCoord.php",
+      { nome, email, senha, codigo_acesso: codigoAcesso, nome_escola: nomeEscola },
+      { autenticado: false }
+    ),
 
   // Alunos / turmas
   listarSalas: () => post<Sala[]>("user/listarSalas.php", {}),
+  cadastrarTurma: (nomeSala: string, periodoSala: string) =>
+    post<Sala>("user/addSala.php", { nome_sala: nomeSala, periodo_sala: periodoSala }),
   filtrarAlunos: (busca: string | null, idSala: number | null, status: string | null, pagina: number, porPagina: number) =>
     post<ListaAlunos>("user/filtroAluno.php", { busca, id_sala: idSala, status, pagina, por_pagina: porPagina }),
   cadastrarAluno: (nomeAluno: string, idSala: number, dtaNascAluno: string, generoAluno: string) =>
@@ -363,14 +371,21 @@ export const Api = {
     }
   },
 
-  // App do aluno: check-ins, celular conectado e conta (o aluno cria a
-  // conta no próprio app - não existe mais código de vínculo)
+  // Check-ins enviados pelo celular do próprio aluno (fluxo anterior ao
+  // app da coordenação; aparelhos já conectados continuam aceitos)
   listarCheckinsPendentes: () => post<CheckinPendente[]>("digital/listarCheckinsPendentes.php", {}),
   confirmarCheckin: (idCheckin: number) => post<null>("digital/confirmarCheckin.php", { id_checkin: idCheckin }),
-  revogarDispositivo: (idAluno: number) =>
-    post<{ quantidade: number }>("digital/revogarDispositivo.php", { id_aluno: idAluno }),
-  removerContaApp: (idAluno: number) =>
-    post<{ celulares_desconectados: number }>("aluno/removerConta.php", { id_aluno: idAluno }),
+
+  // Presenças registradas pelo app de biometria da coordenação
+  listarPresencas: (data: string, idSala: number | null) =>
+    post<PresencasDoDia>("presenca/listar.php", { data, id_sala: idSala }),
+  registrarPresencaManual: (idAluno: number) =>
+    post<{ presenca: { nova: boolean; registrada_em: string } }>("presenca/registrar.php", { id_aluno: idAluno, metodo: "manual" }),
+
+  // Biometria (o cadastro é feito no app; aqui só a consulta e a eliminação - LGPD)
+  excluirBiometria: (idAluno: number, tipo: "facial" | "digital" | "todas") =>
+    post<{ registros_apagados: number }>("biometria/excluirBiometria.php", { id_aluno: idAluno, tipo }),
+  revogarConsentimento: (idAluno: number) => post<null>("biometria/consentimento.php", { id_aluno: idAluno, revogar: true }),
 };
 
 export type { Alerta };
