@@ -11,6 +11,7 @@ export default function CadastroPage() {
   const router = useRouter();
 
   const [nome, setNome] = useState("");
+  const [nomeEscola, setNomeEscola] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
@@ -27,8 +28,8 @@ export default function CadastroPage() {
     evento.preventDefault();
     setErro(null);
 
-    if (!nome.trim() || !email.trim() || !senha) {
-      setErro("Preencha nome, email e senha.");
+    if (!nome.trim() || !nomeEscola.trim() || !email.trim() || !senha) {
+      setErro("Preencha o nome da coordenação, o da escola, o email e a senha.");
       return;
     }
     if (!codigoAcesso.trim()) {
@@ -45,7 +46,7 @@ export default function CadastroPage() {
     }
 
     setEnviando(true);
-    const resposta = await Api.cadastrarCoordenacao(nome.trim(), email.trim(), senha, codigoAcesso.trim());
+    const resposta = await Api.cadastrarCoordenacao(nome.trim(), email.trim(), senha, codigoAcesso.trim(), nomeEscola.trim());
     setEnviando(false);
 
     if (!resposta.sucesso) {
@@ -63,8 +64,9 @@ export default function CadastroPage() {
         <div className="auth-illustration-inner">
           <h1>Crie a conta da sua coordenação</h1>
           <p>
-            Cadastre turmas, alunos e responsáveis, registre faltas e atrasos, acompanhe alertas de
-            frequência e receba os check-ins biométricos do app do aluno.
+            Cada coordenação funciona como uma escola independente: cadastre suas turmas, alunos e
+            responsáveis, acompanhe a frequência e use o app de biometria para registrar as
+            presenças.
           </p>
         </div>
       </div>
@@ -75,6 +77,18 @@ export default function CadastroPage() {
 
           <label htmlFor="nome">Nome da coordenação</label>
           <input id="nome" type="text" value={nome} onChange={(e) => setNome(e.target.value)} required />
+
+          {/* A conta nova ganha uma escola própria: as turmas e os alunos
+              dela não aparecem para nenhuma outra coordenação. */}
+          <label htmlFor="nomeEscola">Nome da escola</label>
+          <input
+            id="nomeEscola"
+            type="text"
+            maxLength={150}
+            value={nomeEscola}
+            onChange={(e) => setNomeEscola(e.target.value)}
+            required
+          />
 
           <label htmlFor="email">Email</label>
           <input

@@ -34,8 +34,7 @@ export default function AlunoDetalhePage() {
   const [modalFalta, setModalFalta] = useState<"falta" | "atraso" | null>(null);
   const [modalResponsavel, setModalResponsavel] = useState(false);
   const [modalAcompanhamento, setModalAcompanhamento] = useState(false);
-  const [revogando, setRevogando] = useState(false);
-  const [removendoConta, setRemovendoConta] = useState(false);
+  const [apagandoBiometria, setApagandoBiometria] = useState<"facial" | "consentimento" | null>(null);
 
   async function carregarTudo() {
     setCarregando(true);
@@ -60,39 +59,44 @@ export default function AlunoDetalhePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idAluno]);
 
-  async function revogarDispositivo() {
-    setRevogando(true);
-    const resposta = await Api.revogarDispositivo(idAluno);
-    setRevogando(false);
+  // LGPD: a coordenação pode apagar a biometria a pedido da família, ou
+  // revogar o consentimento (apaga tudo). O cadastro é feito no app.
+  async function apagarFacial() {
+    if (!confirm("Apagar a biometria facial deste aluno? Ele deixa de ser reconhecido até um novo cadastro pelo app.")) return;
+    setApagandoBiometria("facial");
+    const resposta = await Api.excluirBiometria(idAluno, "facial");
+    setApagandoBiometria(null);
     if (!resposta.sucesso) {
       mostrarToast(resposta.mensagem, true);
       return;
     }
-    mostrarToast(
-      resposta.dados && resposta.dados.quantidade > 0
-        ? "Celular desconectado. O aluno entra de novo no app com o e-mail e a senha."
-        : "Nenhum celular conectado."
-    );
-    setHistorico((atual) => (atual ? { ...atual, aluno: { ...atual.aluno, celulares_ativos: 0 } } : atual));
+    mostrarToast("Biometria facial apagada.");
+    setHistorico((atual) => (atual ? { ...atual, aluno: { ...atual.aluno, facial_atualizada_em: null, facial_amostras: null } } : atual));
   }
 
-  async function removerContaApp() {
-    const email = historico?.aluno.email_app;
-    if (!email) return;
-    // Para conta criada por outra pessoa com os dados do aluno, ou e-mail
-    // perdido: depois disso o aluno cria uma conta nova no app.
-    if (!confirm(`Remover a conta do app ${email}? O aluno vai precisar criar uma conta nova no app.`)) return;
-    setRemovendoConta(true);
-    const resposta = await Api.removerContaApp(idAluno);
-    setRemovendoConta(false);
+  async function revogarConsentimento() {
+    if (!confirm("Revogar o consentimento? Toda a biometria deste aluno será apagada. As presenças já registradas continuam.")) return;
+    setApagandoBiometria("consentimento");
+    const resposta = await Api.revogarConsentimento(idAluno);
+    setApagandoBiometria(null);
     if (!resposta.sucesso) {
       mostrarToast(resposta.mensagem, true);
       return;
     }
-    mostrarToast("Conta do app removida.");
+    mostrarToast("Consentimento revogado e biometria apagada.");
     setHistorico((atual) =>
       atual
-        ? { ...atual, aluno: { ...atual.aluno, email_app: null, conta_app_desde: null, celulares_ativos: 0 } }
+        ? {
+            ...atual,
+            aluno: {
+              ...atual.aluno,
+              consentimento_responsavel: null,
+              consentimento_em: null,
+              facial_atualizada_em: null,
+              facial_amostras: null,
+              digitais: 0,
+            },
+          }
         : atual
     );
   }
@@ -174,41 +178,49 @@ export default function AlunoDetalhePage() {
 
             <div className="panel">
               <div className="panel-head">
-                <h2>App do aluno</h2>
+                <h2>Biometria</h2>
               </div>
-              {historico.aluno.email_app ? (
-                <div className="modal-summary">
-                  Conta: <b>{historico.aluno.email_app}</b>
-                  <br />
-                  Criada em {formatarData(historico.aluno.conta_app_desde)}
-                  {" · "}
-                  {historico.aluno.celulares_ativos > 0 ? "celular conectado" : "nenhum celular conectado"}
-                </div>
-              ) : (
-                <p className="results-caption">
-                  O aluno ainda não criou a conta no app. No primeiro acesso ele toca em &quot;Criar conta&quot; e
-                  usa o nome e a data de nascimento deste cadastro, mais um e-mail e uma senha.
-                </p>
-              )}
+              <div className="modal-summary">
+                Consentimento do responsável:{" "}
+                {historico.aluno.consentimento_responsavel ? (
+                  <>
+                    <b>{historico.aluno.consentimento_responsavel}</b>, em {formatarData(historico.aluno.consentimento_em)}
+                  </>
+                ) : (
+                  <b>não registrado</b>
+                )}
+                <br />
+                Facial:{" "}
+                {historico.aluno.facial_atualizada_em ? (
+                  <b>
+                    cadastrada ({historico.aluno.facial_amostras ?? 1} foto(s)), em {formatarData(historico.aluno.facial_atualizada_em)}
+                  </b>
+                ) : (
+                  <b>não cadastrada</b>
+                )}
+                <br />
+                Digital: <b>{historico.aluno.digitais > 0 ? `${historico.aluno.digitais} cadastrada(s)` : "não cadastrada"}</b>
+              </div>
+              <p className="results-caption">
+                O consentimento e as fotos são registrados pelo app de biometria, no tablet da coordenação. A biometria
+                fica cifrada; as fotos não são guardadas.
+              </p>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button
-                  type="button"
-                  className="btn btn-sm"
-                  onClick={revogarDispositivo}
-                  disabled={revogando || historico.aluno.celulares_ativos === 0}
-                >
-                  {revogando ? "Desconectando…" : "Desconectar celular"}
-                </button>
-                {historico.aluno.email_app && (
-                  <button type="button" className="btn btn-sm" onClick={removerContaApp} disabled={removendoConta}>
-                    {removendoConta ? "Removendo…" : "Remover conta do app"}
+                {historico.aluno.facial_atualizada_em && (
+                  <button type="button" className="btn btn-sm" onClick={apagarFacial} disabled={apagandoBiometria !== null}>
+                    {apagandoBiometria === "facial" ? "Apagando…" : "Apagar biometria facial"}
+                  </button>
+                )}
+                {historico.aluno.consentimento_responsavel && (
+                  <button type="button" className="btn btn-sm" onClick={revogarConsentimento} disabled={apagandoBiometria !== null}>
+                    {apagandoBiometria === "consentimento" ? "Revogando…" : "Revogar consentimento"}
                   </button>
                 )}
               </div>
               <p className="panel-meta" style={{ marginTop: 14 }}>
-                Check-ins pendentes de revisão aparecem em{" "}
-                <Link href="/checkins" style={{ color: "var(--indigo)", fontWeight: 700 }}>
-                  Check-ins
+                As presenças registradas pelo app aparecem em{" "}
+                <Link href="/presencas" style={{ color: "var(--indigo)", fontWeight: 700 }}>
+                  Presenças
                 </Link>
                 .
               </p>

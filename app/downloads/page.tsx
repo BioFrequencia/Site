@@ -54,11 +54,11 @@ export default function DownloadsPage() {
             <div className="report-icon">
               <Icon name="smartphone" />
             </div>
-            <h3>App do aluno (Android)</h3>
+            <h3>App de biometria (Android)</h3>
             <p>
-              Aplicativo para o aluno confirmar a chegada e justificar faltas e atrasos com a
-              biometria do próprio celular. O arquivo abaixo é gerado automaticamente a cada
-              atualização do sistema — é sempre a versão mais recente.
+              Para os tablets e celulares da coordenação: cadastra a biometria facial dos alunos e
+              registra a presença sozinho ao reconhecê-los na entrada. O arquivo abaixo é gerado
+              automaticamente a cada atualização do sistema — é sempre a versão mais recente.
             </p>
             {/* Aponta para a release fixa que o workflow do Android
                 republica a cada build (.github/workflows/android.yml),
@@ -74,35 +74,29 @@ export default function DownloadsPage() {
         </div>
 
         <div className="downloads-note">
-          <b>Como usar o app do aluno:</b>
+          <b>Como usar o app de biometria:</b>
           <br />
-          1. Baixe o APK acima no celular do aluno e instale (o Android vai pedir permissão para
-          instalar um app de fora da Play Store).
+          1. Baixe o APK acima no tablet ou celular da coordenação e instale (o Android vai pedir
+          permissão para instalar um app de fora da Play Store).
           <br />
-          2. O aluno precisa estar cadastrado pela coordenação em{" "}
+          2. Entre com a mesma conta da coordenação usada neste site. O app só mostra os alunos da
+          sua escola, cadastrados em{" "}
           <Link href="/turmas" style={{ color: "var(--indigo)", fontWeight: 700 }}>
             Turmas e alunos
           </Link>
           .
           <br />
-          3. No primeiro acesso, o aluno toca em &quot;Criar conta&quot; e informa o nome e a data de
-          nascimento iguais aos do cadastro da escola, um e-mail e uma senha. Nas próximas vezes, ou
-          em outro celular, é só &quot;Entrar&quot;. Não é preciso informar endereço de servidor nem
-          código nenhum — isso já vem configurado no aplicativo.
+          3. Em &quot;Cadastrar biometria&quot;, escolha o aluno, confira nome e data de nascimento,
+          registre o consentimento do responsável e tire as três fotos do rosto. As fotos não saem
+          do aparelho: o sistema guarda só um código numérico do rosto, cifrado.
           <br />
-          4. A partir daí o aluno confirma a chegada com a biometria do próprio celular, e os
-          check-ins aparecem em{" "}
-          <Link href="/checkins" style={{ color: "var(--indigo)", fontWeight: 700 }}>
-            Check-ins
-          </Link>{" "}
-          para a coordenação confirmar.
-          <br />
-          5. Para justificar uma falta ou atraso, o aluno usa &quot;Registrar falta ou atraso&quot;:
-          confirma a biometria, escreve o motivo e se o responsável está ciente. O envio aparece em{" "}
-          <Link href="/ocorrencias" style={{ color: "var(--indigo)", fontWeight: 700 }}>
-            Ocorrências do app
-          </Link>{" "}
-          e <b>só vira falta depois que a coordenação aprova</b>.
+          4. Em &quot;Identificar aluno&quot;, cada aluno olha para a câmera na chegada. Reconhecido, a
+          presença é registrada na hora e aparece em{" "}
+          <Link href="/presencas" style={{ color: "var(--indigo)", fontWeight: 700 }}>
+            Presenças
+          </Link>
+          , sem lançamento manual. Se não for reconhecido, a presença pode ser registrada à mão,
+          no app ou aqui no site.
         </div>
       </div>
     </>

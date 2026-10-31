@@ -101,15 +101,44 @@ export interface HistoricoAluno {
     id_aluno: number;
     nome_aluno: string;
     nome_sala: string | null;
-    /** Conta que o aluno criou no app (null: ainda não criou). */
-    email_app: string | null;
-    conta_app_desde: string | null;
-    celulares_ativos: number;
+    /** Responsável que autorizou o uso da biometria (null: sem consentimento). */
+    consentimento_responsavel: string | null;
+    consentimento_em: string | null;
+    /** Biometria facial cadastrada pelo app (null: não cadastrada). */
+    facial_atualizada_em: string | null;
+    facial_amostras: number | null;
+    digitais: number;
   };
   periodo: { inicio: string; fim: string };
   faltas: RegistroFalta[];
   atrasos: RegistroFalta[];
 }
+
+export type MetodoPresenca = "facial" | "digital" | "manual";
+
+export const ROTULOS_METODO_PRESENCA: Record<MetodoPresenca, string> = {
+  facial: "Reconhecimento facial",
+  digital: "Digital",
+  manual: "Manual",
+};
+
+/** presenca/listar.php: quem está presente num dia e quem ainda não foi registrado. */
+export interface PresencasDoDia {
+  data: string;
+  total_alunos: number;
+  presentes: {
+    id_aluno: number;
+    nome_aluno: string;
+    id_sala: number;
+    nome_sala: string;
+    id_presenca: number;
+    registrada_em: string;
+    metodo: MetodoPresenca;
+  }[];
+  ausentes: { id_aluno: number; nome_aluno: string; id_sala: number; nome_sala: string }[];
+}
+
+export const PERIODOS_SALA = ["Matutino", "Vespertino", "Noturno", "Indefinido"] as const;
 
 export const CANAIS_ACOMPANHAMENTO = [
   "Ligação para responsável",

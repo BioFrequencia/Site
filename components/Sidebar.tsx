@@ -10,6 +10,8 @@ const ITENS = [
   { href: "/dashboard", label: "Dashboard", icone: "home" as const, badge: undefined as "alertas" | "notificacoes" | "checkins" | "ocorrencias" | undefined },
   { href: "/alertas", label: "Alertas", icone: "alert" as const, badge: "alertas" as const },
   { href: "/turmas", label: "Turmas e alunos", icone: "users" as const, badge: undefined },
+  // Presenças registradas pelo app de biometria da coordenação.
+  { href: "/presencas", label: "Presenças", icone: "userCheck" as const, badge: undefined },
   // Os envios do aplicativo ficam logo abaixo de alertas porque são a
   // outra fila que exige decisão da coordenação.
   { href: "/ocorrencias", label: "Ocorrências do app", icone: "inbox" as const, badge: "ocorrencias" as const },

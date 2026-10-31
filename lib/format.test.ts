@@ -1,6 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { formatarData, formatarDataHora, hojeNaEscola, horarioLocalEscola, lerHorarioApi } from "./format.ts";
+import { formatarData, formatarDataHora, formatarHora, hojeNaEscola, horarioLocalEscola, lerHorarioApi } from "./format.ts";
+
+test("hora da presença no fuso da escola (UTC da API menos 3 horas)", () => {
+  assert.equal(formatarHora("2026-10-30 10:42:07.123"), "07:42");
+  assert.equal(formatarHora("2026-10-31 02:03:00"), "23:03");
+  assert.equal(formatarHora(null), "-");
+});
 
 test("horário da API sem fuso é UTC (padrão do banco)", () => {
   assert.equal(lerHorarioApi("2026-10-29 13:45:00")?.toISOString(), "2026-10-29T13:45:00.000Z");
