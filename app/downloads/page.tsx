@@ -81,7 +81,7 @@ export default function DownloadsPage() {
           <br />
           2. Entre com a mesma conta da coordenação usada neste site. O app só mostra os alunos da
           sua escola, cadastrados em{" "}
-          <Link href="/turmas" style={{ color: "var(--indigo)", fontWeight: 700 }}>
+          <Link href="/turmas" style={{ color: "var(--indigo-texto)", fontWeight: 700 }}>
             Turmas e alunos
           </Link>
           .
@@ -92,7 +92,7 @@ export default function DownloadsPage() {
           <br />
           4. Em &quot;Identificar aluno&quot;, cada aluno olha para a câmera na chegada. Reconhecido, a
           presença é registrada na hora e aparece em{" "}
-          <Link href="/presencas" style={{ color: "var(--indigo)", fontWeight: 700 }}>
+          <Link href="/presencas" style={{ color: "var(--indigo-texto)", fontWeight: 700 }}>
             Presenças
           </Link>
           , sem lançamento manual. Se não for reconhecido, a presença pode ser registrada à mão,

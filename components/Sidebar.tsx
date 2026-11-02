@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon } from "./Icon";
+import { Logo } from "./Logo";
 import { iniciais } from "@/lib/format";
 import { useAuth } from "@/lib/auth";
 
@@ -37,9 +38,7 @@ export function Sidebar({
   return (
     <aside className="sidebar">
       <div className="brand">
-        <div className="brand-mark">
-          <Icon name="fingerprint" />
-        </div>
+        <Logo tamanho={34} />
         <div>
           <div className="brand-name">Biofrequência</div>
           <div className="brand-sub">Coordenação escolar</div>

@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
+import { AlternarTema } from "./AlternarTema";
+import { Logo } from "./Logo";
 
 /**
  * Barra das páginas públicas (downloads). A página de downloads é aberta
@@ -15,10 +17,11 @@ export function NavPublica() {
 
   return (
     <nav className="top-public-nav">
-      <Link href="/" style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 17 }}>
+      <Link href="/" className="marca-publica">
+        <Logo tamanho={28} />
         Biofrequência
       </Link>
-      <div style={{ display: "flex", gap: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         {carregando ? null : autenticado ? (
           <Link href="/dashboard" className="btn btn-primary btn-sm">
             Voltar ao painel
@@ -33,6 +36,7 @@ export function NavPublica() {
             </Link>
           </>
         )}
+        <AlternarTema />
       </div>
     </nav>
   );
