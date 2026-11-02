@@ -5,6 +5,7 @@
    tinha (login, downloads, responsáveis, notificações, check-ins). */
 
 :root {
+  color-scheme: light;
   --ink-900: #211f2b;
   --ink-700: #3a3844;
   --ink-500: #6b6f77;
@@ -25,11 +26,60 @@
   --danger: #e4453a;
   --danger-100: #fdecec;
   --danger-dark: #b42318;
+  /* Papéis que no tema escuro não podem usar a mesma cor: o índigo de
+     texto (links, item ativo) e o de fundo de botão, o fundo dos avisos
+     flutuantes e a logo. */
+  --indigo-texto: #452ff6;
+  --indigo-hover: #3823c9;
+  --toast-fundo: #211f2b;
+  --toast-erro-fundo: #b42318;
+  --aviso-fundo: #fffbeb;
+  --aviso-borda: #fcd34d;
+  --aviso-texto: #78350f;
+  --sombreado: rgba(33, 31, 43, 0.45);
+  --logo-moldura: #452ff6;
+  --logo-check: #16a34a;
   --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 22px;
   --font-display: var(--font-space-grotesk), "Space Grotesk", sans-serif;
   --font-body: var(--font-plus-jakarta), "Plus Jakarta Sans", sans-serif;
+}
+/* Tema escuro: botão no topo das páginas (components/AlternarTema.tsx;
+   escolha guardada em lib/tema.ts). Os mesmos nomes com valores escuros -
+   o resto do CSS não muda. Contraste conferido contra os cartões: texto
+   secundário 6,3:1, links 7,1:1, texto branco no índigo 4,5:1 e gráficos
+   em índigo 3,7:1. */
+:root[data-tema="escuro"] {
+  color-scheme: dark;
+  --ink-900: #f3f1f8;
+  --ink-700: #d3d0dc;
+  --ink-500: #a09cad;
+  --ink-300: #7a7689;
+  --mist-100: #15141b;
+  --mist-200: #2f2c3a;
+  --surface: #1e1c27;
+  --indigo: #6d5cff;
+  --indigo-600: #c4baff;
+  --indigo-100: #2d2758;
+  --indigo-50: #25213f;
+  --emerald-100: #143a26;
+  --emerald-dark: #5fe39a;
+  --aqua: #2b5a56;
+  --aqua-100: #15302d;
+  --aqua-dark: #8fdcd4;
+  --danger: #ff6b61;
+  --danger-100: #3a1c1f;
+  --danger-dark: #ff9b93;
+  --indigo-texto: #a99cff;
+  --indigo-hover: #5b48ff;
+  --toast-fundo: #3a3747;
+  --aviso-fundo: #33290f;
+  --aviso-borda: #7a5d14;
+  --aviso-texto: #fcd34d;
+  --sombreado: rgba(0, 0, 0, 0.6);
+  --logo-moldura: #b3a8fb;
+  --logo-check: #25db6c;
 }
 * {
   box-sizing: border-box;
@@ -107,24 +157,27 @@ svg {
   margin-bottom: 38px;
   padding: 0 4px;
 }
-.brand-mark {
-  width: 36px;
-  height: 36px;
-  border-radius: 11px;
-  background: linear-gradient(135deg, var(--indigo), var(--emerald));
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* Logo (components/Logo.tsx): moldura de reconhecimento com o check. */
+.logo {
   flex-shrink: 0;
 }
-.brand-mark svg {
-  width: 19px;
-  height: 19px;
-  stroke: #fff;
-  fill: none;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.logo-moldura {
+  stroke: var(--logo-moldura);
+}
+.logo-check {
+  stroke: var(--logo-check);
+}
+.logo-sobre-indigo {
+  --logo-moldura: #ffffff;
+  --logo-check: #25db6c;
+}
+/* Botão de tema: lua no claro, sol no escuro. */
+.alternar-tema .tema-sol,
+:root[data-tema="escuro"] .alternar-tema .tema-lua {
+  display: none;
+}
+:root[data-tema="escuro"] .alternar-tema .tema-sol {
+  display: block;
 }
 .brand-name {
   font-family: var(--font-display);
@@ -167,7 +220,7 @@ svg {
 }
 .nav-item.active {
   background: var(--indigo-50);
-  color: var(--indigo);
+  color: var(--indigo-texto);
 }
 .nav-item .label {
   flex: 1;
@@ -597,7 +650,7 @@ svg {
 }
 .btn:hover {
   border-color: var(--indigo);
-  color: var(--indigo);
+  color: var(--indigo-texto);
 }
 .btn-primary {
   background: var(--indigo);
@@ -605,9 +658,9 @@ svg {
   border-color: var(--indigo);
 }
 .btn-primary:hover {
-  background: var(--indigo-600);
+  background: var(--indigo-hover);
   color: #fff;
-  border-color: var(--indigo-600);
+  border-color: var(--indigo-hover);
 }
 .btn-danger {
   color: var(--danger-dark);
@@ -625,7 +678,7 @@ svg {
   padding: 6px 6px;
 }
 .btn-text:hover {
-  color: var(--indigo);
+  color: var(--indigo-texto);
 }
 .btn-sm {
   padding: 6px 13px;
@@ -1019,7 +1072,7 @@ svg {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(33, 31, 43, 0.45);
+  background: var(--sombreado);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1173,7 +1226,7 @@ svg {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: var(--ink-900);
+  background: var(--toast-fundo);
   color: #fff;
   padding: 12px 14px 12px 22px;
   border-radius: 999px;
@@ -1216,7 +1269,7 @@ svg {
   .toast { animation: none; }
 }
 .toast.error {
-  background: var(--danger-dark);
+  background: var(--toast-erro-fundo);
 }
 
 /* ---------- Login / Cadastro ---------- */
@@ -1226,10 +1279,17 @@ svg {
   grid-template-columns: 1fr 460px;
 }
 .auth-illustration {
-  background: linear-gradient(135deg, var(--indigo), var(--emerald));
+  /* Índigo da marca nos dois temas (a logo branca e verde é feita para ele). */
+  background: linear-gradient(150deg, #452ff6, #3823c9);
   display: flex;
   align-items: center;
   padding: 64px;
+}
+:root[data-tema="escuro"] .auth-illustration {
+  background: linear-gradient(150deg, #3a27d6, #241a7a);
+}
+.auth-logo {
+  margin-bottom: 22px;
 }
 .auth-illustration-inner {
   max-width: 420px;
@@ -1247,11 +1307,28 @@ svg {
   line-height: 1.6;
 }
 .auth-card {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 48px;
   background: var(--mist-100);
+}
+.auth-tema {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+/* Marca no topo do formulário: só no celular, onde o painel índigo some. */
+.auth-marca {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 28px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: -0.02em;
 }
 .auth-form {
   width: 100%;
@@ -1300,7 +1377,7 @@ svg {
   margin-top: 18px;
 }
 .auth-switch a {
-  color: var(--indigo);
+  color: var(--indigo-texto);
   font-weight: 700;
   cursor: pointer;
 }
@@ -1310,6 +1387,9 @@ svg {
   }
   .auth-illustration {
     display: none;
+  }
+  .auth-marca {
+    display: flex;
   }
 }
 
@@ -1381,6 +1461,14 @@ svg {
   padding: 20px 42px;
   border-bottom: 1px solid var(--mist-200);
   background: var(--surface);
+}
+.marca-publica {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 17px;
 }
 
 /* ---------- Estados utilitários ---------- */
@@ -1489,6 +1577,19 @@ svg {
     width: 100%;
     justify-content: space-between;
   }
+  /* No celular, o botão de tema fica no canto, ao lado do título, em vez
+     de ocupar uma linha sozinho. */
+  .topbar {
+    position: relative;
+  }
+  .topbar .greeting {
+    padding-right: 52px;
+  }
+  .topbar-actions .alternar-tema {
+    position: absolute;
+    top: 0;
+    right: 0;
+  }
   .alert-item {
     flex-wrap: wrap;
   }
@@ -1558,7 +1659,7 @@ svg {
   border: 1px solid var(--mist-200, #e2e8f0);
   border-radius: var(--radius-sm, 10px);
   padding: 16px 18px;
-  background: #fff;
+  background: var(--surface);
 }
 .ocorrencia-topo {
   display: flex;
@@ -1612,10 +1713,10 @@ svg {
   padding: 12px 14px;
   margin-bottom: 16px;
   border-radius: var(--radius-sm, 10px);
-  background: #fffbeb;
-  border: 1px solid #fcd34d;
+  background: var(--aviso-fundo);
+  border: 1px solid var(--aviso-borda);
   font-size: 13.5px;
-  color: #78350f;
+  color: var(--aviso-texto);
 }
 .aviso-inline svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
 .lista-responsaveis { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }

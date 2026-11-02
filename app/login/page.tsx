@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { Api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Icon } from "@/components/Icon";
+import { Logo } from "@/components/Logo";
+import { AlternarTema } from "@/components/AlternarTema";
 
 export default function LoginPage() {
   const { autenticado, carregando, login } = useAuth();
@@ -69,6 +71,7 @@ export default function LoginPage() {
     <div className="auth-shell">
       <div className="auth-illustration">
         <div className="auth-illustration-inner">
+          <Logo tamanho={56} className="logo-sobre-indigo auth-logo" />
           <h1>Biofrequência</h1>
           <p>
             Acompanhe frequência, atrasos, alertas e o histórico de contato com responsáveis da sua
@@ -77,7 +80,12 @@ export default function LoginPage() {
         </div>
       </div>
       <div className="auth-card">
+        <AlternarTema className="icon-btn auth-tema" />
         <form className="auth-form" onSubmit={aoEnviar}>
+          <div className="auth-marca">
+            <Logo tamanho={30} />
+            Biofrequência
+          </div>
           <h2>Entrar</h2>
           <p className="auth-sub">Acesse com a conta da sua coordenação.</p>
 

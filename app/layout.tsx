@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
+import { SCRIPT_TEMA } from "@/lib/tema";
+import { AplicarTema } from "@/components/AplicarTema";
 import { ToastProvider } from "@/components/Toast";
 
 const fonteDisplay = Space_Grotesk({
@@ -23,8 +25,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={`${fonteDisplay.variable} ${fonteBody.variable}`}>
+    // suppressHydrationWarning: o script abaixo põe o data-tema no <html>
+    // antes de o React hidratar (ver lib/tema.ts).
+    <html lang="pt-BR" className={`${fonteDisplay.variable} ${fonteBody.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
+      </head>
       <body>
+        <AplicarTema />
         <AuthProvider>
           <ToastProvider>{children}</ToastProvider>
         </AuthProvider>

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { Logo } from "@/components/Logo";
+import { AlternarTema } from "@/components/AlternarTema";
 
 export default function CadastroPage() {
   const { autenticado, carregando } = useAuth();
@@ -62,6 +64,7 @@ export default function CadastroPage() {
     <div className="auth-shell">
       <div className="auth-illustration">
         <div className="auth-illustration-inner">
+          <Logo tamanho={56} className="logo-sobre-indigo auth-logo" />
           <h1>Crie a conta da sua coordenação</h1>
           <p>
             Cada coordenação funciona como uma escola independente: cadastre suas turmas, alunos e
@@ -71,7 +74,12 @@ export default function CadastroPage() {
         </div>
       </div>
       <div className="auth-card">
+        <AlternarTema className="icon-btn auth-tema" />
         <form className="auth-form" onSubmit={aoEnviar}>
+          <div className="auth-marca">
+            <Logo tamanho={30} />
+            Biofrequência
+          </div>
           <h2>Cadastrar coordenação</h2>
           <p className="auth-sub">Leva menos de um minuto.</p>
 

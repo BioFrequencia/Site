@@ -104,7 +104,9 @@ aberta também pelo menu do painel).
 
 ```
 app/
-  layout.tsx, globals.css      shell raiz (fontes, AuthProvider, ToastProvider)
+  layout.tsx, globals.css      shell raiz (fontes, tema, AuthProvider, ToastProvider)
+  favicon.ico, icon.svg,       ícones da aba e da tela inicial do celular (logo:
+  apple-icon.png                moldura de reconhecimento com o check)
   page.tsx                     redireciona para /dashboard ou /login
   login/, cadastro/            telas públicas de autenticação
   downloads/                   página pública de downloads
@@ -118,8 +120,12 @@ app/
   (painel)/relatorios/         exportação de CSV (5 relatórios, mesmos do desktop)
   (painel)/notificacoes/       fila de notificações pendentes/enviadas
   (painel)/checkins/           fila de check-ins biométricos pendentes
-components/                    Sidebar, Topbar, Modal, Toast, Icon
+components/                    Sidebar, Topbar, Modal, Toast, Icon, Logo,
+                               AlternarTema (botão claro/escuro no topo das telas)
 lib/
+  tema.ts                      tema claro/escuro: escolha guardada no navegador ou,
+                                sem escolha, o do sistema; script do <head> que
+                                aplica antes da pintura (testado em tema.test.ts)
   config.ts                    endereço da API e do APK (testado em config.test.ts)
   api.ts                       cliente HTTP (mesmo contrato do clsApiService.cs)
   auth.tsx                     AuthContext (sessão em localStorage, confere o "exp")

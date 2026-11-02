@@ -219,7 +219,7 @@ export default function AlunoDetalhePage() {
               </div>
               <p className="panel-meta" style={{ marginTop: 14 }}>
                 As presenças registradas pelo app aparecem em{" "}
-                <Link href="/presencas" style={{ color: "var(--indigo)", fontWeight: 700 }}>
+                <Link href="/presencas" style={{ color: "var(--indigo-texto)", fontWeight: 700 }}>
                   Presenças
                 </Link>
                 .
