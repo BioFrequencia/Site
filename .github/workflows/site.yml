@@ -20,9 +20,9 @@ jobs:
     name: Testes, tipos, lint e build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: npm
@@ -55,9 +55,15 @@ jobs:
           npm run build
           grep -rq "api-de-teste.example" .next/static || { echo "::error::NEXT_PUBLIC_API_URL não foi embutida no build"; exit 1; }
 
+      # .next começa com ponto: sem include-hidden-files, o upload-artifact
+      # (desde a v4.4) não acha nada e o artifact sai vazio. O cache do Next
+      # fica de fora - só pesa e não serve para conferir o build.
       - name: Guardar o build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: site-build
-          path: .next/
+          path: |
+            .next/
+            !.next/cache/
+          include-hidden-files: true
           retention-days: 7
