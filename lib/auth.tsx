@@ -12,6 +12,8 @@ interface AuthContextValue {
   autenticado: boolean;
   login: (coordenacaoComToken: Coordenacao & { token: string }) => void;
   logout: () => void;
+  /** Depois de editar o perfil: troca nome, e-mail ou escola sem sair da conta. */
+  atualizarCoordenacao: (mudancas: Partial<Omit<Coordenacao, "id_coordenacao">>) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -51,9 +53,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   function logout() {
+    // Encerra a sessão também na API (o aparelho sai de "Dispositivos
+    // conectados"). O token é lido antes de ser apagado logo abaixo, e um
+    // 401 dessa chamada não pode virar "Sua sessão expirou".
+    jaExpirou.current = true;
+    void Api.sair();
     Api.encerrarSessao();
     setCoordenacao(null);
     router.replace("/login");
+  }
+
+  function atualizarCoordenacao(mudancas: Partial<Omit<Coordenacao, "id_coordenacao">>) {
+    if (!coordenacao) return;
+    const nova = { ...coordenacao, ...mudancas };
+    Api.atualizarCoordenacaoSalva(nova);
+    setCoordenacao(nova);
   }
 
   useEffect(() => {
@@ -95,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ coordenacao, carregando, autenticado: !!coordenacao, login, logout }}
+      value={{ coordenacao, carregando, autenticado: !!coordenacao, login, logout, atualizarCoordenacao }}
     >
       {children}
     </AuthContext.Provider>

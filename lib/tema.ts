@@ -20,6 +20,27 @@ export function outroTema(tema: Tema): Tema {
   return tema === "escuro" ? "claro" : "escuro";
 }
 
+/** Tema que aparece na tela para a escolha das preferências ("sistema" segue o computador). */
+export function temaEfetivo(escolha: Tema | "sistema", sistemaEscuro: boolean): Tema {
+  return escolha === "sistema" ? (sistemaEscuro ? "escuro" : "claro") : escolha;
+}
+
+/**
+ * Aplica a escolha (do botão de tema ou das preferências da conta) e a
+ * guarda para o script do <head>. "sistema" apaga a escolha guardada: a
+ * página volta a seguir o computador (components/AplicarTema.tsx).
+ */
+export function aplicarEscolhaDeTema(escolha: Tema | "sistema"): void {
+  try {
+    if (escolha === "sistema") localStorage.removeItem(CHAVE_TEMA);
+    else localStorage.setItem(CHAVE_TEMA, escolha);
+  } catch {
+    // Navegador sem armazenamento: vale até recarregar a página.
+  }
+  const sistemaEscuro = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.setAttribute("data-tema", temaEfetivo(escolha, sistemaEscuro));
+}
+
 /**
  * Roda no <head> (app/layout.tsx) antes de a página aparecer: aplica o
  * tema já na primeira pintura, sem piscar o claro para quem usa o escuro.

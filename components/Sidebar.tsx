@@ -25,6 +25,8 @@ const ITENS = [
   { href: "/notificacoes", label: "Notificações", icone: "bell" as const, badge: "notificacoes" as const },
   { href: "/checkins", label: "Check-ins", icone: "fingerprint" as const, badge: "checkins" as const },
   { href: "/downloads", label: "Baixar app e desktop", icone: "download" as const, badge: undefined },
+  { href: "/suporte", label: "Suporte", icone: "lifeBuoy" as const, badge: undefined },
+  { href: "/conta", label: "Minha conta", icone: "user" as const, badge: undefined },
 ];
 
 export function Sidebar({
@@ -60,11 +62,13 @@ export function Sidebar({
       </nav>
 
       <div className="sidebar-footer">
-        <div className="avatar">{iniciais(coordenacao?.nome_coordenacao ?? "?")}</div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="user-name">{coordenacao?.nome_coordenacao}</div>
-          <div className="user-role">Coordenação</div>
-        </div>
+        <Link href="/conta" className="sidebar-conta" title="Minha conta">
+          <div className="avatar">{iniciais(coordenacao?.nome_coordenacao ?? "?")}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="user-name">{coordenacao?.nome_coordenacao}</div>
+            <div className="user-role">{coordenacao?.nome_escola || "Coordenação"}</div>
+          </div>
+        </Link>
         <button type="button" className="icon-btn" onClick={logout} title="Sair" aria-label="Sair">
           <Icon name="logout" />
         </button>

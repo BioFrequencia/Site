@@ -14,6 +14,68 @@ export interface Coordenacao {
   id_coordenacao: number;
   nome_coordenacao: string;
   email_coordenacao: string;
+  /** Vem no login desde a migração 006; sessões salvas antes não têm. */
+  nome_escola?: string;
+}
+
+/** conta/perfil.php e conta/atualizarPerfil.php. */
+export interface PerfilConta {
+  nome_coordenacao: string;
+  email_coordenacao: string;
+  nome_escola: string;
+}
+
+/** Preferências da conta como a API guarda (conta/preferencias.php). */
+export interface PreferenciasApi {
+  tema: "claro" | "escuro" | "sistema";
+  sons_ativos: boolean;
+  volume_sons: number;
+  som_confirmacao: boolean;
+  som_notificacao: boolean;
+  som_erro: boolean;
+}
+
+/** Aparelho conectado à conta (conta/sessoes.php). */
+export interface SessaoConectada {
+  id_sessao: string;
+  cliente: "site" | "app";
+  dispositivo: string;
+  lembrar: boolean;
+  criada_em: string;
+  ultimo_acesso: string;
+  expira_em: string;
+  atual: boolean;
+}
+
+export type CategoriaChamado = "duvida" | "problema" | "biometria" | "conta" | "sugestao";
+export type StatusChamado = "aberto" | "em_andamento" | "respondido" | "fechado";
+
+export const ROTULOS_CATEGORIA_CHAMADO: Record<CategoriaChamado, string> = {
+  duvida: "Dúvida",
+  problema: "Problema no sistema",
+  biometria: "Biometria e app",
+  conta: "Conta e acesso",
+  sugestao: "Sugestão",
+};
+
+export const ROTULOS_STATUS_CHAMADO: Record<StatusChamado, string> = {
+  aberto: "Aberto",
+  em_andamento: "Em andamento",
+  respondido: "Respondido",
+  fechado: "Fechado",
+};
+
+/** Chamado de suporte (suporte/listarChamados.php). */
+export interface ChamadoSuporte {
+  id_chamado: number;
+  categoria: CategoriaChamado;
+  assunto: string;
+  mensagem: string;
+  status: StatusChamado;
+  resposta: string | null;
+  respondido_em: string | null;
+  criado_em: string;
+  atualizado_em: string;
 }
 
 export interface Sala {

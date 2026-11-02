@@ -15,6 +15,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [lembrar, setLembrar] = useState(false);
   const [baseUrl, setBaseUrl] = useState("");
   const [urlEditavel, setUrlEditavel] = useState(false);
   const [semApi, setSemApi] = useState(false);
@@ -53,7 +54,7 @@ export default function LoginPage() {
     setEnviando(true);
     // Primeiro acesso do dia: o servidor pode estar "acordando".
     const aviso = setTimeout(() => setDemorando(true), 5000);
-    const resposta = await Api.login(email.trim(), senha);
+    const resposta = await Api.login(email.trim(), senha, lembrar);
     clearTimeout(aviso);
     setDemorando(false);
     setEnviando(false);
@@ -122,6 +123,16 @@ export default function LoginPage() {
             onChange={(e) => setSenha(e.target.value)}
             required
           />
+
+          {/* 30 dias neste navegador em vez de 2 horas. A sessão aparece em
+              Minha conta > Dispositivos, de onde pode ser desconectada. */}
+          <label className="auth-lembrar">
+            <input type="checkbox" checked={lembrar} onChange={(e) => setLembrar(e.target.checked)} />
+            <span>
+              Lembrar de mim
+              <small>Fica conectado por 30 dias neste aparelho. Não marque em computador compartilhado.</small>
+            </span>
+          </label>
 
           {erro && <p className="field-error show">{erro}</p>}
           {demorando && (
