@@ -20,9 +20,9 @@ jobs:
     name: Testes, tipos, lint e build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: npm
@@ -56,7 +56,7 @@ jobs:
           grep -rq "api-de-teste.example" .next/static || { echo "::error::NEXT_PUBLIC_API_URL não foi embutida no build"; exit 1; }
 
       - name: Guardar o build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: site-build
           path: .next/
