@@ -120,19 +120,42 @@ app/
   (painel)/relatorios/         exportação de CSV (5 relatórios, mesmos do desktop)
   (painel)/notificacoes/       fila de notificações pendentes/enviadas
   (painel)/checkins/           fila de check-ins biométricos pendentes
+  (painel)/conta/              Minha conta: perfil, senha, preferências (tema e
+                                sons) e dispositivos conectados
+  (painel)/suporte/            perguntas frequentes e chamados para a equipe
 components/                    Sidebar, Topbar, Modal, Toast, Icon, Logo,
-                               AlternarTema (botão claro/escuro no topo das telas)
+                               AlternarTema (botão claro/escuro no topo das telas),
+                               Preferencias (preferências da conta no site todo)
 lib/
   tema.ts                      tema claro/escuro: escolha guardada no navegador ou,
                                 sem escolha, o do sistema; script do <head> que
                                 aplica antes da pintura (testado em tema.test.ts)
+  preferencias.ts              preferências da conta (tema e sons) <-> formato da API
+  sons.ts                      sons do site (Web Audio): confirmação, notificação e erro
+  contadores.ts                quando as filas do menu crescem (som de notificação)
   config.ts                    endereço da API e do APK (testado em config.test.ts)
   api.ts                       cliente HTTP (mesmo contrato do clsApiService.cs)
   auth.tsx                     AuthContext (sessão em localStorage, confere o "exp")
   sessao.ts                    leitura da validade do token
   types.ts                     tipos espelhando as respostas da API
   format.ts                    datas no fuso da escola, CPF/telefone, badges, CSV
+public/sons/                   daylight, bloom e shrug (React Bits, licença MIT)
 ```
+
+### Sons e preferências
+
+Todo aviso de sucesso toca o **daylight** (ex.: presença registrada) e todo
+aviso de erro, o **shrug** (ex.: tentar lançar duas faltas no mesmo dia),
+pelo `components/Toast.tsx`. Quando uma fila do menu cresce (alerta,
+notificação, check-in ou ocorrência nova), toca o **bloom**. Os sons só
+tocam depois de a pessoa interagir com a página (regra dos navegadores)
+e respeitam Minha conta > Preferências: ligar/desligar, volume e quais
+tocam. As preferências ficam na conta (migração 007 da API), com uma
+cópia no navegador para aplicar ao abrir.
+
+"Lembrar de mim", no login, deixa a sessão valer 30 dias. Cada login
+aparece em Minha conta > Dispositivos conectados, de onde pode ser
+desconectado; sair também encerra a sessão na API.
 
 ## Segurança
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { tocarSom } from "@/lib/sons";
 
 interface ToastState {
   id: number;
@@ -46,6 +47,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const mostrarToast = useCallback(
     (texto: string, erro = false) => {
+      // Todo aviso é o resultado de uma ação: confirmação (daylight) ou
+      // erro (shrug), conforme as preferências de som da conta.
+      void tocarSom(erro ? "erro" : "confirmacao");
       const id = ++proximoId.current;
       setToasts((atuais) => [...atuais, { id, texto, erro }].slice(-MAXIMO_VISIVEL));
       timeouts.current.set(

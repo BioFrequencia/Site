@@ -11,8 +11,13 @@ import type {
   Alerta,
   Ocorrencia,
   CanalAcompanhamento,
+  CategoriaChamado,
+  ChamadoSuporte,
   CheckinPendente,
   Coordenacao,
+  PerfilConta,
+  PreferenciasApi,
+  SessaoConectada,
   Dashboard,
   HistoricoAluno,
   ListaAcompanhamento,
@@ -97,8 +102,14 @@ function iniciarSessao(dadosCoordenacao: Coordenacao & { token: string }): void 
       id_coordenacao: dadosCoordenacao.id_coordenacao,
       nome_coordenacao: dadosCoordenacao.nome_coordenacao,
       email_coordenacao: dadosCoordenacao.email_coordenacao,
+      nome_escola: dadosCoordenacao.nome_escola,
     })
   );
+}
+
+/** Depois de editar o perfil em Minha conta: atualiza o nome/e-mail/escola guardados, sem mexer no token. */
+function atualizarCoordenacaoSalva(coordenacao: Coordenacao): void {
+  localStorage.setItem(CHAVE_COORDENACAO, JSON.stringify(coordenacao));
 }
 
 function encerrarSessao(): void {
@@ -210,11 +221,12 @@ export const Api = {
   obterCoordenacao,
   iniciarSessao,
   encerrarSessao,
+  atualizarCoordenacaoSalva,
   definirCallbackSessaoExpirada,
 
-  // Autenticação / coordenação
-  login: (email: string, senha: string) =>
-    post<Coordenacao & { token: string }>("user/selectCoord.php", { email, senha }, { autenticado: false }),
+  // Autenticação / coordenação. "lembrar" (Lembrar de mim): sessão de 30 dias.
+  login: (email: string, senha: string, lembrar = false) =>
+    post<Coordenacao & { token: string }>("user/selectCoord.php", { email, senha, lembrar }, { autenticado: false }),
   emailExiste: (email: string) =>
     post<{ email_coordenacao: string } | null>("user/verificarEmail.php", { email }, { autenticado: false }),
   // Cada coordenação é uma escola independente: o cadastro cria a escola.
@@ -386,6 +398,25 @@ export const Api = {
   excluirBiometria: (idAluno: number, tipo: "facial" | "digital" | "todas") =>
     post<{ registros_apagados: number }>("biometria/excluirBiometria.php", { id_aluno: idAluno, tipo }),
   revogarConsentimento: (idAluno: number) => post<null>("biometria/consentimento.php", { id_aluno: idAluno, revogar: true }),
+
+  // Minha conta (migração 007 da API)
+  sair: () => post<null>("conta/sair.php", {}),
+  perfil: () => post<PerfilConta>("conta/perfil.php", {}),
+  atualizarPerfil: (perfil: PerfilConta, senhaAtual?: string) =>
+    post<PerfilConta>("conta/atualizarPerfil.php", { ...perfil, ...(senhaAtual ? { senha_atual: senhaAtual } : {}) }),
+  alterarSenha: (senhaAtual: string, senhaNova: string) =>
+    post<{ sessoes_encerradas: number }>("conta/alterarSenha.php", { senha_atual: senhaAtual, senha_nova: senhaNova }),
+  preferencias: () => post<PreferenciasApi>("conta/preferencias.php", {}),
+  salvarPreferencias: (mudancas: Partial<PreferenciasApi>) => post<PreferenciasApi>("conta/salvarPreferencias.php", { ...mudancas }),
+  listarAparelhos: () => post<SessaoConectada[]>("conta/sessoes.php", {}),
+  desconectarAparelho: (idSessao: string) =>
+    post<{ encerradas: number; era_este: boolean }>("conta/encerrarSessao.php", { id_sessao: idSessao }),
+  desconectarOutrosAparelhos: () => post<{ encerradas: number }>("conta/encerrarSessao.php", { outras: true }),
+
+  // Suporte
+  abrirChamado: (categoria: CategoriaChamado, assunto: string, mensagem: string) =>
+    post<ChamadoSuporte>("suporte/abrirChamado.php", { categoria, assunto, mensagem }),
+  listarChamados: () => post<ChamadoSuporte[]>("suporte/listarChamados.php", {}),
 };
 
 export type { Alerta };

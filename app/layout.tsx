@@ -5,6 +5,7 @@ import { AuthProvider } from "@/lib/auth";
 import { SCRIPT_TEMA } from "@/lib/tema";
 import { AplicarTema } from "@/components/AplicarTema";
 import { ToastProvider } from "@/components/Toast";
+import { PreferenciasProvider } from "@/components/Preferencias";
 
 const fonteDisplay = Space_Grotesk({
   variable: "--font-space-grotesk",
@@ -34,7 +35,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <AplicarTema />
         <AuthProvider>
-          <ToastProvider>{children}</ToastProvider>
+          <ToastProvider>
+            <PreferenciasProvider>{children}</PreferenciasProvider>
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>

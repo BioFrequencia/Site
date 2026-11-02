@@ -5,11 +5,14 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Api } from "@/lib/api";
 import { Sidebar } from "@/components/Sidebar";
+import { tocarSom } from "@/lib/sons";
+import { temNovidade, type Contadores } from "@/lib/contadores";
 
 export default function PainelLayout({ children }: { children: ReactNode }) {
   const { autenticado, carregando } = useAuth();
   const router = useRouter();
-  const [contadores, setContadores] = useState({ alertas: 0, notificacoes: 0, checkins: 0, ocorrencias: 0 });
+  const [contadores, setContadores] = useState<Contadores>({ alertas: 0, notificacoes: 0, checkins: 0, ocorrencias: 0 });
+  const contagemAnterior = useRef<Contadores | null>(null);
 
   // Só redireciona daqui quem chegou numa tela do painel SEM nunca ter
   // tido sessão nesta visita (ex.: acessou a URL direto, sem estar
@@ -46,12 +49,19 @@ export default function PainelLayout({ children }: { children: ReactNode }) {
       if (!ativo) return;
       const ocorrencias = await Api.listarOcorrencias("pendente");
       if (!ativo) return;
-      setContadores({
+      const novos = {
         alertas: dashboard.dados?.alertas_ativos ?? 0,
         notificacoes: notificacoes.dados?.total_registros ?? 0,
         checkins: checkins.dados?.length ?? 0,
         ocorrencias: ocorrencias.dados?.total ?? 0,
-      });
+      };
+      // Chegou algo novo desde a última consulta (não na primeira, ao abrir):
+      // som de notificação (bloom), conforme as preferências da conta.
+      if (contagemAnterior.current && temNovidade(contagemAnterior.current, novos)) {
+        void tocarSom("notificacao");
+      }
+      contagemAnterior.current = novos;
+      setContadores(novos);
     }
     carregarContadores();
     const intervalo = setInterval(carregarContadores, 45000);
