@@ -6,12 +6,14 @@ import { useAuth } from "@/lib/auth";
 import { Api } from "@/lib/api";
 import { Sidebar } from "@/components/Sidebar";
 import { tocarSom } from "@/lib/sons";
-import { temNovidade, type Contadores } from "@/lib/contadores";
+import { CONTADORES_ZERADOS, temNovidade, type Contadores } from "@/lib/contadores";
 
 export default function PainelLayout({ children }: { children: ReactNode }) {
-  const { autenticado, carregando } = useAuth();
+  const { autenticado, carregando, coordenacao } = useAuth();
   const router = useRouter();
-  const [contadores, setContadores] = useState<Contadores>({ alertas: 0, notificacoes: 0, checkins: 0, ocorrencias: 0 });
+  const [contadores, setContadores] = useState<Contadores>(CONTADORES_ZERADOS);
+  const gestao = coordenacao?.papel === "gestor";
+  const equipeDoSistema = !!coordenacao?.administrador;
   const contagemAnterior = useRef<Contadores | null>(null);
 
   // Só redireciona daqui quem chegou numa tela do painel SEM nunca ter
@@ -45,15 +47,15 @@ export default function PainelLayout({ children }: { children: ReactNode }) {
       if (!ativo) return;
       const notificacoes = await Api.listarNotificacoes("pendente", 1);
       if (!ativo) return;
-      const checkins = await Api.listarCheckinsPendentes();
+      const equipe = gestao ? await Api.equipe() : null;
       if (!ativo) return;
-      const ocorrencias = await Api.listarOcorrencias("pendente");
+      const resumo = equipeDoSistema ? await Api.adminResumo() : null;
       if (!ativo) return;
-      const novos = {
+      const novos: Contadores = {
         alertas: dashboard.dados?.alertas_ativos ?? 0,
         notificacoes: notificacoes.dados?.total_registros ?? 0,
-        checkins: checkins.dados?.length ?? 0,
-        ocorrencias: ocorrencias.dados?.total ?? 0,
+        equipe: equipe?.dados?.pendentes ?? 0,
+        admin: (resumo?.dados?.contas_pendentes ?? 0) + (resumo?.dados?.chamados_abertos ?? 0),
       };
       // Chegou algo novo desde a última consulta (não na primeira, ao abrir):
       // som de notificação (bloom), conforme as preferências da conta.
@@ -69,7 +71,7 @@ export default function PainelLayout({ children }: { children: ReactNode }) {
       ativo = false;
       clearInterval(intervalo);
     };
-  }, [autenticado]);
+  }, [autenticado, gestao, equipeDoSistema]);
 
   if (carregando || !autenticado) {
     return <div className="loading-block">Carregando…</div>;

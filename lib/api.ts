@@ -1,15 +1,33 @@
-// Cliente da BioFrequenciaApi para o site. Mesmo contrato de endpoints já
-// testado no desktop (clsApiService.cs) e no app (mobile-app/src/api/*) -
-// nenhum endpoint novo foi criado para o site, ele consome exatamente a
-// mesma API.
+// Cliente da BioFrequenciaApi para o site - o mesmo contrato usado pelo
+// app da coordenação. Os tipos das respostas estão em lib/types.ts.
 //
 // Endereço da API: ver lib/config.ts. Em produção vem do build
 // (NEXT_PUBLIC_API_URL); só em desenvolvimento é editável na tela de login.
 
 import { apiUrlDoBuild, resolverApiUrl } from "./config";
 import type {
+  AcaoEquipe,
   Alerta,
+  AvisosDoRegistro,
+  CanalResponsavel,
+  ChamadoAdmin,
+  ConfiguracaoEscola,
+  ContaAdmin,
+  DadosEscola,
+  EscolaAdmin,
+  EscolaCatalogo,
+  ItemCalendario,
+  ListaPaginada,
+  MembroEquipe,
   Ocorrencia,
+  RegistrosDoDia,
+  ResponsaveisDaEscola,
+  ResponsavelEncontrado,
+  ResumoSistema,
+  SituacaoConta,
+  StatusChamado,
+  TipoCalendario,
+  TipoRegistro,
   CanalAcompanhamento,
   CategoriaChamado,
   ChamadoSuporte,
@@ -103,6 +121,9 @@ function iniciarSessao(dadosCoordenacao: Coordenacao & { token: string }): void 
       nome_coordenacao: dadosCoordenacao.nome_coordenacao,
       email_coordenacao: dadosCoordenacao.email_coordenacao,
       nome_escola: dadosCoordenacao.nome_escola,
+      papel: dadosCoordenacao.papel,
+      administrador: dadosCoordenacao.administrador,
+      municipio: dadosCoordenacao.municipio,
     })
   );
 }
@@ -229,18 +250,34 @@ export const Api = {
     post<Coordenacao & { token: string }>("user/selectCoord.php", { email, senha, lembrar }, { autenticado: false }),
   emailExiste: (email: string) =>
     post<{ email_coordenacao: string } | null>("user/verificarEmail.php", { email }, { autenticado: false }),
-  // Cada coordenação é uma escola independente: o cadastro cria a escola.
-  cadastrarCoordenacao: (nome: string, email: string, senha: string, codigoAcesso: string, nomeEscola: string) =>
-    post<{ nome_escola: string }>(
+  // Uma escola por conta: a do catálogo (id_escola) ou, fora dele, uma
+  // escola nova com nome e município. A primeira conta vira gestora; as
+  // próximas aguardam a aprovação da gestão.
+  cadastrarCoordenacao: (
+    nome: string,
+    email: string,
+    senha: string,
+    codigoAcesso: string,
+    escola: { id_escola: number } | { nome_escola: string; municipio: string }
+  ) =>
+    post<{ nome_escola: string; papel: "gestor" | "coordenador"; situacao: SituacaoConta }>(
       "user/addCoord.php",
-      { nome, email, senha, codigo_acesso: codigoAcesso, nome_escola: nomeEscola },
+      { nome, email, senha, codigo_acesso: codigoAcesso, ...escola },
       { autenticado: false }
     ),
+  /** Busca pública no catálogo de escolas da SEDUC (sem login: é para o cadastro). */
+  buscarEscolas: (busca: string) =>
+    post<{ escolas: EscolaCatalogo[] }>("escola/buscar.php", { busca }, { autenticado: false }),
 
   // Alunos / turmas
   listarSalas: () => post<Sala[]>("user/listarSalas.php", {}),
-  cadastrarTurma: (nomeSala: string, periodoSala: string) =>
-    post<Sala>("user/addSala.php", { nome_sala: nomeSala, periodo_sala: periodoSala }),
+  /** Sem horário, vale o padrão do período. */
+  cadastrarTurma: (nomeSala: string, periodoSala: string, horario?: { inicio: string; fim: string }) =>
+    post<Sala>("user/addSala.php", {
+      nome_sala: nomeSala,
+      periodo_sala: periodoSala,
+      ...(horario ? { horario_inicio: horario.inicio, horario_fim: horario.fim } : {}),
+    }),
   filtrarAlunos: (busca: string | null, idSala: number | null, status: string | null, pagina: number, porPagina: number) =>
     post<ListaAlunos>("user/filtroAluno.php", { busca, id_sala: idSala, status, pagina, por_pagina: porPagina }),
   cadastrarAluno: (nomeAluno: string, idSala: number, dtaNascAluno: string, generoAluno: string) =>
@@ -250,22 +287,40 @@ export const Api = {
       dta_nasc_aluno: dtaNascAluno,
       genero_aluno: generoAluno,
     }),
-  marcarFalta: (idAluno: number, motivo: string | null, observacao: string | null, justificado: boolean) =>
-    post<{ id_falta: number; dta_falta: string }>("user/marcarFalta.php", {
-      id_aluno: idAluno,
-      motivo_falta: motivo,
-      observacao_falta: observacao,
-      justificado_falta: !!justificado,
-    }),
-  /** dataLocal (opcional): "AAAA-MM-DD HH:MM" no horário da escola; sem ela, agora. */
+  /**
+   * Entrada atrasada. dataLocal (opcional): "AAAA-MM-DD HH:MM" no horário
+   * da escola; sem ela, agora. A API recusa (422) fora do dia de aula, do
+   * horário da turma ou dentro da tolerância, explicando o motivo.
+   */
   marcarAtraso: (idAluno: number, motivo: string | null, observacao: string | null, justificado: boolean, dataLocal?: string) =>
-    post<{ id_atraso: number; dta_atraso: string }>("user/marcarAtraso.php", {
+    post<{ id_atraso: number; dta_atraso: string; avisos: AvisosDoRegistro }>("user/marcarAtraso.php", {
       id_aluno: idAluno,
       motivo_atraso: motivo,
       observacao_atraso: observacao,
       justificado_atraso: !!justificado,
       ...(dataLocal ? { dta_atraso: dataLocal } : {}),
     }),
+  /** Saída antecipada: as mesmas regras, mais quem buscou o aluno. */
+  marcarSaida: (
+    idAluno: number,
+    motivo: string | null,
+    observacao: string | null,
+    justificado: boolean,
+    retiradoPor: string | null,
+    dataLocal?: string
+  ) =>
+    post<{ id_saida: number; dta_saida: string; avisos: AvisosDoRegistro }>("user/marcarSaida.php", {
+      id_aluno: idAluno,
+      motivo_saida: motivo,
+      observacao_saida: observacao,
+      justificado_saida: !!justificado,
+      retirado_por: retiradoPor,
+      ...(dataLocal ? { dta_saida: dataLocal } : {}),
+    }),
+  listarRegistros: (data: string, idSala: number | null) =>
+    post<RegistrosDoDia>("registro/listar.php", { data, id_sala: idSala }),
+  /** Só a gestão: apaga um registro feito por engano. */
+  removerRegistro: (tipo: TipoRegistro, id: number) => post<null>("registro/remover.php", { tipo, id }),
   historicoAluno: (idAluno: number, dataInicio?: string, dataFim?: string) =>
     post<HistoricoAluno>("user/historicoAluno.php", { id_aluno: idAluno, data_inicio: dataInicio, data_fim: dataFim }),
 
@@ -288,25 +343,47 @@ export const Api = {
   // Responsáveis
   addResponsavel: (
     idAluno: number,
-    nome: string,
-    cpf: string,
-    telefone: string,
-    email: string | null,
-    genero: string
+    dados: {
+      nome: string;
+      cpf: string;
+      telefone: string;
+      email: string | null;
+      genero: string;
+      canal: CanalResponsavel;
+      parentesco: string | null;
+    }
   ) =>
     post<{ id_responsavel: number }>("responsavel/addResponsavel.php", {
       id_aluno: idAluno,
-      nome_responsavel: nome,
-      cpf_responsavel: cpf,
-      telefone_responsavel: telefone,
-      email_responsavel: email,
-      genero_responsavel: genero,
+      nome_responsavel: dados.nome,
+      cpf_responsavel: dados.cpf,
+      telefone_responsavel: dados.telefone,
+      email_responsavel: dados.email,
+      genero_responsavel: dados.genero,
+      canal_preferido: dados.canal,
+      parentesco: dados.parentesco,
     }),
   listarResponsaveis: (idAluno: number) => post<Responsavel[]>("responsavel/listarResponsaveis.php", { id_aluno: idAluno }),
+  /** Todos os responsáveis da escola numa chamada, com os alunos de cada um. */
+  listarResponsaveisDaEscola: (busca: string | null) =>
+    post<ResponsaveisDaEscola>("responsavel/listarDaEscola.php", { busca }),
   buscarResponsavelPorCpf: (cpf: string) =>
-    post<Responsavel>("responsavel/buscarResponsavelPorCpf.php", { cpf_responsavel: cpf }),
-  vincularResponsavel: (idAluno: number, idResponsavel: number) =>
-    post<null>("responsavel/vincularResponsavel.php", { id_aluno: idAluno, id_responsavel: idResponsavel }),
+    post<ResponsavelEncontrado>("responsavel/buscarResponsavelPorCpf.php", { cpf_responsavel: cpf }),
+  vincularResponsavel: (idAluno: number, idResponsavel: number, parentesco: string | null = null) =>
+    post<null>("responsavel/vincularResponsavel.php", { id_aluno: idAluno, id_responsavel: idResponsavel, parentesco }),
+  /** Só os campos enviados mudam; parentesco vale para o vínculo com idAluno. */
+  atualizarResponsavel: (
+    idResponsavel: number,
+    mudancas: {
+      nome_responsavel?: string;
+      telefone_responsavel?: string;
+      email_responsavel?: string | null;
+      genero_responsavel?: string;
+      canal_preferido?: CanalResponsavel;
+      id_aluno?: number;
+      parentesco?: string | null;
+    }
+  ) => post<{ id_responsavel: number }>("responsavel/atualizarResponsavel.php", { id_responsavel: idResponsavel, ...mudancas }),
   removerVinculoResponsavel: (idAluno: number, idResponsavel: number) =>
     post<null>("responsavel/removerVinculo.php", { id_aluno: idAluno, id_responsavel: idResponsavel }),
 
@@ -338,7 +415,7 @@ export const Api = {
    * arquivo .xml inválido. Aqui só se dispara o download do blob.
    */
   baixarRelatorioXml: async (
-    relatorio: "alertas" | "alunos" | "acompanhamentos" | "ocorrencias"
+    relatorio: "alertas" | "alunos" | "registros" | "acompanhamentos" | "ocorrencias"
   ): Promise<{ sucesso: boolean; mensagem: string }> => {
     const token = obterToken();
     if (!token) {
@@ -392,7 +469,10 @@ export const Api = {
   listarPresencas: (data: string, idSala: number | null) =>
     post<PresencasDoDia>("presenca/listar.php", { data, id_sala: idSala }),
   registrarPresencaManual: (idAluno: number) =>
-    post<{ presenca: { nova: boolean; registrada_em: string } }>("presenca/registrar.php", { id_aluno: idAluno, metodo: "manual" }),
+    post<{
+      presenca: { nova: boolean; registrada_em: string };
+      entrada: { situacao: "no_horario" | "atrasada" | "fora_do_horario" | "sem_aula"; id_atraso: number | null } | null;
+    }>("presenca/registrar.php", { id_aluno: idAluno, metodo: "manual" }),
 
   // Biometria (o cadastro é feito no app; aqui só a consulta e a eliminação - LGPD)
   excluirBiometria: (idAluno: number, tipo: "facial" | "digital" | "todas") =>
@@ -417,6 +497,35 @@ export const Api = {
   abrirChamado: (categoria: CategoriaChamado, assunto: string, mensagem: string) =>
     post<ChamadoSuporte>("suporte/abrirChamado.php", { categoria, assunto, mensagem }),
   listarChamados: () => post<ChamadoSuporte[]>("suporte/listarChamados.php", {}),
+
+  // Escola (migração 008): toda a equipe vê; só a gestão altera.
+  configuracaoEscola: (ano?: number) => post<DadosEscola>("escola/configuracao.php", ano ? { ano } : {}),
+  salvarConfiguracaoEscola: (mudancas: Partial<ConfiguracaoEscola>) =>
+    post<ConfiguracaoEscola>("escola/salvarConfiguracao.php", { ...mudancas }),
+  /** horário null volta ao padrão do período. */
+  salvarTurma: (idSala: number, mudancas: { nome_sala?: string; periodo_sala?: string; horario_inicio?: string | null; horario_fim?: string | null }) =>
+    post<Sala>("escola/salvarTurma.php", { id_sala: idSala, ...mudancas }),
+  adicionarCalendario: (dataInicio: string, dataFim: string, tipo: TipoCalendario, descricao: string) =>
+    post<ItemCalendario>("escola/adicionarCalendario.php", { data_inicio: dataInicio, data_fim: dataFim, tipo, descricao }),
+  removerCalendario: (idCalendario: number) => post<null>("escola/removerCalendario.php", { id_calendario: idCalendario }),
+  equipe: () => post<{ equipe: MembroEquipe[]; pendentes: number; pode_editar: boolean }>("escola/equipe.php", {}),
+  atualizarMembro: (idCoordenacao: number, acao: AcaoEquipe) =>
+    post<MembroEquipe>("escola/atualizarMembro.php", { id_coordenacao: idCoordenacao, acao }),
+
+  // Equipe do sistema (tela /admin; a API responde 404 para as outras contas)
+  adminResumo: () => post<ResumoSistema>("admin/resumo.php", {}),
+  adminEscolas: (busca: string, emUso: boolean, pagina: number) =>
+    post<ListaPaginada & { escolas: EscolaAdmin[] }>("admin/escolas.php", { busca, em_uso: emUso, pagina }),
+  adminContas: (busca: string, situacao: SituacaoConta | null, pagina: number) =>
+    post<ListaPaginada & { contas: ContaAdmin[] }>("admin/contas.php", { busca, situacao, pagina }),
+  adminAtualizarConta: (idCoordenacao: number, acao: AcaoEquipe | "mover_escola", idEscola?: number) =>
+    post<MembroEquipe>("admin/atualizarConta.php", { id_coordenacao: idCoordenacao, acao, ...(idEscola ? { id_escola: idEscola } : {}) }),
+  adminChamados: (status: StatusChamado | null, pagina: number) =>
+    post<ListaPaginada & { chamados: ChamadoAdmin[] }>("admin/chamados.php", { status, pagina }),
+  adminResponderChamado: (idChamado: number, status: Exclude<StatusChamado, "aberto">, resposta: string | null) =>
+    post<null>("admin/responderChamado.php", { id_chamado: idChamado, status, resposta }),
+  adminImportarCatalogo: () =>
+    post<{ total: number; inseridas: number; atualizadas: number; vinculadas: number }>("admin/importarCatalogo.php", {}),
 };
 
 export type { Alerta };

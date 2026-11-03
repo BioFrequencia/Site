@@ -2,9 +2,13 @@
 export interface Contadores {
   alertas: number;
   notificacoes: number;
-  checkins: number;
-  ocorrencias: number;
+  /** Contas aguardando a aprovação da gestão (só para a gestão). */
+  equipe: number;
+  /** Contas pendentes e chamados abertos de todas as escolas (só para a equipe do sistema). */
+  admin: number;
 }
+
+export const CONTADORES_ZERADOS: Contadores = { alertas: 0, notificacoes: 0, equipe: 0, admin: 0 };
 
 /** Alguma fila cresceu desde a última consulta? É o que toca o som de notificação. */
 export function temNovidade(antes: Contadores, agora: Contadores): boolean {

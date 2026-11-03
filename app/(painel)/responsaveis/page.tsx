@@ -1,148 +1,238 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Api } from "@/lib/api";
-import type { AlunoFiltro, Responsavel } from "@/lib/types";
 import { Topbar } from "@/components/Topbar";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
+import { ModalEditarResponsavel, ModalResponsavel } from "@/components/ModalResponsavel";
 import { formatarCpf, formatarTelefone } from "@/lib/format";
+import { ROTULOS_CANAL_RESPONSAVEL, type AlunoFiltro, type ResponsaveisDaEscola, type ResponsavelDaEscola } from "@/lib/types";
 
 /**
- * Visão geral dos responsáveis por aluno.
+ * Responsáveis da escola: quem recebe os avisos quando um aluno passa do
+ * limite de entradas atrasadas ou saídas antecipadas.
  *
- * O cadastro em si já existia, mas só dentro da ficha de cada aluno -
- * sem entrada no menu, ninguém encontrava, e a impressão era de que o
- * sistema não cadastrava responsáveis. Esta tela mostra quem tem e quem
- * não tem responsável vinculado, e leva direto para a ficha onde o
- * cadastro é feito. Nenhum endpoint novo foi criado para isso.
+ * Uma chamada só (responsavel/listarDaEscola.php) - antes a tela buscava
+ * a lista de alunos e depois os responsáveis de cada aluno, um por um.
  */
 export default function ResponsaveisPage() {
   const { mostrarToast } = useToast();
-  const [linhas, setLinhas] = useState<{ aluno: AlunoFiltro; responsaveis: Responsavel[] }[]>([]);
+  const [dados, setDados] = useState<ResponsaveisDaEscola | null>(null);
+  const [alunos, setAlunos] = useState<AlunoFiltro[]>([]);
+  const [busca, setBusca] = useState("");
   const [carregando, setCarregando] = useState(true);
-  const [apenasSemResponsavel, setApenasSemResponsavel] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [aba, setAba] = useState<"responsaveis" | "sem">("responsaveis");
+  const [adicionarPara, setAdicionarPara] = useState<{ id_aluno: number; nome_aluno: string; turma?: string | null } | null>(null);
+  const [adicionarEscolhendo, setAdicionarEscolhendo] = useState(false);
+  const [editando, setEditando] = useState<ResponsavelDaEscola | null>(null);
 
   const carregar = useCallback(async () => {
     setCarregando(true);
-    const lista = await Api.filtrarAlunos(null, null, null, 1, 200);
-    if (!lista.sucesso || !lista.dados) {
-      setCarregando(false);
-      if (!lista.naoAutenticado) mostrarToast(lista.mensagem, true);
-      return;
+    const resposta = await Api.listarResponsaveisDaEscola(busca.trim() || null);
+    if (resposta.sucesso && resposta.dados) {
+      setDados(resposta.dados);
+      setErro(null);
+    } else {
+      setErro(resposta.mensagem);
     }
-    // Sequencial, pelo mesmo motivo dos contadores do painel: disparar
-    // dezenas de chamadas juntas derrubava parte delas no plano gratuito
-    // do banco.
-    const resultado: { aluno: AlunoFiltro; responsaveis: Responsavel[] }[] = [];
-    for (const aluno of lista.dados.alunos) {
-      const resposta = await Api.listarResponsaveis(aluno.id_aluno);
-      resultado.push({ aluno, responsaveis: resposta.dados ?? [] });
-    }
-    setLinhas(resultado);
     setCarregando(false);
-  }, [mostrarToast]);
+  }, [busca]);
 
   useEffect(() => {
-    carregar();
+    const espera = setTimeout(carregar, 250);
+    return () => clearTimeout(espera);
   }, [carregar]);
 
-  const visiveis = apenasSemResponsavel
-    ? linhas.filter((l) => l.responsaveis.length === 0)
-    : linhas;
-  const semResponsavel = linhas.filter((l) => l.responsaveis.length === 0).length;
+  useEffect(() => {
+    Api.filtrarAlunos(null, null, null, 1, 500).then((resposta) => {
+      if (resposta.sucesso && resposta.dados) setAlunos(resposta.dados.alunos);
+    });
+  }, []);
+
+  const semResponsavel = dados?.sem_responsavel ?? [];
+  // Com um aluno só, o parentesco com ele também é editável. Memorizado: um
+  // objeto novo a cada render reiniciaria o formulário enquanto se digita.
+  const responsavelEditado = useMemo(
+    () => (editando ? { ...editando, parentesco: editando.alunos.length === 1 ? editando.alunos[0].parentesco : null } : null),
+    [editando]
+  );
 
   return (
     <>
       <Topbar
         titulo="Responsáveis"
-        subtitulo="Quem a escola aciona quando um aluno precisa de atenção."
+        subtitulo="Quem a escola avisa quando um aluno passa do limite de entradas atrasadas ou saídas antecipadas."
+        acoes={
+          <button type="button" className="btn btn-primary" onClick={() => setAdicionarEscolhendo(true)}>
+            <Icon name="plus" /> Adicionar responsável
+          </button>
+        }
       />
 
-      <div className="panel">
-        {!carregando && semResponsavel > 0 && (
-          <div className="aviso-inline">
-            <Icon name="alert" />
-            <span>
-              <b>{semResponsavel}</b>{" "}
-              {semResponsavel === 1 ? "aluno não tem" : "alunos não têm"} responsável
-              cadastrado. Sem isso o sistema não consegue avisar ninguém quando o alerta
-              chega ao nível máximo.
-            </span>
-          </div>
-        )}
+      {semResponsavel.length > 0 && (
+        <div className="aviso-dia">
+          <Icon name="alert" />
+          <span>
+            <b>{semResponsavel.length}</b> {semResponsavel.length === 1 ? "aluno não tem" : "alunos não têm"} responsável
+            cadastrado: a escola não consegue avisar a família quando {semResponsavel.length === 1 ? "ele passar" : "eles passarem"} do
+            limite.{" "}
+            <button type="button" className="btn-text" onClick={() => setAba("sem")}>
+              Ver quem
+            </button>
+          </span>
+        </div>
+      )}
 
-        <div className="filtros-linha">
-          <button
-            type="button"
-            className={`btn btn-sm${apenasSemResponsavel ? " btn-primary" : ""}`}
-            onClick={() => setApenasSemResponsavel((v) => !v)}
-          >
-            {apenasSemResponsavel ? "Mostrando só os sem responsável" : "Só alunos sem responsável"}
-          </button>
+      <div className="panel">
+        <div className="filter-bar" style={{ marginBottom: 18 }}>
+          <div className="abas-mini" role="tablist">
+            <button type="button" role="tab" aria-selected={aba === "responsaveis"} className={aba === "responsaveis" ? "ativa" : ""} onClick={() => setAba("responsaveis")}>
+              Responsáveis ({dados?.responsaveis.length ?? 0})
+            </button>
+            <button type="button" role="tab" aria-selected={aba === "sem"} className={aba === "sem" ? "ativa" : ""} onClick={() => setAba("sem")}>
+              Alunos sem responsável ({semResponsavel.length})
+            </button>
+          </div>
+          {aba === "responsaveis" && (
+            <div className="search-box" style={{ width: 280 }}>
+              <Icon name="search" />
+              <input placeholder="Nome, CPF, telefone ou aluno" value={busca} onChange={(e) => setBusca(e.target.value)} />
+            </div>
+          )}
         </div>
 
-        {carregando ? (
-          <div className="estado-vazio">
-            <div className="spinner" aria-label="Carregando" />
-            <p>Carregando responsáveis…</p>
-          </div>
-        ) : visiveis.length === 0 ? (
-          <div className="estado-vazio">
-            <Icon name="shield" />
-            <p>
-              {apenasSemResponsavel
-                ? "Todos os alunos têm responsável cadastrado."
-                : "Nenhum aluno cadastrado ainda."}
-            </p>
-          </div>
-        ) : (
-          <div className="tabela-rolavel">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Aluno</th>
-                  <th>Turma</th>
-                  <th>Responsáveis</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {visiveis.map(({ aluno, responsaveis }) => (
-                  <tr key={aluno.id_aluno}>
-                    <td>{aluno.nome_aluno}</td>
-                    <td>{aluno.turma ?? "—"}</td>
-                    <td>
-                      {responsaveis.length === 0 ? (
-                        <span className="badge badge--em-risco">Sem responsável</span>
-                      ) : (
+        {erro && <div className="error-block">{erro}</div>}
+        {carregando && !dados && <div className="loading-block skeleton-bloco">Carregando responsáveis…</div>}
+
+        {dados && aba === "responsaveis" && (
+          dados.responsaveis.length === 0 ? (
+            <div className="empty-state">
+              <Icon name="shield" />
+              <p>{busca ? "Nenhum responsável encontrado com essa busca." : "Nenhum responsável cadastrado ainda."}</p>
+            </div>
+          ) : (
+            <div className="tabela-rolavel">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Responsável</th>
+                    <th>Contato</th>
+                    <th>Avisos por</th>
+                    <th>Alunos</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dados.responsaveis.map((r) => (
+                    <tr key={r.id_responsavel}>
+                      <td>
+                        <b>{r.nome_responsavel}</b>
+                        <div className="panel-meta">CPF {formatarCpf(r.cpf_responsavel)}</div>
+                      </td>
+                      <td>
+                        {formatarTelefone(r.telefone_responsavel)}
+                        {r.email_responsavel && <div className="panel-meta">{r.email_responsavel}</div>}
+                      </td>
+                      <td>{ROTULOS_CANAL_RESPONSAVEL[r.canal_preferido ?? "whatsapp"]}</td>
+                      <td>
                         <ul className="lista-responsaveis">
-                          {responsaveis.map((r) => (
-                            <li key={r.id_responsavel}>
-                              <b>{r.nome_responsavel}</b>
+                          {r.alunos.map((a) => (
+                            <li key={a.id_aluno}>
+                              <Link href={`/turmas/${a.id_aluno}`} className="link-forte">
+                                {a.nome_aluno}
+                              </Link>
                               <span>
-                                {formatarCpf(r.cpf_responsavel)} ·{" "}
-                                {formatarTelefone(r.telefone_responsavel)}
-                                {r.email_responsavel ? ` · ${r.email_responsavel}` : ""}
+                                {a.nome_sala}
+                                {a.parentesco && ` · ${a.parentesco}`}
                               </span>
                             </li>
                           ))}
                         </ul>
-                      )}
-                    </td>
-                    <td style={{ textAlign: "right" }}>
-                      <Link href={`/turmas/${aluno.id_aluno}`} className="btn btn-sm">
-                        {responsaveis.length === 0 ? "Cadastrar" : "Gerenciar"}
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        <button type="button" className="btn btn-sm" onClick={() => setEditando(r)}>
+                          Editar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        )}
+
+        {dados && aba === "sem" && (
+          semResponsavel.length === 0 ? (
+            <div className="empty-state">
+              <Icon name="check" />
+              <p>Todos os alunos têm responsável cadastrado.</p>
+            </div>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Aluno</th>
+                  <th>Turma</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {semResponsavel.map((a) => (
+                  <tr key={a.id_aluno}>
+                    <td>
+                      <Link href={`/turmas/${a.id_aluno}`} className="link-forte">
+                        {a.nome_aluno}
                       </Link>
+                    </td>
+                    <td>{a.nome_sala}</td>
+                    <td style={{ textAlign: "right" }}>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-primary"
+                        onClick={() => setAdicionarPara({ id_aluno: a.id_aluno, nome_aluno: a.nome_aluno, turma: a.nome_sala })}
+                      >
+                        <Icon name="plus" /> Responsável
+                      </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          )
         )}
       </div>
+
+      <ModalResponsavel
+        aberto={!!adicionarPara || adicionarEscolhendo}
+        aluno={adicionarPara ?? undefined}
+        alunos={adicionarPara ? undefined : alunos.map((a) => ({ id_aluno: a.id_aluno, nome_aluno: a.nome_aluno, turma: a.turma }))}
+        onFechar={() => {
+          setAdicionarPara(null);
+          setAdicionarEscolhendo(false);
+        }}
+        onSalvo={(mensagem) => {
+          setAdicionarPara(null);
+          setAdicionarEscolhendo(false);
+          mostrarToast(mensagem);
+          carregar();
+        }}
+      />
+
+      <ModalEditarResponsavel
+        responsavel={responsavelEditado}
+        idAluno={editando?.alunos.length === 1 ? editando.alunos[0].id_aluno : undefined}
+        nomeAluno={editando?.alunos.length === 1 ? editando.alunos[0].nome_aluno : undefined}
+        onFechar={() => setEditando(null)}
+        onSalvo={(mensagem) => {
+          setEditando(null);
+          mostrarToast(mensagem);
+          carregar();
+        }}
+      />
     </>
   );
 }

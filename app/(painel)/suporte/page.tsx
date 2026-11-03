@@ -56,11 +56,13 @@ const PERGUNTAS: { pergunta: string; resposta: ReactNode }[] = [
     ),
   },
   {
-    pergunta: 'Por que o sistema não deixa lançar a mesma falta duas vezes?',
+    pergunta: "Por que o sistema recusou uma entrada atrasada?",
     resposta: (
       <>
-        Cada aluno tem no máximo uma falta e um atraso por dia, para a frequência e os alertas não contarem em dobro. Se a
-        falta do dia está errada, abra um chamado informando o aluno e a data.
+        Ela só existe num dia de aula e dentro do horário da turma: fins de semana, feriados e dias sem aula da escola são
+        recusados, assim como uma chegada dentro da tolerância ou fora do período da turma (o aluno da manhã à tarde). Cada
+        aluno tem no máximo uma entrada atrasada e uma saída antecipada por dia. Registro feito por engano: a gestão apaga na
+        ficha do aluno. Faltas não são registradas aqui - ficam na Sala do Futuro.
       </>
     ),
   },

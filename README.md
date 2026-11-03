@@ -1,16 +1,15 @@
 # BioFrequência — Site (painel web)
 
 Painel web (Next.js/React, App Router, TypeScript) do sistema
-BioFrequência (TCC): faz o mesmo que o software desktop (login,
-dashboard, alertas, turmas/alunos, acompanhamento, relatórios,
-responsáveis, notificações, check-ins biométricos) direto no navegador,
-sem instalar nada, mais uma página pública de downloads do software
-desktop e do app do aluno.
+BioFrequência (TCC). O sistema registra as **entradas atrasadas** e as
+**saídas antecipadas** dos alunos (as faltas ficam na Sala do Futuro) e
+avisa as famílias quando viram rotina. No site, a coordenação registra
+na portaria, acompanha os alertas, cuida dos alunos e responsáveis,
+configura a escola e tira relatórios; a página pública de downloads tem
+o app de biometria do tablet.
 
-Consome exatamente a mesma `BioFrequenciaApi` já usada pelo desktop e
-pelo app — nenhum endpoint novo foi criado para o site. Ver
-`../AUDITORIA.md` (raiz deste repositório) para o histórico completo de
-diagnóstico e o que foi testado nesta rodada.
+Consome a `BioFrequenciaApi` (a mesma do app). A tela **Como funciona**
+(`/como-funciona`) explica o sistema e cada página para quem usa.
 
 ## Dependências
 
@@ -55,7 +54,7 @@ npm start
 ## Testes/verificação
 
 ```bash
-npm test           # regras de endereço da API, sessão expirada e fuso (lib/*.test.ts)
+npm test           # endereço da API, sessão, fuso, preferências, avisos e gráficos (lib/*.test.ts)
 npx tsc --noEmit   # checagem de tipos
 npm run lint       # ESLint (eslint-config-next)
 npm run build      # build de produção completo
@@ -100,6 +99,20 @@ instalador do desktop aparece como "Em breve".
 Para quem está logado, a barra mostra "Voltar ao painel" (a página é
 aberta também pelo menu do painel).
 
+## Gráficos e animações
+
+Os gráficos do dashboard usam [Recharts](https://recharts.org) no estilo
+dos exemplos do shadcn/ui ("Area Chart" e "Radial Chart - Shape"), sem
+Tailwind: as cores vêm dos tokens `--grafico-*` de `app/globals.css`, que
+mudam no tema escuro. O par de cores das séries passou no validador de
+paleta (separação para daltonismo, luminosidade e contraste) nos dois
+temas. Cada gráfico tem dica ao passar o mouse, legenda e a tabela com
+os números ("Ver os números").
+
+As telas entram em cascata, os números contam até o valor, as barras
+crescem e os contadores do menu pulsam quando mudam. Com "reduzir
+movimento" ligado no sistema, nada anima (CSS e `lib/movimento.ts`).
+
 ## Estrutura
 
 ```
@@ -111,21 +124,32 @@ app/
   login/, cadastro/            telas públicas de autenticação
   downloads/                   página pública de downloads
   (painel)/layout.tsx          guarda de autenticação + Sidebar (telas internas)
-  (painel)/dashboard/          gauge de frequência, evolução, turmas, prioridade
-  (painel)/alertas/            filtros + lista de alertas + encerrar
-  (painel)/turmas/             listagem/filtro de alunos + cadastro
-  (painel)/turmas/[id]/        detalhe do aluno: histórico, biometria digital,
+  (painel)/dashboard/          pontualidade do mês (anel), entradas e saídas por mês,
+                                pontualidade por turma e quem precisa de atenção
+  (painel)/registros/          Entradas e saídas: registrar na portaria e ver o dia
+  (painel)/alertas/            alunos acima ou perto do limite da escola
+  (painel)/turmas/             turmas (com horário) e alunos, com a situação de cada um
+  (painel)/turmas/[id]/        ficha do aluno: indicador, entradas e saídas, biometria,
                                 responsáveis, acompanhamento
+  (painel)/responsaveis/       todos os responsáveis e quem ainda não tem nenhum
+  (painel)/escola/             dados do catálogo, horários, calendário, regras de aviso e
+                                equipe (só a gestão altera)
+  (painel)/admin/              equipe do sistema: contas, escolas e chamados
+  (painel)/como-funciona/      o guia do sistema e de cada página
   (painel)/acompanhamento/     timeline global de contatos com responsáveis
   (painel)/relatorios/         exportação de CSV (5 relatórios, mesmos do desktop)
-  (painel)/notificacoes/       fila de notificações pendentes/enviadas
-  (painel)/checkins/           fila de check-ins biométricos pendentes
+  (painel)/notificacoes/       avisos às famílias: enviados, na fila e com erro
+  (painel)/ocorrencias/,       telas do celular do aluno (fluxo anterior), fora do menu
+  (painel)/checkins/
   (painel)/conta/              Minha conta: perfil, senha, preferências (tema e
                                 sons) e dispositivos conectados
   (painel)/suporte/            perguntas frequentes e chamados para a equipe
 components/                    Sidebar, Topbar, Modal, Toast, Icon, Logo,
                                AlternarTema (botão claro/escuro no topo das telas),
-                               Preferencias (preferências da conta no site todo)
+                               Preferencias (preferências da conta no site todo),
+                               Graficos (área e radial), NumeroAnimado,
+                               ModalRegistro (entrada atrasada / saída antecipada),
+                               ModalResponsavel (CPF, depois vincular ou cadastrar)
 lib/
   tema.ts                      tema claro/escuro: escolha guardada no navegador ou,
                                 sem escolha, o do sistema; script do <head> que
@@ -133,6 +157,9 @@ lib/
   preferencias.ts              preferências da conta (tema e sons) <-> formato da API
   sons.ts                      sons do site (Web Audio): confirmação, notificação e erro
   contadores.ts                quando as filas do menu crescem (som de notificação)
+  graficos.ts                  rodapé do gráfico (média por dia de aula) e barras das turmas
+  avisos.ts                    o que os avisos aos responsáveis fizeram depois de um registro
+  movimento.ts                 "reduzir movimento" do sistema e a contagem animada
   config.ts                    endereço da API e do APK (testado em config.test.ts)
   api.ts                       cliente HTTP (mesmo contrato do clsApiService.cs)
   auth.tsx                     AuthContext (sessão em localStorage, confere o "exp")
@@ -145,7 +172,7 @@ public/sons/                   daylight, bloom e shrug (React Bits, licença MIT
 ### Sons e preferências
 
 Todo aviso de sucesso toca o **daylight** (ex.: presença registrada) e todo
-aviso de erro, o **shrug** (ex.: tentar lançar duas faltas no mesmo dia),
+aviso de erro, o **shrug** (ex.: entrada atrasada fora do horário da turma),
 pelo `components/Toast.tsx`. Quando uma fila do menu cresce (alerta,
 notificação, check-in ou ocorrência nova), toca o **bloom**. Os sons só
 tocam depois de a pessoa interagir com a página (regra dos navegadores)

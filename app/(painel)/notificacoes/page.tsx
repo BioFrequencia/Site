@@ -7,6 +7,7 @@ import { Topbar } from "@/components/Topbar";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
 import { formatarDataHora, formatarTelefone } from "@/lib/format";
+import { rotuloTipoAviso } from "@/lib/avisos";
 import type { Notificacao, StatusNotificacao } from "@/lib/types";
 
 export default function NotificacoesPage() {
@@ -115,6 +116,10 @@ export default function NotificacoesPage() {
                       </div>
                     </td>
                     <td style={{ maxWidth: 320 }}>
+                      <div className="panel-meta">
+                        {rotuloTipoAviso(notificacao.tipo_aviso)}
+                        {notificacao.canal && notificacao.canal !== "manual" && ` · ${notificacao.canal === "email" ? "e-mail" : "WhatsApp"}`}
+                      </div>
                       <MensagemNotificacao mensagem={notificacao.mensagem} />
                     </td>
                     <td>

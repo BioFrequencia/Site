@@ -7,35 +7,84 @@ import { Api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
 import { AlternarTema } from "@/components/AlternarTema";
+import { Icon } from "@/components/Icon";
+import type { EscolaCatalogo } from "@/lib/types";
+
+/** "SAO BERNARDO DO CAMPO" -> "Sao Bernardo do Campo" (o catálogo vem em maiúsculas). */
+function emTitulo(texto: string | null): string {
+  if (!texto) return "";
+  return texto
+    .toLowerCase()
+    .split(" ")
+    .map((palavra, i) => (i > 0 && ["de", "da", "do", "das", "dos", "e"].includes(palavra) ? palavra : palavra.charAt(0).toUpperCase() + palavra.slice(1)))
+    .join(" ");
+}
 
 export default function CadastroPage() {
   const { autenticado, carregando } = useAuth();
   const router = useRouter();
 
   const [nome, setNome] = useState("");
-  const [nomeEscola, setNomeEscola] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
   const [codigoAcesso, setCodigoAcesso] = useState("");
+
+  // Escola: escolhida no catálogo da SEDUC ou, se não estiver nele, nova.
+  const [buscaEscola, setBuscaEscola] = useState("");
+  const [resultados, setResultados] = useState<EscolaCatalogo[]>([]);
+  const [buscando, setBuscando] = useState(false);
+  const [escola, setEscola] = useState<EscolaCatalogo | null>(null);
+  const [foraDoCatalogo, setForaDoCatalogo] = useState(false);
+  const [nomeEscola, setNomeEscola] = useState("");
+  const [municipio, setMunicipio] = useState("");
+
   const [erro, setErro] = useState<string | null>(null);
-  const [sucesso, setSucesso] = useState(false);
+  const [concluido, setConcluido] = useState<{ mensagem: string; pendente: boolean } | null>(null);
   const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
     if (!carregando && autenticado) router.replace("/dashboard");
   }, [carregando, autenticado, router]);
 
+  useEffect(() => {
+    const termo = buscaEscola.trim();
+    if (escola || foraDoCatalogo || termo.length < 3) {
+      setResultados([]);
+      return;
+    }
+    let ativo = true;
+    const espera = setTimeout(async () => {
+      setBuscando(true);
+      const resposta = await Api.buscarEscolas(termo);
+      if (!ativo) return;
+      setBuscando(false);
+      setResultados(resposta.sucesso && resposta.dados ? resposta.dados.escolas : []);
+    }, 300);
+    return () => {
+      ativo = false;
+      clearTimeout(espera);
+    };
+  }, [buscaEscola, escola, foraDoCatalogo]);
+
   async function aoEnviar(evento: FormEvent) {
     evento.preventDefault();
     setErro(null);
 
-    if (!nome.trim() || !nomeEscola.trim() || !email.trim() || !senha) {
-      setErro("Preencha o nome da coordenação, o da escola, o email e a senha.");
+    if (!escola && !foraDoCatalogo) {
+      setErro("Escolha a escola na busca (ou marque que ela não está na lista).");
+      return;
+    }
+    if (foraDoCatalogo && (!nomeEscola.trim() || !municipio.trim())) {
+      setErro("Informe o nome da escola e o município.");
+      return;
+    }
+    if (!nome.trim() || !email.trim() || !senha) {
+      setErro("Preencha seu nome, o email e a senha.");
       return;
     }
     if (!codigoAcesso.trim()) {
-      setErro("Informe o código de acesso da escola.");
+      setErro("Informe o código de acesso.");
       return;
     }
     if (senha.length < 6) {
@@ -48,16 +97,22 @@ export default function CadastroPage() {
     }
 
     setEnviando(true);
-    const resposta = await Api.cadastrarCoordenacao(nome.trim(), email.trim(), senha, codigoAcesso.trim(), nomeEscola.trim());
+    const resposta = await Api.cadastrarCoordenacao(
+      nome.trim(),
+      email.trim(),
+      senha,
+      codigoAcesso.trim(),
+      escola ? { id_escola: escola.id_escola } : { nome_escola: nomeEscola.trim(), municipio: municipio.trim() }
+    );
     setEnviando(false);
 
-    if (!resposta.sucesso) {
+    if (!resposta.sucesso || !resposta.dados) {
       setErro(resposta.mensagem || "Não foi possível concluir o cadastro.");
       return;
     }
-
-    setSucesso(true);
-    setTimeout(() => router.replace("/login"), 1600);
+    const pendente = resposta.dados.situacao === "pendente";
+    setConcluido({ mensagem: resposta.mensagem, pendente });
+    if (!pendente) setTimeout(() => router.replace("/login"), 2200);
   }
 
   return (
@@ -67,9 +122,8 @@ export default function CadastroPage() {
           <Logo tamanho={56} className="logo-sobre-indigo auth-logo" />
           <h1>Crie a conta da sua coordenação</h1>
           <p>
-            Cada coordenação funciona como uma escola independente: cadastre suas turmas, alunos e
-            responsáveis, acompanhe a frequência e use o app de biometria para registrar as
-            presenças.
+            Escolha a sua escola entre as 5.795 escolas estaduais de São Paulo. A primeira conta de cada escola vira a gestão e
+            aprova quem entrar depois - os alunos e os responsáveis de uma escola nunca aparecem para outra.
           </p>
         </div>
       </div>
@@ -83,76 +137,148 @@ export default function CadastroPage() {
           <h2>Cadastrar coordenação</h2>
           <p className="auth-sub">Leva menos de um minuto.</p>
 
-          <label htmlFor="nome">Nome da coordenação</label>
-          <input id="nome" type="text" value={nome} onChange={(e) => setNome(e.target.value)} required />
+          {concluido ? (
+            <div className={`auth-concluido${concluido.pendente ? " pendente" : ""}`}>
+              <Icon name={concluido.pendente ? "clock" : "check"} />
+              <p>{concluido.mensagem}</p>
+              {concluido.pendente ? (
+                <p className="auth-sub">Quando a gestão aprovar, é só entrar com o seu email e senha.</p>
+              ) : (
+                <p className="auth-sub">Redirecionando para o login…</p>
+              )}
+              <Link href="/login" className="btn btn-primary">
+                Ir para o login
+              </Link>
+            </div>
+          ) : (
+            <>
+              <label htmlFor="buscaEscola">Escola</label>
+              {escola ? (
+                <div className="escola-escolhida">
+                  <div>
+                    <b>{escola.nome_escola}</b>
+                    <span>
+                      {emTitulo(escola.municipio)}
+                      {escola.bairro && ` · ${emTitulo(escola.bairro)}`} · CIE {escola.codigo_cie}
+                    </span>
+                    {escola.tem_gestao && (
+                      <span className="aviso-escola">
+                        Esta escola já usa o BioFrequência: a sua conta vai aguardar a aprovação da gestão.
+                      </span>
+                    )}
+                  </div>
+                  <button type="button" className="btn-text" onClick={() => setEscola(null)}>
+                    Trocar
+                  </button>
+                </div>
+              ) : foraDoCatalogo ? (
+                <div className="escola-nova">
+                  <input
+                    id="nomeEscola"
+                    type="text"
+                    maxLength={150}
+                    placeholder="Nome da escola"
+                    value={nomeEscola}
+                    onChange={(e) => setNomeEscola(e.target.value)}
+                  />
+                  <input
+                    type="text"
+                    maxLength={60}
+                    placeholder="Município"
+                    aria-label="Município"
+                    value={municipio}
+                    onChange={(e) => setMunicipio(e.target.value)}
+                  />
+                  <button type="button" className="btn-text" onClick={() => setForaDoCatalogo(false)}>
+                    Voltar para a busca
+                  </button>
+                </div>
+              ) : (
+                <div className="busca-escola">
+                  <input
+                    id="buscaEscola"
+                    type="search"
+                    autoComplete="off"
+                    placeholder="Nome, município ou código CIE"
+                    value={buscaEscola}
+                    onChange={(e) => setBuscaEscola(e.target.value)}
+                  />
+                  {buscando && <p className="auth-sub">Procurando…</p>}
+                  {resultados.length > 0 && (
+                    <div className="lista-escolha" role="listbox" aria-label="Escolas encontradas">
+                      {resultados.map((e) => (
+                        <button type="button" role="option" aria-selected={false} key={e.id_escola} onClick={() => setEscola(e)}>
+                          <span>{e.nome_escola}</span>
+                          <span className="panel-meta">
+                            {emTitulo(e.municipio)}
+                            {e.bairro && ` · ${emTitulo(e.bairro)}`}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {!buscando && buscaEscola.trim().length >= 3 && resultados.length === 0 && (
+                    <p className="auth-sub">Nenhuma escola encontrada. Tente outra parte do nome ou o município.</p>
+                  )}
+                  <button type="button" className="btn-text" onClick={() => setForaDoCatalogo(true)}>
+                    Minha escola não está na lista
+                  </button>
+                </div>
+              )}
 
-          {/* A conta nova ganha uma escola própria: as turmas e os alunos
-              dela não aparecem para nenhuma outra coordenação. */}
-          <label htmlFor="nomeEscola">Nome da escola</label>
-          <input
-            id="nomeEscola"
-            type="text"
-            maxLength={150}
-            value={nomeEscola}
-            onChange={(e) => setNomeEscola(e.target.value)}
-            required
-          />
+              <label htmlFor="nome">Seu nome</label>
+              <input id="nome" type="text" value={nome} onChange={(e) => setNome(e.target.value)} required />
 
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            autoComplete="username"
-            autoCapitalize="none"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="username"
+                autoCapitalize="none"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
 
-          <label htmlFor="senha">Senha</label>
-          <input
-            id="senha"
-            type="password"
-            autoComplete="new-password"
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-            required
-          />
+              <label htmlFor="senha">Senha</label>
+              <input
+                id="senha"
+                type="password"
+                autoComplete="new-password"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                required
+              />
 
-          <label htmlFor="confirmarSenha">Confirmar senha</label>
-          <input
-            id="confirmarSenha"
-            type="password"
-            autoComplete="new-password"
-            value={confirmarSenha}
-            onChange={(e) => setConfirmarSenha(e.target.value)}
-            required
-          />
+              <label htmlFor="confirmarSenha">Confirmar senha</label>
+              <input
+                id="confirmarSenha"
+                type="password"
+                autoComplete="new-password"
+                value={confirmarSenha}
+                onChange={(e) => setConfirmarSenha(e.target.value)}
+                required
+              />
 
-          {/* Sem o código, qualquer pessoa criava uma conta e via os dados
-              de todos os alunos da escola. Quem administra o sistema
-              repassa o código (CADASTRO_CODIGO_ACESSO na API). */}
-          <label htmlFor="codigoAcesso">Código de acesso da escola</label>
-          <input
-            id="codigoAcesso"
-            type="text"
-            autoComplete="off"
-            autoCapitalize="none"
-            value={codigoAcesso}
-            onChange={(e) => setCodigoAcesso(e.target.value)}
-            required
-          />
+              {/* Quem administra o sistema repassa o código (CADASTRO_CODIGO_ACESSO na API). */}
+              <label htmlFor="codigoAcesso">Código de acesso</label>
+              <input
+                id="codigoAcesso"
+                type="text"
+                autoComplete="off"
+                autoCapitalize="none"
+                value={codigoAcesso}
+                onChange={(e) => setCodigoAcesso(e.target.value)}
+                required
+              />
 
-          {erro && <p className="field-error show">{erro}</p>}
-          {sucesso && (
-            <p style={{ color: "var(--emerald-dark)", fontSize: 12, marginTop: 6 }}>
-              Cadastro concluído! Redirecionando para o login…
-            </p>
+              {erro && <p className="field-error show">{erro}</p>}
+
+              <button type="submit" className="btn btn-primary" disabled={enviando}>
+                {enviando ? "Cadastrando…" : "Cadastrar"}
+              </button>
+            </>
           )}
-
-          <button type="submit" className="btn btn-primary" disabled={enviando || sucesso}>
-            {enviando ? "Cadastrando…" : "Cadastrar"}
-          </button>
 
           <p className="auth-switch">
             Já tem conta? <Link href="/login">Entrar</Link>
