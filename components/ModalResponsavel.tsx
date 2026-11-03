@@ -237,7 +237,7 @@ export function ModalResponsavel({
             <button type="button" className="btn" onClick={onFechar}>
               Cancelar
             </button>
-            <button type="submit" className="btn btn-primary" disabled={enviando}>
+            <button type="submit" className="btn btn-primary" disabled={enviando} aria-busy={enviando}>
               {enviando ? "Procurando…" : "Continuar"}
             </button>
           </div>
@@ -272,7 +272,7 @@ export function ModalResponsavel({
             <button type="button" className="btn" onClick={() => setEtapa("cpf")}>
               Voltar
             </button>
-            <button type="button" className="btn btn-primary" onClick={vincular} disabled={enviando || jaVinculado}>
+            <button type="button" className="btn btn-primary" onClick={vincular} disabled={enviando || jaVinculado} aria-busy={enviando}>
               {enviando ? "Vinculando…" : `Vincular a ${escolhido?.nome_aluno.split(" ")[0] ?? "o aluno"}`}
             </button>
           </div>
@@ -329,7 +329,7 @@ export function ModalResponsavel({
             <button type="button" className="btn" onClick={() => setEtapa("cpf")}>
               Voltar
             </button>
-            <button type="submit" className="btn btn-primary" disabled={enviando}>
+            <button type="submit" className="btn btn-primary" disabled={enviando} aria-busy={enviando}>
               {enviando ? "Salvando…" : "Cadastrar e vincular"}
             </button>
           </div>
@@ -464,7 +464,7 @@ export function ModalEditarResponsavel({
           <button type="button" className="btn" onClick={onFechar}>
             Cancelar
           </button>
-          <button type="submit" className="btn btn-primary" disabled={enviando}>
+          <button type="submit" className="btn btn-primary" disabled={enviando} aria-busy={enviando}>
             {enviando ? "Salvando…" : "Salvar"}
           </button>
         </div>

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
+import { Esqueleto } from "@/components/Esqueleto";
 import { Modal } from "@/components/Modal";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
@@ -154,7 +155,7 @@ export default function AlunoDetalhePage() {
       </button>
 
       {erro && <div className="error-block">{erro}</div>}
-      {carregando && !historico && <div className="loading-block skeleton-bloco">Carregando aluno…</div>}
+      {carregando && !historico && <Esqueleto variante="ficha" texto="Carregando o aluno…" />}
 
       {historico && (
         <div className="entrada-em-cascata">
@@ -522,7 +523,7 @@ function ModalAcompanhamento({
           <button type="button" className="btn" onClick={onFechar}>
             Cancelar
           </button>
-          <button type="submit" className="btn btn-primary" disabled={enviando}>
+          <button type="submit" className="btn btn-primary" disabled={enviando} aria-busy={enviando}>
             {enviando ? "Salvando…" : "Salvar"}
           </button>
         </div>

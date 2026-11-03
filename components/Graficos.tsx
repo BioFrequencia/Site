@@ -8,6 +8,7 @@
 // validador de paleta nos dois temas: separação para daltonismo, faixa
 // de luminosidade e contraste com o fundo do cartão.
 
+import { useId, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -21,18 +22,37 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  type DotItemDotProps,
   type TooltipContentProps,
 } from "recharts";
 import { Icon } from "./Icon";
 import { formatarDeltaPontos, formatarPercentual, nomeMesCurto, nomeMesLongo } from "@/lib/format";
 import { tendenciaDoMes } from "@/lib/graficos";
-import { useMenosMovimento } from "@/lib/movimento";
+import { useContagem, useMenosMovimento } from "@/lib/movimento";
 import type { EvolucaoMensal } from "@/lib/types";
 
 const SERIES = [
   { chave: "atrasos", rotulo: "Entradas atrasadas", cor: "var(--grafico-atrasos)" },
   { chave: "saidas", rotulo: "Saídas antecipadas", cor: "var(--grafico-saidas)" },
 ] as const;
+
+type ChaveSerie = (typeof SERIES)[number]["chave"];
+
+/** Duração da entrada do anel - o número do meio conta no mesmo ritmo. */
+const DURACAO_ANEL_MS = 1100;
+
+/** O mês mais recente de cada série ganha um ponto que pulsa: é o "agora" do gráfico. */
+function pontoDoMesAtual(cor: string, total: number) {
+  return function PontoDoMesAtual({ cx, cy, index }: DotItemDotProps) {
+    if (index !== total - 1 || cx === undefined || cy === undefined) return null;
+    return (
+      <g className="ponto-atual">
+        <circle className="ponto-atual-pulso" cx={cx} cy={cy} r={5} fill={cor} />
+        <circle cx={cx} cy={cy} r={4} fill={cor} stroke="var(--surface)" strokeWidth={2} />
+      </g>
+    );
+  };
+}
 
 /** Tooltip no estilo do shadcn (indicator="line"): mês por extenso e as duas séries. */
 function DicaDoMes({ active, payload }: TooltipContentProps<number, string>) {
@@ -63,6 +83,11 @@ function DicaDoMes({ active, payload }: TooltipContentProps<number, string>) {
  */
 export function GraficoEntradasSaidas({ meses }: { meses: EvolucaoMensal[] }) {
   const menosMovimento = useMenosMovimento();
+  const idGradiente = useId().replace(/:/g, "");
+  // Passar o mouse (ou o foco) numa legenda destaca a série; clicar fixa.
+  const [sobLegenda, setSobLegenda] = useState<ChaveSerie | null>(null);
+  const [fixada, setFixada] = useState<ChaveSerie | null>(null);
+  const destaque = sobLegenda ?? fixada;
   const dados = meses.map((mes) => ({ ...mes, rotulo: nomeMesCurto(mes.mes) }));
   const tendencia = tendenciaDoMes(meses);
 
@@ -82,9 +107,24 @@ export function GraficoEntradasSaidas({ meses }: { meses: EvolucaoMensal[] }) {
         </div>
       ) : (
         <>
-          <div className="grafico-area" role="img" aria-label="Gráfico de entradas atrasadas e saídas antecipadas por mês">
+          <div
+            className="grafico-area"
+            role="img"
+            aria-label="Gráfico de entradas atrasadas e saídas antecipadas por mês"
+            data-destaque={destaque ?? undefined}
+          >
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={dados} margin={{ left: 0, right: 12, top: 8, bottom: 0 }}>
+                {/* Degradê do "Area Chart - Gradient" do shadcn: a cor da série no
+                    alto, sumindo até a linha de base. */}
+                <defs>
+                  {SERIES.map((serie, indice) => (
+                    <linearGradient key={serie.chave} id={`${idGradiente}-${serie.chave}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" style={{ stopColor: serie.cor, stopOpacity: indice === 0 ? 0.55 : 0.45 }} />
+                      <stop offset="95%" style={{ stopColor: serie.cor, stopOpacity: 0.04 }} />
+                    </linearGradient>
+                  ))}
+                </defs>
                 <CartesianGrid vertical={false} stroke="var(--grafico-grade)" />
                 <XAxis
                   dataKey="rotulo"
@@ -113,14 +153,16 @@ export function GraficoEntradasSaidas({ meses }: { meses: EvolucaoMensal[] }) {
                     // monotone e não natural: a curva natural "passa do
                     // ponto" e desenharia contagens negativas entre os meses.
                     type="monotone"
-                    fill={serie.cor}
-                    fillOpacity={indice === 0 ? 0.4 : 0.28}
+                    className={`serie-${serie.chave}`}
+                    fill={`url(#${idGradiente}-${serie.chave})`}
                     stroke={serie.cor}
                     strokeWidth={2}
-                    activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--surface)" }}
+                    dot={pontoDoMesAtual(serie.cor, dados.length)}
+                    activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--surface)", className: "ponto-ativo" }}
                     isAnimationActive={!menosMovimento}
-                    animationDuration={900}
-                    animationBegin={indice * 150}
+                    animationDuration={1000}
+                    animationEasing="ease-out"
+                    animationBegin={indice * 180}
                   />
                 ))}
               </AreaChart>
@@ -128,9 +170,20 @@ export function GraficoEntradasSaidas({ meses }: { meses: EvolucaoMensal[] }) {
           </div>
           <div className="chart-legend">
             {SERIES.map((serie) => (
-              <span key={serie.chave}>
+              <button
+                type="button"
+                key={serie.chave}
+                className={`legenda-serie${destaque && destaque !== serie.chave ? " apagada" : ""}`}
+                aria-pressed={fixada === serie.chave}
+                title={fixada === serie.chave ? "Clique para mostrar as duas séries" : `Destacar ${serie.rotulo.toLowerCase()}`}
+                onMouseEnter={() => setSobLegenda(serie.chave)}
+                onMouseLeave={() => setSobLegenda(null)}
+                onFocus={() => setSobLegenda(serie.chave)}
+                onBlur={() => setSobLegenda(null)}
+                onClick={() => setFixada((atual) => (atual === serie.chave ? null : serie.chave))}
+              >
                 <span className="legend-dot" style={{ background: serie.cor }} /> {serie.rotulo}
-              </span>
+              </button>
             ))}
           </div>
           <div className="grafico-rodape">
@@ -194,6 +247,8 @@ export function GraficoPontualidade({
 }) {
   const menosMovimento = useMenosMovimento();
   const percentual = valor ?? 0;
+  // O número do meio conta junto com o anel.
+  const contado = useContagem(percentual, DURACAO_ANEL_MS);
   // O anel começa no alto e anda no sentido horário até a porcentagem.
   const dados = [{ nome: "pontualidade", valor: percentual, fill: "var(--grafico-atrasos)" }];
 
@@ -216,8 +271,10 @@ export function GraficoPontualidade({
               dataKey="valor"
               background={{ fill: "var(--grafico-trilha)" }}
               cornerRadius={10}
+              className="anel-pontualidade"
               isAnimationActive={!menosMovimento}
-              animationDuration={1100}
+              animationDuration={DURACAO_ANEL_MS}
+              animationEasing="ease-out"
             />
             <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
               <Label
@@ -226,7 +283,7 @@ export function GraficoPontualidade({
                   return (
                     <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
                       <tspan x={viewBox.cx} y={viewBox.cy - 4} className="grafico-radial-valor">
-                        {valor === null ? "—" : formatarPercentual(valor)}
+                        {valor === null ? "—" : formatarPercentual(contado)}
                       </tspan>
                       <tspan x={viewBox.cx} y={viewBox.cy + 20} className="grafico-radial-rotulo">
                         pontualidade

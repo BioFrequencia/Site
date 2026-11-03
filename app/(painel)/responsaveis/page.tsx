@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Api } from "@/lib/api";
 import { Topbar } from "@/components/Topbar";
+import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
 import { ModalEditarResponsavel, ModalResponsavel } from "@/components/ModalResponsavel";
@@ -105,7 +106,7 @@ export default function ResponsaveisPage() {
         </div>
 
         {erro && <div className="error-block">{erro}</div>}
-        {carregando && !dados && <div className="loading-block skeleton-bloco">Carregando responsáveis…</div>}
+        {carregando && !dados && <Esqueleto variante="lista" texto="Carregando responsáveis…" />}
 
         {dados && aba === "responsaveis" && (
           dados.responsaveis.length === 0 ? (

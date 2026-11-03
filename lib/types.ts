@@ -34,6 +34,35 @@ export interface PerfilConta {
   municipio?: string | null;
   /** Escola do catálogo da SEDUC: o nome é o oficial e não muda pelo perfil. */
   escola_do_catalogo?: boolean;
+  /** E-mail novo de uma troca que espera a confirmação pelo link (o login segue o atual). */
+  email_pendente?: string | null;
+}
+
+/** Quem libera uma conta pendente: a gestão da escola ou a equipe do sistema. */
+export type QuemAprova = "gestao" | "equipe";
+
+/** user/addCoord.php: a conta nasce pendente, com o e-mail por confirmar. */
+export interface ContaCriada {
+  nome_escola: string;
+  papel: PapelConta;
+  situacao: SituacaoConta;
+  email_verificado: boolean;
+  /** O link de confirmação saiu (false: sem provedor de e-mail ou falha no envio). */
+  email_enviado: boolean;
+  aprovacao: QuemAprova;
+}
+
+/** conta/confirmarEmail.php. */
+export interface EmailConfirmado {
+  finalidade: "cadastro" | "troca_email";
+  email: string;
+  situacao: SituacaoConta;
+  aprovacao: QuemAprova | null;
+}
+
+/** Por que o login foi recusado (dados do 403 de user/selectCoord.php). */
+export interface LoginRecusado {
+  situacao: SituacaoConta | "email_nao_confirmado";
 }
 
 /** Preferências da conta como a API guarda (conta/preferencias.php). */
@@ -544,6 +573,8 @@ export interface MembroEquipe {
   email_coordenacao?: string;
   papel: PapelConta;
   situacao: SituacaoConta;
+  /** A aprovação só libera depois que a pessoa confirma o e-mail (migração 009). */
+  email_verificado?: boolean;
   criado_em?: string | null;
   aprovado_em?: string | null;
   voce: boolean;
@@ -555,7 +586,10 @@ export interface ResumoSistema {
   escolas_em_uso: number;
   escolas_fora_catalogo: number;
   contas_ativas: number;
+  /** Pendentes que já confirmaram o e-mail: as que dá para aprovar. */
   contas_pendentes: number;
+  /** Pendentes que ainda não abriram o link do e-mail. */
+  contas_sem_email: number;
   alunos: number;
   turmas: number;
   atrasos_mes: number;
@@ -593,6 +627,7 @@ export interface ContaAdmin {
   municipio: string | null;
   ultimo_acesso: string | null;
   administrador: boolean;
+  email_verificado: boolean;
 }
 
 export interface ChamadoAdmin extends ChamadoSuporte {

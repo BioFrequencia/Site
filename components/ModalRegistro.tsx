@@ -188,7 +188,7 @@ export function ModalRegistro({
           <button type="button" className="btn" onClick={onFechar}>
             Cancelar
           </button>
-          <button type="submit" className="btn btn-primary" disabled={enviando}>
+          <button type="submit" className="btn btn-primary" disabled={enviando} aria-busy={enviando}>
             {enviando ? "Salvando…" : "Registrar"}
           </button>
         </div>

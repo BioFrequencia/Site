@@ -8,7 +8,9 @@ import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
 import { AlternarTema } from "@/components/AlternarTema";
 import { Icon } from "@/components/Icon";
-import type { EscolaCatalogo } from "@/lib/types";
+import { CampoSenha } from "@/components/CampoSenha";
+import { ReenviarLink } from "@/components/ReenviarLink";
+import type { ContaCriada, EscolaCatalogo } from "@/lib/types";
 
 /** "SAO BERNARDO DO CAMPO" -> "Sao Bernardo do Campo" (o catálogo vem em maiúsculas). */
 function emTitulo(texto: string | null): string {
@@ -28,7 +30,6 @@ export default function CadastroPage() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
-  const [codigoAcesso, setCodigoAcesso] = useState("");
 
   // Escola: escolhida no catálogo da SEDUC ou, se não estiver nele, nova.
   const [buscaEscola, setBuscaEscola] = useState("");
@@ -40,7 +41,7 @@ export default function CadastroPage() {
   const [municipio, setMunicipio] = useState("");
 
   const [erro, setErro] = useState<string | null>(null);
-  const [concluido, setConcluido] = useState<{ mensagem: string; pendente: boolean } | null>(null);
+  const [concluido, setConcluido] = useState<{ mensagem: string; conta: ContaCriada } | null>(null);
   const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
@@ -83,10 +84,6 @@ export default function CadastroPage() {
       setErro("Preencha seu nome, o email e a senha.");
       return;
     }
-    if (!codigoAcesso.trim()) {
-      setErro("Informe o código de acesso.");
-      return;
-    }
     if (senha.length < 6) {
       setErro("A senha deve ter pelo menos 6 caracteres.");
       return;
@@ -101,7 +98,6 @@ export default function CadastroPage() {
       nome.trim(),
       email.trim(),
       senha,
-      codigoAcesso.trim(),
       escola ? { id_escola: escola.id_escola } : { nome_escola: nomeEscola.trim(), municipio: municipio.trim() }
     );
     setEnviando(false);
@@ -110,9 +106,7 @@ export default function CadastroPage() {
       setErro(resposta.mensagem || "Não foi possível concluir o cadastro.");
       return;
     }
-    const pendente = resposta.dados.situacao === "pendente";
-    setConcluido({ mensagem: resposta.mensagem, pendente });
-    if (!pendente) setTimeout(() => router.replace("/login"), 2200);
+    setConcluido({ mensagem: resposta.mensagem, conta: resposta.dados });
   }
 
   return (
@@ -122,8 +116,9 @@ export default function CadastroPage() {
           <Logo tamanho={56} className="logo-sobre-indigo auth-logo" />
           <h1>Crie a conta da sua coordenação</h1>
           <p>
-            Escolha a sua escola entre as 5.795 escolas estaduais de São Paulo. A primeira conta de cada escola vira a gestão e
-            aprova quem entrar depois - os alunos e os responsáveis de uma escola nunca aparecem para outra.
+            Escolha a sua escola entre as 5.795 escolas estaduais de São Paulo e confirme o seu e-mail. Depois, a gestão da escola
+            libera o seu acesso - ou a equipe do BioFrequência, se a escola ainda não usa o sistema. Os alunos e os responsáveis
+            de uma escola nunca aparecem para outra.
           </p>
         </div>
       </div>
@@ -138,14 +133,22 @@ export default function CadastroPage() {
           <p className="auth-sub">Leva menos de um minuto.</p>
 
           {concluido ? (
-            <div className={`auth-concluido${concluido.pendente ? " pendente" : ""}`}>
-              <Icon name={concluido.pendente ? "clock" : "check"} />
+            <div className="auth-concluido pendente">
+              <Icon name="mail" className="icon auth-concluido-icone" />
               <p>{concluido.mensagem}</p>
-              {concluido.pendente ? (
-                <p className="auth-sub">Quando a gestão aprovar, é só entrar com o seu email e senha.</p>
-              ) : (
-                <p className="auth-sub">Redirecionando para o login…</p>
-              )}
+              {/* O caminho até entrar, com o passo em que a pessoa está. */}
+              <ol className="passos-acesso">
+                <li className="feito">Conta criada</li>
+                <li className="atual">
+                  Abrir o link enviado para <b>{email.trim().toLowerCase()}</b>
+                  <small>Confira também a caixa de spam. O link vale por 24 horas.</small>
+                </li>
+                <li>
+                  Aprovação {concluido.conta.aprovacao === "gestao" ? `da gestão da ${concluido.conta.nome_escola}` : "da equipe do BioFrequência"}
+                  <small>Você recebe um e-mail quando o acesso for liberado.</small>
+                </li>
+              </ol>
+              <ReenviarLink email={email.trim()} senha={senha} acabouDeEnviar={concluido.conta.email_enviado} />
               <Link href="/login" className="btn btn-primary">
                 Ir para o login
               </Link>
@@ -161,11 +164,11 @@ export default function CadastroPage() {
                       {emTitulo(escola.municipio)}
                       {escola.bairro && ` · ${emTitulo(escola.bairro)}`} · CIE {escola.codigo_cie}
                     </span>
-                    {escola.tem_gestao && (
-                      <span className="aviso-escola">
-                        Esta escola já usa o BioFrequência: a sua conta vai aguardar a aprovação da gestão.
-                      </span>
-                    )}
+                    <span className="aviso-escola">
+                      {escola.tem_gestao
+                        ? "Esta escola já usa o BioFrequência: a gestão dela aprova a sua conta."
+                        : "Esta escola ainda não usa o BioFrequência: a equipe do sistema aprova a sua conta, e você vira a gestão dela."}
+                    </span>
                   </div>
                   <button type="button" className="btn-text" onClick={() => setEscola(null)}>
                     Trocar
@@ -241,9 +244,8 @@ export default function CadastroPage() {
               />
 
               <label htmlFor="senha">Senha</label>
-              <input
+              <CampoSenha
                 id="senha"
-                type="password"
                 autoComplete="new-password"
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
@@ -251,30 +253,17 @@ export default function CadastroPage() {
               />
 
               <label htmlFor="confirmarSenha">Confirmar senha</label>
-              <input
+              <CampoSenha
                 id="confirmarSenha"
-                type="password"
                 autoComplete="new-password"
                 value={confirmarSenha}
                 onChange={(e) => setConfirmarSenha(e.target.value)}
                 required
               />
 
-              {/* Quem administra o sistema repassa o código (CADASTRO_CODIGO_ACESSO na API). */}
-              <label htmlFor="codigoAcesso">Código de acesso</label>
-              <input
-                id="codigoAcesso"
-                type="text"
-                autoComplete="off"
-                autoCapitalize="none"
-                value={codigoAcesso}
-                onChange={(e) => setCodigoAcesso(e.target.value)}
-                required
-              />
-
               {erro && <p className="field-error show">{erro}</p>}
 
-              <button type="submit" className="btn btn-primary" disabled={enviando}>
+              <button type="submit" className="btn btn-primary" disabled={enviando} aria-busy={enviando}>
                 {enviando ? "Cadastrando…" : "Cadastrar"}
               </button>
             </>

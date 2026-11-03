@@ -33,8 +33,21 @@ export function deveTocar(configuracao: ConfiguracaoSons, tipo: TipoSom): boolea
   return configuracao.ativos && configuracao.volume > 0 && configuracao.tipos[tipo];
 }
 
+/**
+ * Ganho no volume máximo. Os arquivos já vêm normalizados (pico em
+ * -1 dBFS); acima de 1, o limitador de obterSaida() segura os picos para
+ * o som sair mais alto sem estourar.
+ */
+export const GANHO_MAXIMO = 1.6;
+
+/** Volume da preferência (0 a 1) para o ganho aplicado ao som. */
+export function ganhoDoVolume(volume: number): number {
+  return Math.min(1, Math.max(0, volume)) * GANHO_MAXIMO;
+}
+
 let configuracao: ConfiguracaoSons = SONS_PADRAO;
 let contexto: AudioContext | null = null;
+let saida: AudioNode | null = null;
 const buffers = new Map<TipoSom, Promise<AudioBuffer | null>>();
 
 export function configurarSons(nova: ConfiguracaoSons): void {
@@ -50,6 +63,21 @@ function obterContexto(): AudioContext | null {
     contexto = new Construtor({ latencyHint: "interactive" });
   }
   return contexto;
+}
+
+/** Limitador no fim da cadeia: com o ganho acima de 1, nenhum pico passa do teto. */
+function obterSaida(audio: AudioContext): AudioNode {
+  if (!saida) {
+    const limitador = audio.createDynamicsCompressor();
+    limitador.threshold.value = -2;
+    limitador.knee.value = 0;
+    limitador.ratio.value = 20;
+    limitador.attack.value = 0.001;
+    limitador.release.value = 0.1;
+    limitador.connect(audio.destination);
+    saida = limitador;
+  }
+  return saida;
 }
 
 /** Sem interação, o navegador não deixa o som tocar (e o resume() fica esperando). */
@@ -99,8 +127,8 @@ export async function tocarSom(tipo: TipoSom, { testar = false, volume }: { test
     const fonte = audio.createBufferSource();
     fonte.buffer = buffer;
     const ganho = audio.createGain();
-    ganho.gain.value = Math.min(1, Math.max(0, volume ?? configuracao.volume));
-    fonte.connect(ganho).connect(audio.destination);
+    ganho.gain.value = ganhoDoVolume(volume ?? configuracao.volume);
+    fonte.connect(ganho).connect(obterSaida(audio));
     fonte.start();
   } catch {
     // Navegador sem Web Audio ou arquivo indisponível: segue sem som.

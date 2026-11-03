@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Api } from "@/lib/api";
 import { Topbar } from "@/components/Topbar";
+import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
 import { formatarData, formatarHora, hojeNaEscola, iniciais } from "@/lib/format";
@@ -102,7 +103,7 @@ export default function PresencasPage() {
       />
 
       {erro && <div className="error-block">{erro}</div>}
-      {carregando && !dia && <div className="loading-block">Carregando presenças…</div>}
+      {carregando && !dia && <Esqueleto variante="lista" texto="Carregando presenças…" />}
 
       {dia && (
         <div className="grid-2">

@@ -107,10 +107,17 @@ Tailwind: as cores vêm dos tokens `--grafico-*` de `app/globals.css`, que
 mudam no tema escuro. O par de cores das séries passou no validador de
 paleta (separação para daltonismo, luminosidade e contraste) nos dois
 temas. Cada gráfico tem dica ao passar o mouse, legenda e a tabela com
-os números ("Ver os números").
+os números ("Ver os números"). As áreas têm degradê e entram desenhando,
+o mês atual tem um ponto que pulsa, passar o mouse (ou clicar) numa
+legenda destaca a série, e o número no meio do anel conta junto com ele.
 
-As telas entram em cascata, os números contam até o valor, as barras
-crescem e os contadores do menu pulsam quando mudam. Com "reduzir
+As telas entram em cascata e deslizam ao trocar de página
+(`app/(painel)/template.tsx`), os números contam até o valor, as barras
+das turmas crescem uma depois da outra e os contadores do menu pulsam
+quando mudam. Carregando: o símbolo da marca anima (`Carregando`), as
+listas mostram o formato do que vem (`Esqueleto`), uma barra fina corre
+no topo enquanto a API responde (`BarraProgresso` + `lib/carregamento.ts`)
+e os botões mostram um giro enquanto salvam (`aria-busy`). Com "reduzir
 movimento" ligado no sistema, nada anima (CSS e `lib/movimento.ts`).
 
 ## Estrutura
@@ -121,7 +128,8 @@ app/
   favicon.ico, icon.svg,       ícones da aba e da tela inicial do celular (logo:
   apple-icon.png                moldura de reconhecimento com o check)
   page.tsx                     redireciona para /dashboard ou /login
-  login/, cadastro/            telas públicas de autenticação
+  login/, cadastro/            telas públicas de autenticação (com o olhinho da senha)
+  confirmar-email/             o link que chega por e-mail (cadastro e troca de e-mail)
   downloads/                   página pública de downloads
   (painel)/layout.tsx          guarda de autenticação + Sidebar (telas internas)
   (painel)/dashboard/          pontualidade do mês (anel), entradas e saídas por mês,
@@ -194,7 +202,10 @@ desconectado; sair também encerra a sessão na API.
   `(painel)/layout.tsx` e redireciona para `/login` se não houver
   sessão; `/login` e `/cadastro` fazem o inverso. Token vencido (lido do
   "exp") é descartado ao abrir o site e ao voltar para a aba.
-- O cadastro de coordenação exige o código de acesso da escola
-  (`CADASTRO_CODIGO_ACESSO` na API).
+- O cadastro é aberto, mas ninguém entra sem confirmar o e-mail (link de
+  uso único que chega por e-mail e abre `/confirmar-email`, que tira o
+  código da barra de endereço e não o repassa a outros sites) e sem a
+  aprovação da gestão da escola ou, numa escola que ainda não usa o
+  sistema, da equipe do sistema (`/admin`).
 - Cabeçalhos `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy` e
   `Permissions-Policy` em todas as páginas (`next.config.ts`).

@@ -229,7 +229,7 @@ export default function ComoFuncionaPage() {
             <dl className="lista-dados">
               <div>
                 <dt>Gestão da escola</dt>
-                <dd>A primeira conta da escola. Aprova quem entra, define horários, calendário, tolerância e limites, e pode apagar um registro feito por engano.</dd>
+                <dd>A primeira conta aprovada da escola. Aprova quem pede acesso, define horários, calendário, tolerância e limites, e pode apagar um registro feito por engano.</dd>
               </div>
               <div>
                 <dt>Coordenação</dt>
@@ -237,12 +237,13 @@ export default function ComoFuncionaPage() {
               </div>
               <div>
                 <dt>Equipe do sistema</dt>
-                <dd>Cuida das contas de todas as escolas, do catálogo e responde os chamados de suporte.</dd>
+                <dd>Aprova as contas das escolas que ainda não usam o sistema, cuida das contas de todas as escolas e do catálogo, e responde os chamados de suporte.</dd>
               </div>
             </dl>
             <p className="results-caption">
-              Cada conta é de uma escola, escolhida no cadastro entre as escolas estaduais de São Paulo. Alunos e responsáveis de
-              uma escola nunca aparecem para outra.
+              Cada conta é de uma escola, escolhida no cadastro entre as escolas estaduais de São Paulo. Quem se cadastra confirma o
+              e-mail pelo link que recebe e espera a aprovação - da gestão da escola ou, se a escola ainda não usa o sistema, da
+              equipe do BioFrequência. Alunos e responsáveis de uma escola nunca aparecem para outra.
             </p>
           </section>
         </div>
