@@ -28,7 +28,8 @@ Consome a `BioFrequenciaApi` (a mesma do app). A tela **Como funciona**
 A variável é embutida no JavaScript durante o build: depois de mudá-la na
 Vercel, faça um novo deploy. A API precisa liberar a origem do site em
 `CORS_ORIGENS` (no Render). Outras variáveis: `NEXT_PUBLIC_APK_URL`
-(opcional, link do APK na página de downloads).
+(opcional, link do APK na página de downloads) e `NEXT_PUBLIC_DESKTOP_URL`
+(opcional, link do `.exe` do software desktop).
 
 A API gratuita do Render "dorme" sem uso; o login dispara um aquecimento
 ao abrir e espera até 70 s antes de desistir.
@@ -93,8 +94,15 @@ Página pública (sem login). O botão "Baixar APK" aponta para
 `app-mais-recente` que o workflow do repositório **App** republica a cada
 push na master (`biofrequencia.apk`). Esse link só abre para quem não
 está logado no GitHub da equipe se o repositório App for **público**;
-senão, publique o APK em outro lugar e defina `NEXT_PUBLIC_APK_URL`. O
-instalador do desktop aparece como "Em breve".
+senão, publique o APK em outro lugar e defina `NEXT_PUBLIC_APK_URL`.
+
+O software desktop só ganha o botão "Baixar para Windows" com
+`NEXT_PUBLIC_DESKTOP_URL` definida; sem ela, o card diz "Em breve" (nunca
+um link quebrado). O workflow do repositório **SoftwareDesktop** publica o
+`BioFrequencia.exe` numa Release a cada tag `v*`; com esse repositório
+público, use
+`https://github.com/BioFrequencia/SoftwareDesktop/releases/latest/download/BioFrequencia.exe`
+(o mesmo endereço fica em `DESKTOP_URL_RELEASES`, em `lib/config.ts`).
 
 Para quem está logado, a barra mostra "Voltar ao painel" (a página é
 aberta também pelo menu do painel).
