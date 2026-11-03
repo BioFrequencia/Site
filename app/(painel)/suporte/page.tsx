@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { Api } from "@/lib/api";
 import { Topbar } from "@/components/Topbar";
+import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
 import { formatarDataHora } from "@/lib/format";
@@ -63,6 +64,17 @@ const PERGUNTAS: { pergunta: string; resposta: ReactNode }[] = [
         recusados, assim como uma chegada dentro da tolerância ou fora do período da turma (o aluno da manhã à tarde). Cada
         aluno tem no máximo uma entrada atrasada e uma saída antecipada por dia. Registro feito por engano: a gestão apaga na
         ficha do aluno. Faltas não são registradas aqui - ficam na Sala do Futuro.
+      </>
+    ),
+  },
+  {
+    pergunta: "Alguém da escola precisa de acesso. Como faço?",
+    resposta: (
+      <>
+        A pessoa se cadastra em <Link href="/cadastro">Cadastrar coordenação</Link>, escolhendo a escola, e abre o link de
+        confirmação que chega no e-mail dela. Depois disso, a gestão aprova em{" "}
+        <Link href="/escola?aba=equipe">Escola &gt; Equipe</Link> - o número no menu mostra quantos pedidos esperam. Quem é
+        aprovado recebe um e-mail e já pode entrar.
       </>
     ),
   },
@@ -230,7 +242,7 @@ export default function SuportePage() {
               <p className="dica-campo">{mensagem.length}/4000</p>
             </div>
             {erro && <p className="field-error show">{erro}</p>}
-            <button type="submit" className="btn btn-primary" disabled={enviando}>
+            <button type="submit" className="btn btn-primary" disabled={enviando} aria-busy={enviando}>
               <Icon name="send" />
               {enviando ? "Enviando…" : "Enviar chamado"}
             </button>
@@ -243,7 +255,7 @@ export default function SuportePage() {
           <h2>Meus chamados</h2>
         </div>
         {erroLista && <div className="error-block">{erroLista}</div>}
-        {!chamados && !erroLista && <div className="loading-block">Carregando os chamados…</div>}
+        {!chamados && !erroLista && <Esqueleto variante="lista" texto="Carregando os chamados…" />}
         {chamados && chamados.length === 0 && (
           <div className="empty-state">
             <Icon name="lifeBuoy" />

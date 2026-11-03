@@ -8,6 +8,9 @@ import { useAuth } from "@/lib/auth";
 import { Icon } from "@/components/Icon";
 import { Logo } from "@/components/Logo";
 import { AlternarTema } from "@/components/AlternarTema";
+import { CampoSenha } from "@/components/CampoSenha";
+import { ReenviarLink } from "@/components/ReenviarLink";
+import type { LoginRecusado } from "@/lib/types";
 
 export default function LoginPage() {
   const { autenticado, carregando, login } = useAuth();
@@ -21,6 +24,8 @@ export default function LoginPage() {
   const [semApi, setSemApi] = useState(false);
   const [mostrarConfig, setMostrarConfig] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  // Conta que ainda não abriu o link do e-mail: o login oferece outro link.
+  const [semConfirmacao, setSemConfirmacao] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [demorando, setDemorando] = useState(false);
   const [avisoSessaoExpirada, setAvisoSessaoExpirada] = useState(false);
@@ -43,6 +48,7 @@ export default function LoginPage() {
   async function aoEnviar(evento: FormEvent) {
     evento.preventDefault();
     setErro(null);
+    setSemConfirmacao(false);
 
     if (!email.trim() || !senha) {
       setErro("Informe email e senha.");
@@ -61,6 +67,7 @@ export default function LoginPage() {
 
     if (!resposta.sucesso || !resposta.dados) {
       setErro(resposta.mensagem || "Não foi possível fazer login.");
+      setSemConfirmacao((resposta.dados as LoginRecusado | null)?.situacao === "email_nao_confirmado");
       return;
     }
 
@@ -75,8 +82,8 @@ export default function LoginPage() {
           <Logo tamanho={56} className="logo-sobre-indigo auth-logo" />
           <h1>Biofrequência</h1>
           <p>
-            Acompanhe frequência, atrasos, alertas e o histórico de contato com responsáveis da sua
-            coordenação em um só lugar — o mesmo sistema do software desktop, agora também pelo navegador.
+            Registre as entradas atrasadas e as saídas antecipadas, acompanhe quem precisa de atenção e avise as famílias -
+            pelo navegador, pelo software desktop ou pelo app do tablet.
           </p>
         </div>
       </div>
@@ -115,9 +122,8 @@ export default function LoginPage() {
           />
 
           <label htmlFor="senha">Senha</label>
-          <input
+          <CampoSenha
             id="senha"
-            type="password"
             autoComplete="current-password"
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
@@ -135,13 +141,14 @@ export default function LoginPage() {
           </label>
 
           {erro && <p className="field-error show">{erro}</p>}
+          {semConfirmacao && <ReenviarLink email={email.trim()} senha={senha} />}
           {demorando && (
             <p className="panel-meta" style={{ marginTop: 6 }}>
               Conectando ao servidor… no primeiro acesso do dia isso pode levar até um minuto.
             </p>
           )}
 
-          <button type="submit" className="btn btn-primary" disabled={enviando || semApi}>
+          <button type="submit" className="btn btn-primary" disabled={enviando || semApi} aria-busy={enviando}>
             {enviando ? "Entrando…" : "Entrar"}
           </button>
 

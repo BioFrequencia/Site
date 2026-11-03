@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Api } from "@/lib/api";
 import { Topbar } from "@/components/Topbar";
+import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
 import { formatarDataHora, horarioLocalEscola, iniciais } from "@/lib/format";
@@ -80,7 +81,7 @@ export default function CheckinsPage() {
       <Topbar titulo="Check-ins" subtitulo={`${checkins.length} check-in(s) pendente(s) de confirmação.`} />
 
       {erro && <div className="error-block">{erro}</div>}
-      {carregando && <div className="loading-block">Carregando check-ins…</div>}
+      {carregando && <Esqueleto variante="lista" texto="Carregando check-ins…" />}
 
       {!carregando && (
         <div className="panel">

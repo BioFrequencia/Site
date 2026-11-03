@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
+import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
 import { Interruptor } from "@/components/Interruptor";
 import { useToast } from "@/components/Toast";
@@ -91,7 +92,7 @@ export default function EscolaPage() {
       </div>
 
       {erro && <div className="error-block">{erro}</div>}
-      {!dados && !erro && <div className="loading-block skeleton-bloco">Carregando a escola…</div>}
+      {!dados && !erro && <Esqueleto variante="cartoes" texto="Carregando a escola…" />}
 
       {dados && (
         <div role="tabpanel" className="entrada-em-cascata" key={aba}>
@@ -532,7 +533,7 @@ function AbaAvisos({ dados, podeEditar, aoMudar }: { dados: DadosEscola; podeEdi
           <button type="button" className="btn" onClick={() => setConfig(dados.padroes)}>
             Voltar ao padrão
           </button>
-          <button type="submit" className="btn btn-primary" disabled={salvando}>
+          <button type="submit" className="btn btn-primary" disabled={salvando} aria-busy={salvando}>
             {salvando ? "Salvando…" : "Salvar regras"}
           </button>
         </div>
@@ -598,7 +599,7 @@ function AbaEquipe() {
         <span className="panel-meta">Quem se cadastra nesta escola aguarda a aprovação da gestão</span>
       </div>
       {carregando ? (
-        <div className="loading-block skeleton-bloco">Carregando a equipe…</div>
+        <Esqueleto variante="lista" texto="Carregando a equipe…" />
       ) : (
         <ul className="lista-equipe">
           {equipe.map((membro) => (
@@ -614,6 +615,9 @@ function AbaEquipe() {
                   {membro.papel === "gestor" ? "Gestão" : "Coordenação"} · {ROTULOS_SITUACAO[membro.situacao]}
                   {membro.criado_em && membro.situacao === "pendente" && ` · pediu em ${formatarDataHora(membro.criado_em)}`}
                 </span>
+                {membro.situacao === "pendente" && membro.email_verificado === false && (
+                  <span className="selo-email">Ainda não abriu o link do e-mail: a aprovação fica liberada depois.</span>
+                )}
               </div>
               {podeEditar && !membro.voce && (
                 <div className="acoes-linha">
@@ -622,7 +626,13 @@ function AbaEquipe() {
                       <button type="button" className="btn btn-sm" onClick={() => aplicar(membro, "recusar")} disabled={acao !== null}>
                         Recusar
                       </button>
-                      <button type="button" className="btn btn-sm btn-primary" onClick={() => aplicar(membro, "aprovar")} disabled={acao !== null}>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-primary"
+                        onClick={() => aplicar(membro, "aprovar")}
+                        disabled={acao !== null || membro.email_verificado === false}
+                        title={membro.email_verificado === false ? "A pessoa ainda não confirmou o e-mail" : undefined}
+                      >
                         Aprovar
                       </button>
                     </>

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { Carregando } from "@/components/Carregando";
 
 export default function Home() {
   const { autenticado, carregando } = useAuth();
@@ -13,5 +14,5 @@ export default function Home() {
     router.replace(autenticado ? "/dashboard" : "/login");
   }, [carregando, autenticado, router]);
 
-  return <div className="loading-block">Carregando…</div>;
+  return <Carregando tela />;
 }

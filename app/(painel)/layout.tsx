@@ -5,8 +5,13 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Api } from "@/lib/api";
 import { Sidebar } from "@/components/Sidebar";
+import { BarraProgresso } from "@/components/BarraProgresso";
+import { Carregando } from "@/components/Carregando";
 import { tocarSom } from "@/lib/sons";
 import { CONTADORES_ZERADOS, temNovidade, type Contadores } from "@/lib/contadores";
+
+// Os contadores do menu se atualizam sozinhos: sem a barra de carregamento.
+const SEGUNDO_PLANO = { segundoPlano: true };
 
 export default function PainelLayout({ children }: { children: ReactNode }) {
   const { autenticado, carregando, coordenacao } = useAuth();
@@ -43,13 +48,13 @@ export default function PainelLayout({ children }: { children: ReactNode }) {
       // chamadas quando disparadas juntas, exatamente junto com as
       // chamadas próprias de cada tela - resultado real observado:
       // dashboard.php/filtroAluno.php falhando de forma intermitente.
-      const dashboard = await Api.dashboard();
+      const dashboard = await Api.dashboard(SEGUNDO_PLANO);
       if (!ativo) return;
-      const notificacoes = await Api.listarNotificacoes("pendente", 1);
+      const notificacoes = await Api.listarNotificacoes("pendente", 1, SEGUNDO_PLANO);
       if (!ativo) return;
-      const equipe = gestao ? await Api.equipe() : null;
+      const equipe = gestao ? await Api.equipe(SEGUNDO_PLANO) : null;
       if (!ativo) return;
-      const resumo = equipeDoSistema ? await Api.adminResumo() : null;
+      const resumo = equipeDoSistema ? await Api.adminResumo(SEGUNDO_PLANO) : null;
       if (!ativo) return;
       const novos: Contadores = {
         alertas: dashboard.dados?.alertas_ativos ?? 0,
@@ -74,11 +79,12 @@ export default function PainelLayout({ children }: { children: ReactNode }) {
   }, [autenticado, gestao, equipeDoSistema]);
 
   if (carregando || !autenticado) {
-    return <div className="loading-block">Carregando…</div>;
+    return <Carregando tela texto="Conferindo a sua sessão…" />;
   }
 
   return (
     <div className="app">
+      <BarraProgresso />
       <Sidebar contadores={contadores} />
       <main className="main">
         <div className="view">{children}</div>

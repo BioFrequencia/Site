@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
+import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
 import { NumeroAnimado } from "@/components/NumeroAnimado";
 import { GraficoEntradasSaidas, GraficoPontualidade } from "@/components/Graficos";
@@ -48,7 +49,7 @@ export default function DashboardPage() {
       <Topbar titulo={`Olá, ${primeiroNome}`} subtitulo="Entradas atrasadas, saídas antecipadas e quem precisa de atenção na sua escola." />
 
       {erro && <div className="error-block">{erro}</div>}
-      {carregando && !dados && <div className="loading-block skeleton-bloco">Carregando dashboard…</div>}
+      {carregando && !dados && <Esqueleto variante="painel" texto="Carregando o dashboard…" />}
 
       {dados && (
         <div className="entrada-em-cascata">
@@ -128,7 +129,7 @@ export default function DashboardPage() {
                 <span className="panel-meta">{nomeMesLongo(dados.mes)}</span>
               </div>
               {dados.turmas.length === 0 && <p className="results-caption">Nenhuma turma cadastrada.</p>}
-              {dados.turmas.map((turma) => {
+              {dados.turmas.map((turma, indice) => {
                 const barra = barraPontualidade(turma.pontualidade, dados.limite_alerta);
                 return (
                   <div
@@ -140,7 +141,11 @@ export default function DashboardPage() {
                   >
                     <span className="turma-name">{turma.nome_sala}</span>
                     <div className="turma-bar-track">
-                      <div className={`turma-bar-fill turma-bar-fill--${barra.classe}`} style={{ width: `${barra.largura}%` }} />
+                      {/* As barras crescem uma depois da outra, de cima para baixo. */}
+                      <div
+                        className={`turma-bar-fill turma-bar-fill--${barra.classe}`}
+                        style={{ width: `${barra.largura}%`, animationDelay: `${Math.min(indice, 12) * 60}ms` }}
+                      />
                     </div>
                     <span className="turma-pct">{formatarPercentual(turma.pontualidade, 0)}</span>
                   </div>

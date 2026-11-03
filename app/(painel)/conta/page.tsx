@@ -4,10 +4,13 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
+import { Esqueleto } from "@/components/Esqueleto";
+import { Carregando } from "@/components/Carregando";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
 import { usePreferencias } from "@/components/Preferencias";
 import { Interruptor } from "@/components/Interruptor";
+import { CampoSenha } from "@/components/CampoSenha";
 import { formatarDataHora, iniciais } from "@/lib/format";
 import { tocarSom, type TipoSom } from "@/lib/sons";
 import type { EscolhaTema, Preferencias } from "@/lib/preferencias";
@@ -95,7 +98,7 @@ function AbaPerfil() {
   }, []);
 
   if (erroCarregar) return <div className="error-block">{erroCarregar}</div>;
-  if (!original) return <div className="loading-block">Carregando os dados da conta…</div>;
+  if (!original) return <Carregando texto="Carregando os dados da conta…" />;
 
   const trocaEmail = form.email_coordenacao.trim().toLowerCase() !== original.email_coordenacao.toLowerCase();
   const mudou =
@@ -168,18 +171,25 @@ function AbaPerfil() {
             onChange={(e) => campo("email_coordenacao", e.target.value)}
             required
           />
+          {original.email_pendente && !trocaEmail && (
+            <p className="aviso-email-pendente" role="status">
+              Esperando a confirmação de <b>{original.email_pendente}</b>: abra o link que enviamos para ele. Até lá, o login
+              continua sendo {original.email_coordenacao}.
+            </p>
+          )}
         </div>
         {trocaEmail && (
           <div className="modal-field">
             <label htmlFor="perfilSenha">Senha atual</label>
-            <input
+            <CampoSenha
               id="perfilSenha"
-              type="password"
               autoComplete="current-password"
               value={senhaAtual}
               onChange={(e) => setSenhaAtual(e.target.value)}
             />
-            <p className="dica-campo">Para trocar o e-mail de login, confirme a senha.</p>
+            <p className="dica-campo">
+              Para trocar o e-mail de login, confirme a senha. O e-mail novo recebe um link, e a troca vale quando você abrir.
+            </p>
           </div>
         )}
         <div className="modal-field">
@@ -206,7 +216,7 @@ function AbaPerfil() {
 
         {erro && <p className="field-error show">{erro}</p>}
         <div className="acoes-form">
-          <button type="submit" className="btn btn-primary" disabled={!mudou || salvando}>
+          <button type="submit" className="btn btn-primary" disabled={!mudou || salvando} aria-busy={salvando}>
             {salvando ? "Salvando…" : "Salvar alterações"}
           </button>
           {mudou && (
@@ -266,9 +276,8 @@ function AbaSenha() {
       <form className="form-conta" onSubmit={trocar}>
         <div className="modal-field">
           <label htmlFor="senhaAtual">Senha atual</label>
-          <input
+          <CampoSenha
             id="senhaAtual"
-            type="password"
             autoComplete="current-password"
             value={atual}
             onChange={(e) => setAtual(e.target.value)}
@@ -277,9 +286,8 @@ function AbaSenha() {
         </div>
         <div className="modal-field">
           <label htmlFor="senhaNova">Nova senha</label>
-          <input
+          <CampoSenha
             id="senhaNova"
-            type="password"
             autoComplete="new-password"
             minLength={6}
             value={nova}
@@ -289,9 +297,8 @@ function AbaSenha() {
         </div>
         <div className="modal-field">
           <label htmlFor="senhaConfirmacao">Repita a nova senha</label>
-          <input
+          <CampoSenha
             id="senhaConfirmacao"
-            type="password"
             autoComplete="new-password"
             value={confirmacao}
             onChange={(e) => setConfirmacao(e.target.value)}
@@ -304,7 +311,7 @@ function AbaSenha() {
 
         {erro && <p className="field-error show">{erro}</p>}
         <div className="acoes-form">
-          <button type="submit" className="btn btn-primary" disabled={salvando}>
+          <button type="submit" className="btn btn-primary" disabled={salvando} aria-busy={salvando}>
             {salvando ? "Trocando…" : "Trocar senha"}
           </button>
         </div>
@@ -489,7 +496,7 @@ function AbaDispositivos() {
   }
 
   if (erro) return <div className="error-block">{erro}</div>;
-  if (!aparelhos) return <div className="loading-block">Carregando os aparelhos conectados…</div>;
+  if (!aparelhos) return <Esqueleto variante="lista" texto="Carregando os aparelhos conectados…" />;
 
   const outros = aparelhos.filter((aparelho) => !aparelho.atual);
 

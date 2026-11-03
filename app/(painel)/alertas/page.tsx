@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Api } from "@/lib/api";
 import { Topbar } from "@/components/Topbar";
+import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
 import { classeBadgePrioridade, formatarData, formatarPercentual, iniciais, rotuloTipoAlerta } from "@/lib/format";
@@ -117,7 +118,7 @@ export default function AlertasPage() {
       </div>
 
       {erro && <div className="error-block">{erro}</div>}
-      {carregando && <div className="loading-block">Carregando alertas…</div>}
+      {carregando && <Esqueleto variante="lista" texto="Carregando alertas…" />}
 
       {!carregando && (
         <>

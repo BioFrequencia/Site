@@ -5,9 +5,12 @@
 // (NEXT_PUBLIC_API_URL); só em desenvolvimento é editável na tela de login.
 
 import { apiUrlDoBuild, resolverApiUrl } from "./config";
+import { iniciarCarregamento } from "./carregamento";
 import type {
   AcaoEquipe,
   Alerta,
+  ContaCriada,
+  EmailConfirmado,
   AvisosDoRegistro,
   CanalResponsavel,
   ChamadoAdmin,
@@ -152,16 +155,31 @@ function definirCallbackSessaoExpirada(callback: (() => void) | null): void {
   aoSessaoExpirar = callback;
 }
 
+/** Consultas que a tela faz sozinha (contadores do menu): não mostram a barra de carregamento. */
+export interface OpcoesChamada {
+  segundoPlano?: boolean;
+}
+
 /**
  * POST genérico. Diferencia erro de rede/timeout de erro HTTP/de
  * validação, no mesmo espírito de clsApiService.cs - nunca deixa uma
- * exceção crua chegar em quem chamou.
+ * exceção crua chegar em quem chamou. Enquanto a chamada anda, a barra
+ * do topo (components/BarraProgresso.tsx) aparece.
  */
 async function post<T>(
   caminho: string,
   corpo: Record<string, unknown>,
-  { autenticado = true }: { autenticado?: boolean } = {}
+  { autenticado = true, segundoPlano = false }: { autenticado?: boolean } & OpcoesChamada = {}
 ): Promise<RespostaApi<T>> {
+  const terminar = segundoPlano ? null : iniciarCarregamento();
+  try {
+    return await enviarPost<T>(caminho, corpo, autenticado);
+  } finally {
+    terminar?.();
+  }
+}
+
+async function enviarPost<T>(caminho: string, corpo: Record<string, unknown>, autenticado: boolean): Promise<RespostaApi<T>> {
   const base = obterBaseUrl();
   if (!base) {
     return { sucesso: false, mensagem: MENSAGEM_SEM_API, dados: null };
@@ -251,20 +269,20 @@ export const Api = {
   emailExiste: (email: string) =>
     post<{ email_coordenacao: string } | null>("user/verificarEmail.php", { email }, { autenticado: false }),
   // Uma escola por conta: a do catálogo (id_escola) ou, fora dele, uma
-  // escola nova com nome e município. A primeira conta vira gestora; as
-  // próximas aguardam a aprovação da gestão.
+  // escola nova com nome e município. Toda conta nasce pendente: confirma
+  // o e-mail pelo link e espera a gestão da escola (ou a equipe do
+  // sistema, numa escola sem gestão) aprovar.
   cadastrarCoordenacao: (
     nome: string,
     email: string,
     senha: string,
-    codigoAcesso: string,
     escola: { id_escola: number } | { nome_escola: string; municipio: string }
-  ) =>
-    post<{ nome_escola: string; papel: "gestor" | "coordenador"; situacao: SituacaoConta }>(
-      "user/addCoord.php",
-      { nome, email, senha, codigo_acesso: codigoAcesso, ...escola },
-      { autenticado: false }
-    ),
+  ) => post<ContaCriada>("user/addCoord.php", { nome, email, senha, ...escola }, { autenticado: false }),
+  /** Abre o link do e-mail (página /confirmar-email). */
+  confirmarEmail: (codigo: string) => post<EmailConfirmado>("conta/confirmarEmail.php", { codigo }, { autenticado: false }),
+  /** Manda outro link de confirmação; pede a senha para ninguém encher a caixa de outra pessoa. */
+  reenviarConfirmacao: (email: string, senha: string) =>
+    post<{ email_enviado: boolean }>("conta/reenviarConfirmacao.php", { email, senha }, { autenticado: false }),
   /** Busca pública no catálogo de escolas da SEDUC (sem login: é para o cadastro). */
   buscarEscolas: (busca: string) =>
     post<{ escolas: EscolaCatalogo[] }>("escola/buscar.php", { busca }, { autenticado: false }),
@@ -325,7 +343,7 @@ export const Api = {
     post<HistoricoAluno>("user/historicoAluno.php", { id_aluno: idAluno, data_inicio: dataInicio, data_fim: dataFim }),
 
   // Dashboard / alertas
-  dashboard: () => post<Dashboard>("user/dashboard.php", {}),
+  dashboard: (opcoes?: OpcoesChamada) => post<Dashboard>("user/dashboard.php", {}, opcoes),
   alertas: (idSala: number | null, tipo: string | null, prioridade: string | null) =>
     post<ListaAlertas>("user/alertas.php", { id_sala: idSala, tipo, prioridade }),
   encerrarAlerta: (idAluno: number) => post<null>("user/encerrarAlerta.php", { id_aluno: idAluno }),
@@ -388,8 +406,8 @@ export const Api = {
     post<null>("responsavel/removerVinculo.php", { id_aluno: idAluno, id_responsavel: idResponsavel }),
 
   // Notificações
-  listarNotificacoes: (status: StatusNotificacao | null, pagina: number) =>
-    post<ListaNotificacoes>("notificacao/listarNotificacoes.php", { status, pagina, por_pagina: 20 }),
+  listarNotificacoes: (status: StatusNotificacao | null, pagina: number, opcoes?: OpcoesChamada) =>
+    post<ListaNotificacoes>("notificacao/listarNotificacoes.php", { status, pagina, por_pagina: 20 }, opcoes),
   marcarNotificacaoEnviada: (idNotificacao: number) =>
     post<null>("notificacao/marcarEnviada.php", { id_notificacao: idNotificacao }),
 
@@ -426,6 +444,7 @@ export const Api = {
     if (!base) {
       return { sucesso: false, mensagem: MENSAGEM_SEM_API };
     }
+    const terminar = iniciarCarregamento();
     try {
       const resposta = await fetch(base + "relatorio/exportarXml.php", {
         method: "POST",
@@ -457,6 +476,8 @@ export const Api = {
       return { sucesso: true, mensagem: "Relatório XML baixado." };
     } catch {
       return { sucesso: false, mensagem: "Não foi possível conectar ao servidor." };
+    } finally {
+      terminar();
     }
   },
 
@@ -508,17 +529,18 @@ export const Api = {
   adicionarCalendario: (dataInicio: string, dataFim: string, tipo: TipoCalendario, descricao: string) =>
     post<ItemCalendario>("escola/adicionarCalendario.php", { data_inicio: dataInicio, data_fim: dataFim, tipo, descricao }),
   removerCalendario: (idCalendario: number) => post<null>("escola/removerCalendario.php", { id_calendario: idCalendario }),
-  equipe: () => post<{ equipe: MembroEquipe[]; pendentes: number; pode_editar: boolean }>("escola/equipe.php", {}),
+  equipe: (opcoes?: OpcoesChamada) =>
+    post<{ equipe: MembroEquipe[]; pendentes: number; pode_editar: boolean }>("escola/equipe.php", {}, opcoes),
   atualizarMembro: (idCoordenacao: number, acao: AcaoEquipe) =>
     post<MembroEquipe>("escola/atualizarMembro.php", { id_coordenacao: idCoordenacao, acao }),
 
   // Equipe do sistema (tela /admin; a API responde 404 para as outras contas)
-  adminResumo: () => post<ResumoSistema>("admin/resumo.php", {}),
+  adminResumo: (opcoes?: OpcoesChamada) => post<ResumoSistema>("admin/resumo.php", {}, opcoes),
   adminEscolas: (busca: string, emUso: boolean, pagina: number) =>
     post<ListaPaginada & { escolas: EscolaAdmin[] }>("admin/escolas.php", { busca, em_uso: emUso, pagina }),
   adminContas: (busca: string, situacao: SituacaoConta | null, pagina: number) =>
     post<ListaPaginada & { contas: ContaAdmin[] }>("admin/contas.php", { busca, situacao, pagina }),
-  adminAtualizarConta: (idCoordenacao: number, acao: AcaoEquipe | "mover_escola", idEscola?: number) =>
+  adminAtualizarConta: (idCoordenacao: number, acao: AcaoEquipe | "mover_escola" | "confirmar_email", idEscola?: number) =>
     post<MembroEquipe>("admin/atualizarConta.php", { id_coordenacao: idCoordenacao, acao, ...(idEscola ? { id_escola: idEscola } : {}) }),
   adminChamados: (status: StatusChamado | null, pagina: number) =>
     post<ListaPaginada & { chamados: ChamadoAdmin[] }>("admin/chamados.php", { status, pagina }),

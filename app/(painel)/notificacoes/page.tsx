@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Api } from "@/lib/api";
 import { Topbar } from "@/components/Topbar";
+import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
 import { formatarDataHora, formatarTelefone } from "@/lib/format";
@@ -82,7 +83,7 @@ export default function NotificacoesPage() {
       </div>
 
       {erro && <div className="error-block">{erro}</div>}
-      {carregando && <div className="loading-block">Carregando notificações…</div>}
+      {carregando && <Esqueleto variante="lista" texto="Carregando notificações…" />}
 
       {!carregando && (
         <div className="panel">

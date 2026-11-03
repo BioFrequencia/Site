@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Api } from "@/lib/api";
 import { Topbar } from "@/components/Topbar";
+import { Esqueleto } from "@/components/Esqueleto";
 import { Modal } from "@/components/Modal";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
@@ -50,7 +51,7 @@ export default function AcompanhamentoPage() {
       />
 
       {erro && <div className="error-block">{erro}</div>}
-      {carregando && <div className="loading-block">Carregando…</div>}
+      {carregando && <Esqueleto variante="lista" />}
 
       {!carregando && (
         <div className="panel">
@@ -250,7 +251,7 @@ function ModalNovoRegistro({
           <button type="button" className="btn" onClick={onFechar}>
             Cancelar
           </button>
-          <button type="submit" className="btn btn-primary" disabled={enviando}>
+          <button type="submit" className="btn btn-primary" disabled={enviando} aria-busy={enviando}>
             {enviando ? "Salvando…" : "Salvar"}
           </button>
         </div>

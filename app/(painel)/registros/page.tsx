@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
+import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
 import { ModalRegistro } from "@/components/ModalRegistro";
@@ -114,7 +115,7 @@ export default function RegistrosPage() {
       </div>
 
       {erro && <div className="error-block">{erro}</div>}
-      {carregando && !dia && <div className="loading-block skeleton-bloco">Carregando registros…</div>}
+      {carregando && !dia && <Esqueleto variante="lista" texto="Carregando registros…" />}
 
       {dia && (
         <div className="entrada-em-cascata">

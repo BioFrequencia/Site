@@ -3197,7 +3197,7 @@ button.card-resumo:disabled {
   text-align: center;
   animation: subir 0.4s ease both;
 }
-.auth-concluido svg {
+.auth-concluido > svg {
   width: 42px;
   height: 42px;
   stroke: var(--emerald-dark);
@@ -3205,7 +3205,7 @@ button.card-resumo:disabled {
   stroke-width: 2;
   stroke-linecap: round;
 }
-.auth-concluido.pendente svg {
+.auth-concluido.pendente > svg {
   stroke: var(--aviso-texto);
 }
 
@@ -3350,4 +3350,577 @@ button.card-resumo:disabled {
   .indicador-situacao {
     align-items: flex-start;
   }
+}
+
+/* ---------- Senha com olhinho (components/CampoSenha.tsx) ---------- */
+.campo-senha {
+  position: relative;
+}
+.campo-senha input {
+  padding-right: 46px;
+}
+/* O Edge desenha o próprio olhinho: fica só o nosso. */
+.campo-senha input::-ms-reveal,
+.campo-senha input::-ms-clear {
+  display: none;
+}
+.campo-senha-olho {
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-500);
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+.campo-senha-olho:hover {
+  color: var(--ink-900);
+  background: var(--mist-200);
+}
+.campo-senha-olho[aria-pressed="true"] {
+  color: var(--indigo-texto);
+}
+.campo-senha-olho .icon {
+  width: 18px;
+  height: 18px;
+  animation: trocar-olho 0.22s ease;
+}
+@keyframes trocar-olho {
+  from {
+    opacity: 0.2;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- Carregando (components/Carregando.tsx) ---------- */
+/* Os cantos da moldura focam no meio e o check se desenha, em ciclo. */
+.carregando {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 56px 20px;
+  color: var(--ink-500);
+  font-size: 13.5px;
+  animation: subir 0.3s ease both;
+}
+.carregando-tela {
+  min-height: 100vh;
+  padding: 24px;
+}
+.carregando-simbolo {
+  width: 44px;
+  height: 44px;
+  overflow: visible;
+}
+.carregando-tela .carregando-simbolo {
+  width: 64px;
+  height: 64px;
+}
+.carregando-canto {
+  animation: focar-canto 1.6s ease-in-out infinite;
+}
+.canto-1 {
+  --dx: 3px;
+  --dy: 3px;
+}
+.canto-2 {
+  --dx: -3px;
+  --dy: 3px;
+}
+.canto-3 {
+  --dx: 3px;
+  --dy: -3px;
+}
+.canto-4 {
+  --dx: -3px;
+  --dy: -3px;
+}
+.carregando-check {
+  stroke-dasharray: 34;
+  stroke-dashoffset: 34;
+  animation: desenhar-check 1.6s ease-in-out infinite;
+}
+@keyframes focar-canto {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(var(--dx), var(--dy));
+  }
+}
+@keyframes desenhar-check {
+  0%,
+  15% {
+    stroke-dashoffset: 34;
+  }
+  55%,
+  80% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -34;
+  }
+}
+
+/* ---------- Esqueletos (components/Esqueleto.tsx) ---------- */
+:root {
+  --esqueleto-base: #eee9ec;
+  --esqueleto-brilho: #faf8fa;
+}
+:root[data-tema="escuro"] {
+  --esqueleto-base: #2a2735;
+  --esqueleto-brilho: #3a3747;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.esqueleto {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  animation: subir 0.3s ease both;
+}
+.esq {
+  display: block;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--esqueleto-base) 25%, var(--esqueleto-brilho) 37%, var(--esqueleto-base) 63%);
+  background-size: 400% 100%;
+  animation: brilho 1.4s ease infinite;
+}
+.esq-cartao {
+  background: var(--surface);
+  border: 1px solid var(--mist-200);
+  border-radius: var(--radius-md);
+  padding: 6px 18px;
+}
+.esq-linha {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--mist-100);
+}
+.esq-linha:last-child {
+  border-bottom: 0;
+}
+.esq-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.esq-avatar.grande {
+  width: 56px;
+  height: 56px;
+}
+.esq-textos {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+.esq-texto {
+  height: 11px;
+  width: 60%;
+}
+.esq-texto.curto {
+  width: 32%;
+  height: 9px;
+}
+.esq-selo {
+  width: 64px;
+  height: 20px;
+  border-radius: 99px;
+  flex-shrink: 0;
+}
+.esq-hero {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 18px;
+  align-items: center;
+}
+.esq-anel {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  margin: 0 auto;
+}
+.esq-numeros {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.esq-numero {
+  height: 92px;
+  border-radius: var(--radius-md);
+}
+.esq-grade-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+}
+.esq-grade-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.esq-grafico {
+  height: 280px;
+  border-radius: var(--radius-md);
+}
+.esq-bloco {
+  height: 120px;
+  border-radius: var(--radius-md);
+}
+.esq-cabecalho {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px;
+}
+.esq-topo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+.esq-titulo {
+  height: 24px;
+  width: 220px;
+  max-width: 70%;
+}
+.esq-subtitulo {
+  height: 12px;
+  width: 340px;
+  max-width: 85%;
+}
+@media (max-width: 860px) {
+  .esq-hero,
+  .esq-grade-2 {
+    grid-template-columns: 1fr;
+  }
+  .esq-grade-3 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ---------- Barra de carregamento no topo (components/BarraProgresso.tsx) ---------- */
+.barra-progresso {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 1000;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.barra-progresso.ativa {
+  opacity: 1;
+}
+.barra-progresso span {
+  display: block;
+  width: 40%;
+  height: 100%;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(90deg, transparent, var(--indigo) 40%, var(--emerald));
+  animation: barra-indo 1.1s ease-in-out infinite;
+}
+.barra-progresso:not(.ativa) span {
+  animation-play-state: paused;
+}
+@keyframes barra-indo {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(260%);
+  }
+}
+
+/* ---------- Troca de página (app/(painel)/template.tsx) ---------- */
+.transicao-pagina {
+  animation: entrar-pagina 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes entrar-pagina {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- Botão trabalhando (aria-busy) ---------- */
+.btn[aria-busy="true"] {
+  cursor: progress;
+}
+.btn[aria-busy="true"]::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: girar 0.7s linear infinite;
+}
+
+/* ---------- Gráficos: destaque da legenda, mês atual e anel ---------- */
+.grafico-area .recharts-area {
+  transition: opacity 0.25s ease;
+}
+.grafico-area[data-destaque="atrasos"] .recharts-area:not(.serie-atrasos),
+.grafico-area[data-destaque="saidas"] .recharts-area:not(.serie-saidas) {
+  opacity: 0.15;
+}
+.ponto-atual-pulso {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pulso-ponto 1.8s ease-out infinite;
+}
+@keyframes pulso-ponto {
+  from {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(3.2);
+  }
+}
+.ponto-ativo {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: surgir-ponto 0.18s ease-out;
+}
+@keyframes surgir-ponto {
+  from {
+    transform: scale(0.3);
+  }
+  to {
+    transform: none;
+  }
+}
+.legenda-serie {
+  display: inline-flex;
+  align-items: center;
+  border: 0;
+  background: none;
+  padding: 4px 9px;
+  margin: -4px -9px;
+  border-radius: 99px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+.legenda-serie:hover,
+.legenda-serie[aria-pressed="true"] {
+  background: var(--mist-100);
+}
+.legenda-serie.apagada {
+  opacity: 0.45;
+}
+.anel-pontualidade .recharts-radial-bar-sector {
+  filter: drop-shadow(0 3px 8px rgba(69, 47, 246, 0.32));
+}
+:root[data-tema="escuro"] .anel-pontualidade .recharts-radial-bar-sector {
+  filter: drop-shadow(0 3px 10px rgba(123, 108, 255, 0.45));
+}
+.turma-row {
+  transition: background-color 0.15s ease;
+}
+.turma-row:hover .turma-bar-fill {
+  filter: brightness(1.08) saturate(1.1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Sem animação, o check do símbolo aparece pronto e o pulso some. */
+  .carregando-check {
+    stroke-dashoffset: 0;
+  }
+  .ponto-atual-pulso {
+    display: none;
+  }
+}
+
+/* ---------- Cadastro: confirmar o e-mail e aguardar a aprovação ---------- */
+.auth-concluido h2 {
+  margin-bottom: 0;
+}
+.auth-concluido.erro > svg {
+  stroke: var(--danger-dark);
+}
+.auth-concluido-icone {
+  animation: flutuar 2.6s ease-in-out infinite;
+}
+/* Os passos até entrar: o feito ganha o check, o atual pulsa. */
+.passos-acesso {
+  list-style: none;
+  counter-reset: passo;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 8px 0 4px;
+  text-align: left;
+  font-size: 13.5px;
+}
+.passos-acesso li {
+  counter-increment: passo;
+  position: relative;
+  padding-left: 36px;
+  color: var(--ink-500);
+  animation: subir 0.4s ease both;
+}
+.passos-acesso li:nth-child(2) {
+  animation-delay: 0.08s;
+}
+.passos-acesso li:nth-child(3) {
+  animation-delay: 0.16s;
+}
+.passos-acesso li::before {
+  content: counter(passo);
+  position: absolute;
+  left: 0;
+  top: -2px;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--mist-200);
+  color: var(--ink-500);
+}
+.passos-acesso li.feito {
+  color: var(--ink-700);
+}
+.passos-acesso li.feito::before {
+  content: "✓";
+  background: var(--emerald-100);
+  color: var(--emerald-dark);
+}
+.passos-acesso li.atual {
+  color: var(--ink-900);
+  font-weight: 600;
+}
+.passos-acesso li.atual::before {
+  background: var(--indigo);
+  color: #fff;
+  animation: pulsar-passo 1.8s ease-in-out infinite;
+}
+.passos-acesso small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ink-500);
+}
+@keyframes pulsar-passo {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(69, 47, 246, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 7px rgba(69, 47, 246, 0);
+  }
+}
+.reenviar-link {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+.reenviar-link .btn {
+  width: 100%;
+  justify-content: center;
+}
+.reenviar-ok {
+  font-size: 12.5px;
+  color: var(--emerald-dark);
+}
+/* E-mail confirmado: o círculo se desenha e, em seguida, o check. */
+.auth-concluido > .check-animado {
+  width: 64px;
+  height: 64px;
+}
+.check-animado circle {
+  stroke-width: 2.5;
+  stroke-dasharray: 145;
+  stroke-dashoffset: 145;
+  animation: desenhar-traco 0.6s ease-out forwards;
+}
+.check-animado path {
+  stroke-width: 3;
+  stroke-dasharray: 34;
+  stroke-dashoffset: 34;
+  animation: desenhar-traco 0.35s 0.5s ease-out forwards;
+}
+@keyframes desenhar-traco {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .check-animado circle,
+  .check-animado path {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Conta que ainda não abriu o link do e-mail (Administração e Escola > Equipe). */
+.selo-email {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 9px;
+  border-radius: 99px;
+  border: 1px solid var(--aviso-borda);
+  background: var(--aviso-fundo);
+  color: var(--aviso-texto);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.data-table .selo-email {
+  white-space: nowrap;
+}
+.aviso-email-pendente {
+  margin-top: 8px;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--aviso-borda);
+  background: var(--aviso-fundo);
+  color: var(--aviso-texto);
+  font-size: 12.5px;
 }

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
+import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
 import { useToast } from "@/components/Toast";
@@ -37,6 +38,13 @@ const ROTULOS_SITUACAO: Record<SituacaoConta, string> = {
   desativado: "Desativada",
 };
 
+/** O que o aviso diz depois de cada ação (quem pediu o acesso recebe e-mail ao ser aprovado ou recusado). */
+const MENSAGENS_ACAO: Partial<Record<AcaoEquipe | "confirmar_email", string>> = {
+  aprovar: "Conta aprovada: a pessoa recebe um e-mail e já pode entrar.",
+  recusar: "Pedido recusado: a pessoa recebe um e-mail avisando.",
+  confirmar_email: "E-mail confirmado. Agora a conta pode ser aprovada.",
+};
+
 /**
  * Administração do sistema, para a equipe do BioFrequência (os e-mails de
  * ADMIN_EMAILS na API). Contas de todas as escolas, o catálogo e os
@@ -46,6 +54,17 @@ const ROTULOS_SITUACAO: Record<SituacaoConta, string> = {
 export default function AdminPage() {
   const { coordenacao } = useAuth();
   const [aba, setAba] = useState<Aba>("geral");
+
+  // ?aba=contas abre direto na aba (o link do e-mail de pedido de acesso).
+  useEffect(() => {
+    const pedida = new URLSearchParams(window.location.search).get("aba");
+    if (ABAS.some((item) => item.id === pedida)) setAba(pedida as Aba);
+  }, []);
+
+  function trocarAba(nova: Aba) {
+    setAba(nova);
+    window.history.replaceState(null, "", nova === "geral" ? "/admin" : `/admin?aba=${nova}`);
+  }
 
   if (!coordenacao?.administrador) {
     return (
@@ -67,7 +86,7 @@ export default function AdminPage() {
             role="tab"
             aria-selected={aba === item.id}
             className={`filter-pill${aba === item.id ? " active" : ""}`}
-            onClick={() => setAba(item.id)}
+            onClick={() => trocarAba(item.id)}
           >
             <Icon name={item.icone} />
             {item.rotulo}
@@ -75,7 +94,7 @@ export default function AdminPage() {
         ))}
       </div>
       <div className="entrada-em-cascata" key={aba}>
-        {aba === "geral" && <AbaGeral irPara={setAba} />}
+        {aba === "geral" && <AbaGeral irPara={trocarAba} />}
         {aba === "contas" && <AbaContas />}
         {aba === "escolas" && <AbaEscolas />}
         {aba === "chamados" && <AbaChamados />}
@@ -108,10 +127,15 @@ function AbaGeral({ irPara }: { irPara: (aba: Aba) => void }) {
     carregar();
   }
 
-  if (!resumo) return <div className="loading-block skeleton-bloco">Carregando…</div>;
+  if (!resumo) return <Esqueleto variante="cartoes" />;
 
   const cartoes: { rotulo: string; valor: number; detalhe?: string; aba?: Aba }[] = [
-    { rotulo: "Contas aguardando aprovação", valor: resumo.contas_pendentes, aba: "contas" },
+    {
+      rotulo: "Contas aguardando aprovação",
+      valor: resumo.contas_pendentes,
+      detalhe: resumo.contas_sem_email > 0 ? `+ ${resumo.contas_sem_email} esperando confirmar o e-mail` : "e-mail já confirmado",
+      aba: "contas",
+    },
     { rotulo: "Chamados abertos", valor: resumo.chamados_abertos, aba: "chamados" },
     { rotulo: "Escolas usando o sistema", valor: resumo.escolas_em_uso, detalhe: `de ${resumo.escolas_catalogo.toLocaleString("pt-BR")} no catálogo`, aba: "escolas" },
     { rotulo: "Contas ativas", valor: resumo.contas_ativas, aba: "contas" },
@@ -181,14 +205,23 @@ function AbaContas() {
     return () => clearTimeout(espera);
   }, [carregar]);
 
-  async function aplicar(conta: ContaAdmin, acao: AcaoEquipe) {
+  async function aplicar(conta: ContaAdmin, acao: AcaoEquipe | "confirmar_email") {
     const resposta = await Api.adminAtualizarConta(conta.id_coordenacao, acao);
     if (!resposta.sucesso) {
       mostrarToast(resposta.mensagem, true);
       return;
     }
-    mostrarToast("Conta atualizada.");
+    mostrarToast(MENSAGENS_ACAO[acao] ?? "Conta atualizada.");
     carregar();
+  }
+
+  // Sem provedor de e-mail o link não chega: a equipe confirma no lugar
+  // da pessoa, depois de conferir que o endereço é dela.
+  function confirmarEmail(conta: ContaAdmin) {
+    const aviso =
+      `Confirmar o e-mail ${conta.email_coordenacao} sem o link?\n\n` +
+      "Faça isso só se você já conferiu com a pessoa que o endereço é dela - normalmente ela confirma sozinha, pelo link que recebeu.";
+    if (confirm(aviso)) aplicar(conta, "confirmar_email");
   }
 
   return (
@@ -240,6 +273,7 @@ function AbaContas() {
                   <b>{conta.nome_coordenacao}</b>
                   {conta.administrador && <span className="badge badge--media">equipe</span>}
                   <div className="panel-meta">{conta.email_coordenacao}</div>
+                  {!conta.email_verificado && <span className="selo-email">e-mail não confirmado</span>}
                 </td>
                 <td>
                   {conta.nome_escola}
@@ -255,9 +289,15 @@ function AbaContas() {
                 <td className="acoes-linha">
                   {conta.situacao === "pendente" && (
                     <>
-                      <button type="button" className="btn btn-sm btn-primary" onClick={() => aplicar(conta, "aprovar")}>
-                        Aprovar
-                      </button>
+                      {conta.email_verificado ? (
+                        <button type="button" className="btn btn-sm btn-primary" onClick={() => aplicar(conta, "aprovar")}>
+                          Aprovar
+                        </button>
+                      ) : (
+                        <button type="button" className="btn btn-sm" onClick={() => confirmarEmail(conta)} title="A aprovação fica liberada depois da confirmação">
+                          Confirmar e-mail
+                        </button>
+                      )}
                       <button type="button" className="btn btn-sm" onClick={() => aplicar(conta, "recusar")}>
                         Recusar
                       </button>

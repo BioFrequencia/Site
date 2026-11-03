@@ -7,7 +7,7 @@ import {
   preferenciasDaApi,
   preferenciasParaApi,
 } from "./preferencias.ts";
-import { ARQUIVOS_SOM, deveTocar, SONS_PADRAO } from "./sons.ts";
+import { ARQUIVOS_SOM, deveTocar, GANHO_MAXIMO, ganhoDoVolume, SONS_PADRAO } from "./sons.ts";
 import { temNovidade } from "./contadores.ts";
 import { temaEfetivo } from "./tema.ts";
 
@@ -46,6 +46,16 @@ test("sons: cada tipo toca o arquivo pedido e respeita as preferências", () => 
   assert.equal(deveTocar(configuracaoDeSons({ ...PREFERENCIAS_PADRAO, sonsAtivos: false }), "confirmacao"), false);
   assert.equal(deveTocar(configuracaoDeSons({ ...PREFERENCIAS_PADRAO, volumeSons: 0 }), "confirmacao"), false);
   assert.equal(configuracaoDeSons({ ...PREFERENCIAS_PADRAO, volumeSons: 40 }).volume, 0.4);
+});
+
+test("volume da preferência vira o ganho do som, com folga acima do arquivo", () => {
+  assert.equal(ganhoDoVolume(0), 0);
+  assert.equal(ganhoDoVolume(1), GANHO_MAXIMO);
+  // O padrão (70%) já toca acima do nível do arquivo normalizado.
+  assert.ok(ganhoDoVolume(SONS_PADRAO.volume) > 1);
+  // Valores fora da faixa (preferência antiga ou corrompida) ficam no limite.
+  assert.equal(ganhoDoVolume(2), GANHO_MAXIMO);
+  assert.equal(ganhoDoVolume(-1), 0);
 });
 
 test("som de notificação só quando alguma fila do menu cresce", () => {
