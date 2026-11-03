@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
 import { NavPublica } from "@/components/NavPublica";
-import { resolverApkUrl } from "@/lib/config";
+import { resolverApkUrl, resolverDesktopUrl } from "@/lib/config";
 
 export const metadata = {
   title: "Downloads — Biofrequência",
@@ -12,6 +12,10 @@ export const metadata = {
 // NEXT_PUBLIC_APK_URL, ou da release fixa que o workflow do app publica
 // (ver lib/config.ts).
 const APK_URL = resolverApkUrl(process.env.NEXT_PUBLIC_APK_URL);
+
+// O .exe do desktop sai do workflow do repositório SoftwareDesktop (Release
+// numa tag v*). Só aparece com NEXT_PUBLIC_DESKTOP_URL definida no deploy.
+const DESKTOP_URL = resolverDesktopUrl(process.env.NEXT_PUBLIC_DESKTOP_URL);
 
 export default function DownloadsPage() {
   return (
@@ -34,20 +38,34 @@ export default function DownloadsPage() {
             </div>
             <h3>
               Software desktop (Windows)
-              <span className="selo-em-breve">Em breve</span>
+              {!DESKTOP_URL && <span className="selo-em-breve">Em breve</span>}
             </h3>
             <p>
-              Aplicativo WPF (.NET) para a coordenação: dashboard, alertas, turmas, acompanhamento,
-              relatórios, responsáveis, notificações e biometria facial. O instalador ainda não está
-              disponível para download — enquanto isso, todas essas funções já funcionam pelo painel
-              web, nesta mesma conta.
+              Para o computador da coordenação: as mesmas telas deste painel — dashboard, alertas,
+              entradas e saídas, presenças, turmas e alunos, responsáveis, avisos às famílias, escola e
+              relatórios — com a mesma conta, o mesmo tema e os mesmos sons.
             </p>
-            {/* Sem link: oferecer um download que não existe (ou um .zip
-                que não é o instalador) é pior que dizer que ainda não
-                está pronto. */}
-            <button type="button" className="btn" disabled>
-              <Icon name="download" /> Indisponível no momento
-            </button>
+            {DESKTOP_URL ? (
+              <>
+                <a href={DESKTOP_URL} className="btn btn-primary" rel="noopener">
+                  <Icon name="download" /> Baixar para Windows
+                </a>
+                <p className="download-nota">
+                  Windows 10 ou 11 (64 bits). É um arquivo só, sem instalação. Se o Windows avisar que
+                  protegeu o computador, clique em &ldquo;Mais informações&rdquo; &rsaquo; &ldquo;Executar
+                  assim mesmo&rdquo;.
+                </p>
+              </>
+            ) : (
+              <>
+                {/* Sem link: oferecer um download que não existe é pior que
+                    dizer que ainda não está pronto. */}
+                <button type="button" className="btn" disabled>
+                  <Icon name="download" /> Indisponível no momento
+                </button>
+                <p className="download-nota">Enquanto isso, tudo isso já funciona aqui no painel web.</p>
+              </>
+            )}
           </div>
 
           <div className="download-card">

@@ -48,3 +48,19 @@ export function resolverApkUrl(valor: string | undefined): string {
   const limpo = (valor ?? "").trim();
   return limpo || APK_URL_PADRAO;
 }
+
+/**
+ * Onde a última versão publicada do desktop fica, quando o repositório
+ * SoftwareDesktop é público: o workflow dele cria a Release numa tag v*.
+ */
+export const DESKTOP_URL_RELEASES = "https://github.com/BioFrequencia/SoftwareDesktop/releases/latest/download/BioFrequencia.exe";
+
+/**
+ * Endereço do software desktop (NEXT_PUBLIC_DESKTOP_URL), ou null. Sem a
+ * variável não há padrão: o repositório do desktop é privado, e um link
+ * que dá 404 para a escola é pior que o card dizer "Em breve".
+ */
+export function resolverDesktopUrl(valor: string | undefined): string | null {
+  const limpo = (valor ?? "").trim();
+  return limpo || null;
+}
