@@ -7,6 +7,7 @@ import { Topbar } from "@/components/Topbar";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
 import { usePreferencias } from "@/components/Preferencias";
+import { Interruptor } from "@/components/Interruptor";
 import { formatarDataHora, iniciais } from "@/lib/format";
 import { tocarSom, type TipoSom } from "@/lib/sons";
 import type { EscolhaTema, Preferencias } from "@/lib/preferencias";
@@ -73,7 +74,7 @@ export default function ContaPage() {
 }
 
 function AbaPerfil() {
-  const { atualizarCoordenacao } = useAuth();
+  const { atualizarCoordenacao, coordenacao } = useAuth();
   const { mostrarToast } = useToast();
   const [original, setOriginal] = useState<PerfilConta | null>(null);
   const [form, setForm] = useState<PerfilConta>({ nome_coordenacao: "", email_coordenacao: "", nome_escola: "" });
@@ -182,15 +183,25 @@ function AbaPerfil() {
           </div>
         )}
         <div className="modal-field">
-          <label htmlFor="perfilEscola">Nome da escola</label>
+          <label htmlFor="perfilEscola">Escola</label>
           <input
             id="perfilEscola"
             value={form.nome_escola}
             maxLength={150}
             onChange={(e) => campo("nome_escola", e.target.value)}
+            // O nome de uma escola do catálogo é o oficial da SEDUC; fora
+            // do catálogo, só a gestão muda (vale para a escola inteira).
+            disabled={original.escola_do_catalogo || coordenacao?.papel !== "gestor"}
             required
           />
-          <p className="dica-campo">Aparece no app de biometria e vale para todas as contas desta escola.</p>
+          <p className="dica-campo">
+            {original.escola_do_catalogo
+              ? "Nome oficial do catálogo da Secretaria da Educação - não muda por aqui."
+              : coordenacao?.papel === "gestor"
+                ? "Aparece no app de biometria e vale para todas as contas desta escola."
+                : "Só a gestão da escola muda o nome."}{" "}
+            Você é {original.papel === "gestor" ? "da gestão" : "da coordenação"} desta escola.
+          </p>
         </div>
 
         {erro && <p className="field-error show">{erro}</p>}
@@ -313,7 +324,7 @@ type CampoSom = "somConfirmacao" | "somNotificacao" | "somErro";
 const SONS: { tipo: TipoSom; campo: CampoSom; rotulo: string; descricao: string }[] = [
   { tipo: "confirmacao", campo: "somConfirmacao", rotulo: "Confirmações", descricao: "Presença registrada, aluno cadastrado, dados salvos." },
   { tipo: "notificacao", campo: "somNotificacao", rotulo: "Notificações", descricao: "Chegou um alerta, notificação, check-in ou ocorrência nova." },
-  { tipo: "erro", campo: "somErro", rotulo: "Erros", descricao: "Algo não deu certo, como lançar duas faltas no mesmo dia." },
+  { tipo: "erro", campo: "somErro", rotulo: "Erros", descricao: "Algo não deu certo, como registrar duas entradas atrasadas no mesmo dia." },
 ];
 
 function AbaPreferencias() {
@@ -430,31 +441,6 @@ function AbaPreferencias() {
   );
 }
 
-function Interruptor({
-  ligado,
-  rotulo,
-  desabilitado = false,
-  onMudar,
-}: {
-  ligado: boolean;
-  rotulo: string;
-  desabilitado?: boolean;
-  onMudar: (ligado: boolean) => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={ligado}
-      aria-label={rotulo}
-      disabled={desabilitado}
-      className={`interruptor${ligado ? " ligado" : ""}`}
-      onClick={() => onMudar(!ligado)}
-    >
-      <span className="interruptor-botao" />
-    </button>
-  );
-}
 
 function AbaDispositivos() {
   const { logout } = useAuth();

@@ -4,25 +4,39 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
 import { Modal } from "@/components/Modal";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
-import { formatarCpf, formatarData, formatarDataHora, formatarTelefone } from "@/lib/format";
+import { ModalRegistro } from "@/components/ModalRegistro";
+import { ModalEditarResponsavel, ModalResponsavel } from "@/components/ModalResponsavel";
+import {
+  classeBadgeStatus,
+  formatarCpf,
+  formatarData,
+  formatarDataHora,
+  formatarHora,
+  formatarPercentual,
+  formatarTelefone,
+  rotuloOrigemAtraso,
+} from "@/lib/format";
 import {
   CANAIS_ACOMPANHAMENTO,
-  GENEROS_RESPONSAVEL,
-  ROTULOS_GENERO_RESPONSAVEL,
+  ROTULOS_CANAL_RESPONSAVEL,
   type Acompanhamento,
   type HistoricoAluno,
   type Responsavel,
+  type TipoRegistro,
 } from "@/lib/types";
 
 export default function AlunoDetalhePage() {
   const params = useParams<{ id: string }>();
   const idAluno = Number(params.id);
   const router = useRouter();
+  const { coordenacao } = useAuth();
   const { mostrarToast } = useToast();
+  const gestao = coordenacao?.papel === "gestor";
 
   const [historico, setHistorico] = useState<HistoricoAluno | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -31,16 +45,19 @@ export default function AlunoDetalhePage() {
   const [responsaveis, setResponsaveis] = useState<Responsavel[]>([]);
   const [acompanhamentos, setAcompanhamentos] = useState<Acompanhamento[]>([]);
 
-  const [modalFalta, setModalFalta] = useState<"falta" | "atraso" | null>(null);
+  const [modalRegistro, setModalRegistro] = useState<TipoRegistro | null>(null);
   const [modalResponsavel, setModalResponsavel] = useState(false);
+  const [editando, setEditando] = useState<Responsavel | null>(null);
   const [modalAcompanhamento, setModalAcompanhamento] = useState(false);
   const [apagandoBiometria, setApagandoBiometria] = useState<"facial" | "consentimento" | null>(null);
 
   async function carregarTudo() {
     setCarregando(true);
     // Sequencial, não Promise.all - ver o comentário em (painel)/layout.tsx
-    // sobre limite de conexões simultâneas do banco.
-    const respHistorico = await Api.historicoAluno(idAluno);
+    // sobre limite de conexões simultâneas do banco. Histórico dos últimos
+    // 90 dias.
+    const inicio = new Date(Date.now() - 89 * 86400000).toISOString().slice(0, 10);
+    const respHistorico = await Api.historicoAluno(idAluno, inicio);
     const respResponsaveis = await Api.listarResponsaveis(idAluno);
     const respAcompanhamento = await Api.listarAcompanhamento(idAluno, 1);
     if (respHistorico.sucesso && respHistorico.dados) {
@@ -101,16 +118,34 @@ export default function AlunoDetalhePage() {
     );
   }
 
+  async function removerRegistro(tipo: TipoRegistro, id: number) {
+    const nome = tipo === "atraso" ? "esta entrada atrasada" : "esta saída antecipada";
+    if (!confirm(`Apagar ${nome}? Use só para registro feito por engano. Avisos que já foram para a família não voltam.`)) return;
+    const resposta = await Api.removerRegistro(tipo, id);
+    if (!resposta.sucesso) {
+      mostrarToast(resposta.mensagem, true);
+      return;
+    }
+    mostrarToast(tipo === "atraso" ? "Entrada atrasada apagada." : "Saída antecipada apagada.");
+    carregarTudo();
+  }
+
   if (!Number.isFinite(idAluno)) {
     return <div className="error-block">Aluno inválido.</div>;
   }
 
   const eventos = historico
     ? [
-        ...historico.faltas.map((f) => ({ ...f, tipoEvento: "Falta" as const })),
-        ...historico.atrasos.map((a) => ({ ...a, tipoEvento: "Atraso" as const })),
+        ...historico.atrasos.map((a) => ({ ...a, tipo: "atraso" as const })),
+        ...historico.saidas.map((s) => ({ ...s, tipo: "saida" as const })),
       ].sort((a, b) => (a.data < b.data ? 1 : -1))
     : [];
+  const indicador = historico?.indicador ?? null;
+  const horario =
+    historico?.aluno.horario_inicio && historico.aluno.horario_fim
+      ? `${historico.aluno.horario_inicio}–${historico.aluno.horario_fim}`
+      : null;
+  const alunoDoModal = historico ? { id_aluno: idAluno, nome_aluno: historico.aluno.nome_aluno, turma: historico.aluno.nome_sala } : undefined;
 
   return (
     <>
@@ -119,34 +154,64 @@ export default function AlunoDetalhePage() {
       </button>
 
       {erro && <div className="error-block">{erro}</div>}
-      {carregando && !historico && <div className="loading-block">Carregando aluno…</div>}
+      {carregando && !historico && <div className="loading-block skeleton-bloco">Carregando aluno…</div>}
 
       {historico && (
-        <>
+        <div className="entrada-em-cascata">
           <Topbar
             titulo={historico.aluno.nome_aluno}
-            subtitulo={historico.aluno.nome_sala ?? "Sem turma"}
+            subtitulo={[historico.aluno.nome_sala ?? "Sem turma", historico.aluno.periodo_sala, horario].filter(Boolean).join(" · ")}
             acoes={
               <>
-                <button type="button" className="btn" onClick={() => setModalFalta("atraso")}>
-                  Registrar atraso
+                <button type="button" className="btn" onClick={() => setModalRegistro("saida")}>
+                  <Icon name="logout" /> Saída antecipada
                 </button>
-                <button type="button" className="btn btn-primary" onClick={() => setModalFalta("falta")}>
-                  Registrar falta
+                <button type="button" className="btn btn-primary" onClick={() => setModalRegistro("atraso")}>
+                  <Icon name="clock" /> Entrada atrasada
                 </button>
               </>
             }
           />
 
+          {indicador && (
+            <div className="indicador-aluno">
+              <div>
+                <div className="stat-label">Últimos {indicador.janela_dias} dias</div>
+                <div className="indicador-numeros">
+                  <span>
+                    <b>{indicador.atrasos}</b> {indicador.atrasos === 1 ? "entrada atrasada" : "entradas atrasadas"} (
+                    {formatarPercentual(indicador.taxa_atrasos)})
+                  </span>
+                  <span>
+                    <b>{indicador.saidas}</b> {indicador.saidas === 1 ? "saída antecipada" : "saídas antecipadas"} (
+                    {formatarPercentual(indicador.taxa_saidas)})
+                  </span>
+                  <span>
+                    em <b>{indicador.dias_letivos}</b> {indicador.dias_letivos === 1 ? "dia de aula" : "dias de aula"}
+                  </span>
+                </div>
+              </div>
+              <div className="indicador-situacao">
+                <span className={classeBadgeStatus(indicador.situacao)}>{indicador.situacao}</span>
+                <span className="panel-meta">
+                  A família é avisada a partir de {indicador.limite}% (mínimo de {indicador.minimo})
+                </span>
+              </div>
+            </div>
+          )}
+
           <div className="grid-2">
             <div className="panel">
               <div className="panel-head">
-                <h2>Histórico ({formatarData(historico.periodo.inicio)} – {formatarData(historico.periodo.fim)})</h2>
+                <h2>Entradas e saídas</h2>
+                <span className="panel-meta">
+                  {formatarData(historico.periodo.inicio)} – {formatarData(historico.periodo.fim)}
+                </span>
               </div>
               {eventos.length === 0 ? (
                 <div className="empty-state">
                   <Icon name="check" />
-                  <p>Nenhuma falta ou atraso neste período.</p>
+                  <p>Nenhuma entrada atrasada ou saída antecipada nos últimos 90 dias.</p>
                 </div>
               ) : (
                 <table className="data-table">
@@ -155,20 +220,43 @@ export default function AlunoDetalhePage() {
                       <th>Data</th>
                       <th>Tipo</th>
                       <th>Motivo</th>
-                      <th>Justificado</th>
+                      <th>Registro</th>
+                      {gestao && <th></th>}
                     </tr>
                   </thead>
                   <tbody>
                     {eventos.map((evento) => (
-                      <tr key={`${evento.tipoEvento}-${evento.id}`}>
-                        <td>{formatarData(evento.data)}</td>
+                      <tr key={`${evento.tipo}-${evento.id}`}>
                         <td>
-                          <span className={`badge ${evento.tipoEvento === "Falta" ? "badge--alta" : "badge--media"}`}>
-                            {evento.tipoEvento}
-                          </span>
+                          {formatarData(evento.data)} <span className="panel-meta">{formatarHora(evento.data)}</span>
                         </td>
-                        <td>{evento.motivo ?? "-"}</td>
-                        <td>{evento.justificado ? "Sim" : "Não"}</td>
+                        <td>
+                          <span className={`badge ${evento.tipo === "atraso" ? "badge--atraso" : "badge--saida"}`}>
+                            {evento.tipo === "atraso" ? "Entrada atrasada" : "Saída antecipada"}
+                          </span>
+                          {evento.justificado && <span className="badge badge--regular">Justificado</span>}
+                        </td>
+                        <td>
+                          {evento.motivo ?? "-"}
+                          {evento.retirado_por && <div className="panel-meta">Buscou: {evento.retirado_por}</div>}
+                        </td>
+                        <td className="panel-meta">
+                          {evento.tipo === "atraso" ? rotuloOrigemAtraso(evento.origem) : "Lançada pela coordenação"}
+                          {evento.registrado_por && <div>por {evento.registrado_por}</div>}
+                        </td>
+                        {gestao && (
+                          <td>
+                            <button
+                              type="button"
+                              className="icon-btn"
+                              title="Apagar (registro feito por engano)"
+                              aria-label="Apagar registro"
+                              onClick={() => removerRegistro(evento.tipo, evento.id)}
+                            >
+                              <Icon name="trash" />
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -202,8 +290,9 @@ export default function AlunoDetalhePage() {
                 Digital: <b>{historico.aluno.digitais > 0 ? `${historico.aluno.digitais} cadastrada(s)` : "não cadastrada"}</b>
               </div>
               <p className="results-caption">
-                O consentimento e as fotos são registrados pelo app de biometria, no tablet da coordenação. A biometria
-                fica cifrada; as fotos não são guardadas.
+                O consentimento e as fotos são registrados pelo app de biometria, no tablet da coordenação. A biometria fica
+                cifrada; as fotos não são guardadas. A presença registrada pelo app depois da tolerância já vira entrada
+                atrasada.
               </p>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {historico.aluno.facial_atualizada_em && (
@@ -235,26 +324,38 @@ export default function AlunoDetalhePage() {
               </button>
             </div>
             {responsaveis.length === 0 ? (
-              <p className="results-caption">Nenhum responsável vinculado.</p>
+              <div className="aviso-dia">
+                <Icon name="alert" />
+                <span>Sem responsável cadastrado: a escola não consegue avisar a família quando o aluno passar do limite.</span>
+              </div>
             ) : (
               <table className="data-table">
                 <thead>
                   <tr>
                     <th>Nome</th>
-                    <th>CPF</th>
-                    <th>Telefone</th>
-                    <th>Email</th>
+                    <th>Parentesco</th>
+                    <th>Contato</th>
+                    <th>Avisos por</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   {responsaveis.map((responsavel) => (
                     <tr key={responsavel.id_responsavel}>
-                      <td>{responsavel.nome_responsavel}</td>
-                      <td>{formatarCpf(responsavel.cpf_responsavel)}</td>
-                      <td>{formatarTelefone(responsavel.telefone_responsavel)}</td>
-                      <td>{responsavel.email_responsavel ?? "-"}</td>
                       <td>
+                        {responsavel.nome_responsavel}
+                        <div className="panel-meta">CPF {formatarCpf(responsavel.cpf_responsavel)}</div>
+                      </td>
+                      <td>{responsavel.parentesco ?? "-"}</td>
+                      <td>
+                        {formatarTelefone(responsavel.telefone_responsavel)}
+                        {responsavel.email_responsavel && <div className="panel-meta">{responsavel.email_responsavel}</div>}
+                      </td>
+                      <td>{ROTULOS_CANAL_RESPONSAVEL[responsavel.canal_preferido ?? "whatsapp"]}</td>
+                      <td className="acoes-linha">
+                        <button type="button" className="btn-text" onClick={() => setEditando(responsavel)}>
+                          Editar
+                        </button>
                         <button
                           type="button"
                           className="btn-text"
@@ -307,27 +408,39 @@ export default function AlunoDetalhePage() {
               </div>
             )}
           </div>
-        </>
+        </div>
       )}
 
-      <ModalMarcarEvento
-        tipo={modalFalta}
-        onFechar={() => setModalFalta(null)}
-        onConfirmado={() => {
-          setModalFalta(null);
-          mostrarToast(modalFalta === "falta" ? "Falta registrada." : "Atraso registrado.");
+      <ModalRegistro
+        tipo={modalRegistro}
+        aluno={alunoDoModal}
+        onFechar={() => setModalRegistro(null)}
+        onConfirmado={(mensagem) => {
+          setModalRegistro(null);
+          mostrarToast(mensagem);
           carregarTudo();
         }}
-        idAluno={idAluno}
       />
 
       <ModalResponsavel
         aberto={modalResponsavel}
-        idAluno={idAluno}
+        aluno={alunoDoModal}
         onFechar={() => setModalResponsavel(false)}
-        onSalvo={() => {
+        onSalvo={(mensagem) => {
           setModalResponsavel(false);
-          mostrarToast("Responsável salvo.");
+          mostrarToast(mensagem);
+          carregarTudo();
+        }}
+      />
+
+      <ModalEditarResponsavel
+        responsavel={editando}
+        idAluno={idAluno}
+        nomeAluno={historico?.aluno.nome_aluno}
+        onFechar={() => setEditando(null)}
+        onSalvo={(mensagem) => {
+          setEditando(null);
+          mostrarToast(mensagem);
           carregarTudo();
         }}
       />
@@ -343,202 +456,6 @@ export default function AlunoDetalhePage() {
         }}
       />
     </>
-  );
-}
-
-function ModalMarcarEvento({
-  tipo,
-  idAluno,
-  onFechar,
-  onConfirmado,
-}: {
-  tipo: "falta" | "atraso" | null;
-  idAluno: number;
-  onFechar: () => void;
-  onConfirmado: () => void;
-}) {
-  const { mostrarToast } = useToast();
-  const [motivo, setMotivo] = useState("");
-  const [observacao, setObservacao] = useState("");
-  const [justificado, setJustificado] = useState(false);
-  const [enviando, setEnviando] = useState(false);
-
-  useEffect(() => {
-    if (tipo) {
-      setMotivo("");
-      setObservacao("");
-      setJustificado(false);
-    }
-  }, [tipo]);
-
-  async function aoEnviar(evento: FormEvent) {
-    evento.preventDefault();
-    setEnviando(true);
-    const resposta =
-      tipo === "falta"
-        ? await Api.marcarFalta(idAluno, motivo || null, observacao || null, justificado)
-        : await Api.marcarAtraso(idAluno, motivo || null, observacao || null, justificado);
-    setEnviando(false);
-    if (!resposta.sucesso) {
-      mostrarToast(resposta.mensagem, true);
-      return;
-    }
-    onConfirmado();
-  }
-
-  return (
-    <Modal titulo={tipo === "falta" ? "Registrar falta" : "Registrar atraso"} aberto={!!tipo} onFechar={onFechar}>
-      <form onSubmit={aoEnviar}>
-        <div className="modal-field">
-          <label htmlFor="motivoEvento">Motivo</label>
-          <input id="motivoEvento" value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Opcional" />
-        </div>
-        <div className="modal-field">
-          <label htmlFor="observacaoEvento">Observação</label>
-          <textarea id="observacaoEvento" value={observacao} onChange={(e) => setObservacao(e.target.value)} />
-        </div>
-        <div className="modal-field checkbox-field">
-          <input
-            id="justificadoEvento"
-            type="checkbox"
-            checked={justificado}
-            onChange={(e) => setJustificado(e.target.checked)}
-          />
-          <label htmlFor="justificadoEvento" style={{ margin: 0 }}>
-            Justificado
-          </label>
-        </div>
-        <div className="modal-actions">
-          <button type="button" className="btn" onClick={onFechar}>
-            Cancelar
-          </button>
-          <button type="submit" className="btn btn-primary" disabled={enviando}>
-            {enviando ? "Salvando…" : "Confirmar"}
-          </button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-
-function ModalResponsavel({
-  aberto,
-  idAluno,
-  onFechar,
-  onSalvo,
-}: {
-  aberto: boolean;
-  idAluno: number;
-  onFechar: () => void;
-  onSalvo: () => void;
-}) {
-  const { mostrarToast } = useToast();
-  const [nome, setNome] = useState("");
-  const [cpf, setCpf] = useState("");
-  const [telefone, setTelefone] = useState("");
-  const [email, setEmail] = useState("");
-  const [genero, setGenero] = useState("");
-  const [erro, setErro] = useState<string | null>(null);
-  const [enviando, setEnviando] = useState(false);
-  const [buscando, setBuscando] = useState(false);
-
-  useEffect(() => {
-    if (aberto) {
-      setNome("");
-      setCpf("");
-      setTelefone("");
-      setEmail("");
-      setGenero("");
-      setErro(null);
-    }
-  }, [aberto]);
-
-  async function buscarPorCpf() {
-    if (!cpf.trim()) return;
-    setBuscando(true);
-    const resposta = await Api.buscarResponsavelPorCpf(cpf);
-    setBuscando(false);
-    if (resposta.sucesso && resposta.dados) {
-      const vinculo = await Api.vincularResponsavel(idAluno, resposta.dados.id_responsavel);
-      if (!vinculo.sucesso) {
-        mostrarToast(vinculo.mensagem, true);
-        return;
-      }
-      mostrarToast(`${resposta.dados.nome_responsavel} vinculado(a).`);
-      onSalvo();
-      return;
-    }
-    setErro("Nenhum responsável com esse CPF - preencha os dados abaixo para cadastrar um novo.");
-  }
-
-  async function aoEnviar(evento: FormEvent) {
-    evento.preventDefault();
-    if (!nome.trim() || !cpf.trim() || !telefone.trim() || !genero) {
-      setErro("Preencha nome, CPF, telefone e gênero.");
-      return;
-    }
-    setEnviando(true);
-    const resposta = await Api.addResponsavel(idAluno, nome.trim(), cpf, telefone, email.trim() || null, genero);
-    setEnviando(false);
-    if (!resposta.sucesso) {
-      setErro(resposta.mensagem);
-      return;
-    }
-    onSalvo();
-  }
-
-  return (
-    <Modal titulo="Adicionar responsável" aberto={aberto} onFechar={onFechar}>
-      <form onSubmit={aoEnviar}>
-        <div className="modal-field">
-          <label htmlFor="cpfResponsavel">CPF</label>
-          <div style={{ display: "flex", gap: 8 }}>
-            <input
-              id="cpfResponsavel"
-              value={cpf}
-              onChange={(e) => setCpf(e.target.value)}
-              placeholder="Só números"
-              maxLength={14}
-            />
-            <button type="button" className="btn btn-sm" onClick={buscarPorCpf} disabled={buscando}>
-              {buscando ? "Buscando…" : "Buscar"}
-            </button>
-          </div>
-        </div>
-        <div className="modal-field">
-          <label htmlFor="nomeResponsavel">Nome</label>
-          <input id="nomeResponsavel" value={nome} onChange={(e) => setNome(e.target.value)} />
-        </div>
-        <div className="modal-field">
-          <label htmlFor="telefoneResponsavel">Telefone</label>
-          <input id="telefoneResponsavel" value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="DDD + número" />
-        </div>
-        <div className="modal-field">
-          <label htmlFor="emailResponsavel">Email</label>
-          <input id="emailResponsavel" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Opcional" />
-        </div>
-        <div className="modal-field">
-          <label htmlFor="generoResponsavel">Gênero</label>
-          <select id="generoResponsavel" value={genero} onChange={(e) => setGenero(e.target.value)}>
-            <option key="" value="">Selecione…</option>
-            {GENEROS_RESPONSAVEL.map((g) => (
-              <option key={g} value={g}>
-                {ROTULOS_GENERO_RESPONSAVEL[g]}
-              </option>
-            ))}
-          </select>
-        </div>
-        {erro && <p className="field-error show">{erro}</p>}
-        <div className="modal-actions">
-          <button type="button" className="btn" onClick={onFechar}>
-            Cancelar
-          </button>
-          <button type="submit" className="btn btn-primary" disabled={enviando}>
-            {enviando ? "Salvando…" : "Cadastrar e vincular"}
-          </button>
-        </div>
-      </form>
-    </Modal>
   );
 }
 

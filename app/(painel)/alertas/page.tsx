@@ -6,7 +6,7 @@ import { Api } from "@/lib/api";
 import { Topbar } from "@/components/Topbar";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
-import { classeBadgePrioridade, formatarData, iniciais, rotuloTipoAlerta } from "@/lib/format";
+import { classeBadgePrioridade, formatarData, formatarPercentual, iniciais, rotuloTipoAlerta } from "@/lib/format";
 import type { Alerta, Sala } from "@/lib/types";
 
 export default function AlertasPage() {
@@ -19,6 +19,8 @@ export default function AlertasPage() {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [encerrando, setEncerrando] = useState<number | null>(null);
+  const [limite, setLimite] = useState<number | null>(null);
+  const [janelaDias, setJanelaDias] = useState<number | null>(null);
 
   useEffect(() => {
     Api.listarSalas().then((resposta) => {
@@ -31,6 +33,8 @@ export default function AlertasPage() {
     const resposta = await Api.alertas(idSala ? Number(idSala) : null, tipo || null, prioridade || null);
     if (resposta.sucesso && resposta.dados) {
       setAlertas(resposta.dados.alertas);
+      setLimite(resposta.dados.limite ?? null);
+      setJanelaDias(resposta.dados.janela?.dias ?? null);
       setErro(null);
     } else {
       setErro(resposta.mensagem);
@@ -51,13 +55,16 @@ export default function AlertasPage() {
       mostrarToast(resposta.mensagem, true);
       return;
     }
-    mostrarToast(`Alertas de ${alerta.nome_aluno} encerrados por hoje.`);
+    mostrarToast(`Alertas de ${alerta.nome_aluno} encerrados até o próximo registro.`);
     setAlertas((atual) => atual.filter((a) => a.id_aluno !== alerta.id_aluno));
   }
 
   return (
     <>
-      <Topbar titulo="Alertas" subtitulo="Alunos que precisam de atenção agora." />
+      <Topbar
+        titulo="Alertas"
+        subtitulo="Alunos com muitas entradas atrasadas ou saídas antecipadas, contando só os dias de aula."
+      />
 
       <div className="filter-bar">
         <select className="filter-select" value={idSala} onChange={(e) => setIdSala(e.target.value)}>
@@ -74,9 +81,8 @@ export default function AlertasPage() {
         <div className="pill-group">
           {[
             { valor: "", rotulo: "Todos os tipos" },
-            { valor: "frequencia", rotulo: "Frequência" },
-            { valor: "faltas", rotulo: "Faltas" },
-            { valor: "atrasos", rotulo: "Atrasos" },
+            { valor: "atrasos", rotulo: "Entradas atrasadas" },
+            { valor: "saidas", rotulo: "Saídas antecipadas" },
           ].map((opcao) => (
             <button
               key={opcao.valor}
@@ -115,7 +121,16 @@ export default function AlertasPage() {
 
       {!carregando && (
         <>
-          <p className="results-caption">{alertas.length} alerta(s) encontrado(s).</p>
+          <p className="results-caption">
+            {alertas.length} alerta(s) encontrado(s).
+            {limite !== null && janelaDias !== null && (
+              <>
+                {" "}
+                Prioridade baixa a partir de {limite / 2}% dos dias de aula, média a partir de {limite}% (a família é avisada
+                automaticamente) e alta a partir de {Math.min(100, limite * 2)}%, nos últimos {janelaDias} dias.
+              </>
+            )}
+          </p>
 
           {alertas.length === 0 ? (
             <div className="empty-state">
@@ -135,9 +150,17 @@ export default function AlertasPage() {
                     <span className="tag">{rotuloTipoAlerta(alerta.tipo)}</span>
                   </div>
                   <div className="alert-reason">{alerta.motivo}</div>
-                  <div className="alert-meta">Referência: {formatarData(alerta.dta_referencia)}</div>
+                  <div className="alert-meta">
+                    Último registro: {formatarData(alerta.dta_referencia)}
+                    {alerta.nivel_rotulo && alerta.nivel ? ` · Situação: ${alerta.nivel_rotulo}` : ""}
+                  </div>
+                  <div className="alert-taxa" aria-hidden="true">
+                    <div className={`alert-taxa-barra alert-taxa-barra--${alerta.tipo}`} style={{ width: `${Math.min(100, alerta.taxa ?? 0)}%` }} />
+                    {limite !== null && <div className="alert-taxa-limite" style={{ left: `${Math.min(100, limite)}%` }} />}
+                  </div>
                 </div>
                 <div className="alert-side">
+                  <span className="alert-taxa-valor">{formatarPercentual(alerta.taxa)}</span>
                   <span className={classeBadgePrioridade(alerta.prioridade)}>{alerta.prioridade}</span>
                   <div className="alert-actions">
                     <Link href={`/turmas/${alerta.id_aluno}`} className="btn btn-sm">

@@ -5,11 +5,11 @@ import { Api } from "@/lib/api";
 import { Topbar } from "@/components/Topbar";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
-import { baixarCsv, formatarData, formatarDataHora, hojeNaEscola } from "@/lib/format";
+import { baixarCsv, formatarData, formatarDataHora, formatarPercentual, hojeNaEscola, nomeMesLongo, rotuloOrigemAtraso, rotuloTipoAlerta } from "@/lib/format";
 
-// Mesmos 5 relatórios do desktop (Windows/Relatorios.xaml.cs) - mesma
-// fonte de dados, só troca SaveFileDialog+File.WriteAllText por um
-// download de Blob no navegador (baixarCsv, em lib/format.ts).
+// Relatórios de entradas atrasadas e saídas antecipadas, em CSV (montado
+// no navegador, baixarCsv em lib/format.ts) ou XML (montado no servidor).
+// Os números são os mesmos das telas: só dias de aula entram nas contas.
 export default function RelatoriosPage() {
   const { mostrarToast } = useToast();
   const [gerando, setGerando] = useState<string | null>(null);
@@ -31,7 +31,7 @@ export default function RelatoriosPage() {
    * ".xml" que na verdade não abre em lugar nenhum: faltaria escapar &,
    * < e aspas vindos de nomes e observações.
    */
-  async function baixarXml(relatorio: "alertas" | "alunos" | "acompanhamentos" | "ocorrencias") {
+  async function baixarXml(relatorio: RelatorioXml) {
     setGerandoXml(relatorio);
     const resultado = await Api.baixarRelatorioXml(relatorio);
     setGerandoXml(null);
@@ -46,8 +46,18 @@ export default function RelatoriosPage() {
     }
     baixarCsv(
       `alertas_pendentes_${dataHoje()}.csv`,
-      ["Aluno", "Turma", "Tipo", "Prioridade", "Frequência", "Motivo", "Data de referência"],
-      resposta.dados.alertas.map((a) => [a.nome_aluno, a.turma ?? "", a.tipo, a.prioridade, `${a.frequencia}%`, a.motivo, formatarData(a.dta_referencia)])
+      ["Aluno", "Turma", "Tipo", "Prioridade", "Ocorrências", "Dias de aula", "Taxa", "Motivo", "Último registro"],
+      resposta.dados.alertas.map((a) => [
+        a.nome_aluno,
+        a.turma ?? "",
+        rotuloTipoAlerta(a.tipo),
+        a.prioridade,
+        a.ocorrencias,
+        a.dias_letivos,
+        formatarPercentual(a.taxa),
+        a.motivo,
+        formatarData(a.dta_referencia),
+      ])
     );
     mostrarToast("Relatório de alertas baixado.");
   }
@@ -82,9 +92,9 @@ export default function RelatoriosPage() {
       return;
     }
     baixarCsv(
-      `evolucao_mensal_frequencia_${dataHoje()}.csv`,
-      ["Mês", "Frequência da rede"],
-      resposta.dados.evolucao_mensal.map((m) => [m.mes.slice(0, 7), `${m.frequencia.toFixed(1)}%`])
+      `entradas_e_saidas_por_mes_${dataHoje()}.csv`,
+      ["Mês", "Dias de aula", "Entradas atrasadas", "Saídas antecipadas", "Pontualidade"],
+      resposta.dados.evolucao_mensal.map((m) => [nomeMesLongo(m.mes), m.dias_letivos, m.atrasos, m.saidas, formatarPercentual(m.pontualidade)])
     );
     mostrarToast("Relatório de evolução baixado.");
   }
@@ -96,9 +106,9 @@ export default function RelatoriosPage() {
       return;
     }
     baixarCsv(
-      `frequencia_por_turma_${dataHoje()}.csv`,
-      ["Turma", "Alunos", "Frequência"],
-      resposta.dados.turmas.map((t) => [t.nome_sala, t.total_alunos, `${t.frequencia.toFixed(1)}%`])
+      `pontualidade_por_turma_${dataHoje()}.csv`,
+      ["Turma", "Período", "Alunos", "Entradas atrasadas no mês", "Saídas antecipadas no mês", "Pontualidade"],
+      resposta.dados.turmas.map((t) => [t.nome_sala, t.periodo_sala ?? "", t.total_alunos, t.atrasos, t.saidas, formatarPercentual(t.pontualidade)])
     );
     mostrarToast("Relatório de turmas baixado.");
   }
@@ -131,31 +141,42 @@ export default function RelatoriosPage() {
 
     // Ordena pelo horário original (texto ISO) e só depois formata.
     const linhas = [
-      ...historico.dados.faltas.map((f) => ({ ...f, tipo: "Falta" })),
-      ...historico.dados.atrasos.map((a) => ({ ...a, tipo: "Atraso" })),
+      ...historico.dados.atrasos.map((a) => ({ ...a, tipo: "Entrada atrasada", registro: rotuloOrigemAtraso(a.origem) })),
+      ...historico.dados.saidas.map((s) => ({ ...s, tipo: "Saída antecipada", registro: "Lançada pela coordenação" })),
     ]
       .sort((a, b) => (a.data < b.data ? 1 : -1))
-      .map((r) => [formatarDataHora(r.data), r.tipo, r.motivo ?? "", r.justificado ? "Sim" : "Não", r.observacao ?? ""]);
+      .map((r) => [
+        formatarDataHora(r.data),
+        r.tipo,
+        r.motivo ?? "",
+        r.justificado ? "Sim" : "Não",
+        r.retirado_por ?? "",
+        r.observacao ?? "",
+        r.registro,
+        r.registrado_por ?? "",
+      ]);
 
     baixarCsv(
       `historico_${aluno.nome_aluno.replace(/\s+/g, "_")}_${dataHoje()}.csv`,
-      ["Data", "Tipo", "Motivo", "Justificado", "Observação"],
+      ["Data e hora", "Tipo", "Motivo", "Justificado", "Quem buscou", "Observação", "Registro", "Registrado por"],
       linhas
     );
     mostrarToast("Relatório individual baixado.");
   }
 
-  // xml: null quando aquele relatório existe só em CSV (os dois são
-  // montados a partir de agregados do dashboard, que não têm uma
-  // listagem correspondente no servidor).
+  // xml: null quando aquele relatório existe só em CSV (montados a partir
+  // dos agregados do dashboard, que não têm listagem no servidor);
+  // executar: null quando existe só em XML.
   const relatorios: {
-    id: string; titulo: string; desc: string; executar: () => Promise<void>;
-    xml: "alertas" | "alunos" | "acompanhamentos" | "ocorrencias" | null;
+    id: string; titulo: string; desc: string; executar: (() => Promise<void>) | null;
+    xml: RelatorioXml | null;
   }[] = [
-    { id: "alertas", titulo: "Alertas pendentes", desc: "Todos os alunos com alerta ativo, sua prioridade e motivo.", executar: relatorioAlertas, xml: "alertas" },
+    { id: "registros", titulo: "Entradas atrasadas e saídas antecipadas", desc: "Cada registro dos últimos 90 dias: aluno, horário, motivo, quem buscou e de onde veio.", executar: null, xml: "registros" },
+    { id: "alunos", titulo: "Situação de cada aluno", desc: "Dias de aula, entradas atrasadas, saídas antecipadas e taxas de cada aluno na janela de alerta da escola.", executar: null, xml: "alunos" },
+    { id: "alertas", titulo: "Alertas", desc: "Alunos acima ou perto do limite, com a taxa e o motivo.", executar: relatorioAlertas, xml: "alertas" },
+    { id: "evolucao", titulo: "Entradas e saídas por mês", desc: "Os meses do gráfico do dashboard, com os dias de aula e a pontualidade.", executar: relatorioEvolucao, xml: null },
+    { id: "turmas", titulo: "Pontualidade por turma", desc: "Entradas atrasadas, saídas antecipadas e pontualidade de cada turma no mês.", executar: relatorioTurmas, xml: null },
     { id: "acompanhamento", titulo: "Histórico de acompanhamentos", desc: "Todos os contatos registrados com responsáveis.", executar: relatorioAcompanhamento, xml: "acompanhamentos" },
-    { id: "evolucao", titulo: "Evolução mensal da frequência", desc: "Frequência geral da rede nos últimos 6 meses.", executar: relatorioEvolucao, xml: null },
-    { id: "turmas", titulo: "Frequência por turma", desc: "Frequência atual de cada turma cadastrada.", executar: relatorioTurmas, xml: null },
   ];
 
   return (
@@ -173,14 +194,16 @@ export default function RelatoriosPage() {
               <div className="report-desc">{relatorio.desc}</div>
             </div>
             <div className="report-acoes">
-              <button
-                type="button"
-                className="btn btn-sm"
-                onClick={() => comFeedback(relatorio.id, relatorio.executar)}
-                disabled={gerando === relatorio.id}
-              >
-                {gerando === relatorio.id ? "Gerando…" : "CSV"}
-              </button>
+              {relatorio.executar && (
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={() => comFeedback(relatorio.id, relatorio.executar!)}
+                  disabled={gerando === relatorio.id}
+                >
+                  {gerando === relatorio.id ? "Gerando…" : "CSV"}
+                </button>
+              )}
               {relatorio.xml && (
                 <button
                   type="button"
@@ -200,9 +223,9 @@ export default function RelatoriosPage() {
             <Icon name="inbox" />
           </div>
           <div className="report-body">
-            <div className="report-title">Ocorrências enviadas pelo aplicativo</div>
+            <div className="report-title">Ocorrências do celular do aluno (fluxo anterior)</div>
             <div className="report-desc">
-              Todos os envios dos alunos, com motivo, observação e a decisão da coordenação.
+              Histórico dos envios feitos pelo app antigo do aluno, com motivo, observação e a decisão da coordenação.
             </div>
           </div>
           <div className="report-acoes">
@@ -223,7 +246,7 @@ export default function RelatoriosPage() {
           </div>
           <div className="report-body">
             <div className="report-title">Histórico individual por aluno</div>
-            <div className="report-desc">Faltas e atrasos dos últimos 3 meses de um aluno específico.</div>
+            <div className="report-desc">Entradas atrasadas e saídas antecipadas dos últimos 3 meses de um aluno.</div>
             <input
               style={{
                 marginTop: 10,
@@ -252,6 +275,8 @@ export default function RelatoriosPage() {
     </>
   );
 }
+
+type RelatorioXml = "alertas" | "alunos" | "registros" | "acompanhamentos" | "ocorrencias";
 
 // Data da escola, não a data em UTC: depois das 21h o toISOString() já
 // dava o dia seguinte (nome do arquivo e período do relatório errados).

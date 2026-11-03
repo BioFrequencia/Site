@@ -49,7 +49,7 @@ test("sons: cada tipo toca o arquivo pedido e respeita as preferências", () => 
 });
 
 test("som de notificação só quando alguma fila do menu cresce", () => {
-  const antes = { alertas: 2, notificacoes: 0, checkins: 1, ocorrencias: 0 };
+  const antes = { alertas: 2, notificacoes: 0, equipe: 1, admin: 0 };
   assert.equal(temNovidade(antes, { ...antes }), false);
   assert.equal(temNovidade(antes, { ...antes, notificacoes: 1 }), true);
   // Fila diminuindo (alguém resolveu um alerta) não é novidade.

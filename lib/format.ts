@@ -1,4 +1,4 @@
-import type { PrioridadeAlerta, StatusFrequencia } from "./types";
+import type { OrigemAtraso, PrioridadeAlerta, StatusAluno } from "./types";
 
 // Datas e horários: a API grava e devolve horários em UTC sem indicar o
 // fuso ("2026-10-29 13:45:00", padrão do Supabase). Antes o site lia isso
@@ -49,7 +49,7 @@ export function formatarDataHora(iso: string | null | undefined): string {
   return data.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: FUSO_ESCOLA });
 }
 
-/** "AAAA-MM-DD HH:MM" no horário da escola - formato que a API aceita em dta_falta/dta_atraso. */
+/** "AAAA-MM-DD HH:MM" no horário da escola - formato que a API aceita em dta_atraso/dta_saida. */
 export function horarioLocalEscola(valorApi: string): string | null {
   const data = lerHorarioApi(valorApi);
   if (!data) return null;
@@ -73,16 +73,16 @@ export function iniciais(nome: string): string {
   return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
 }
 
-export function classeBadgeStatus(status: StatusFrequencia): string {
+export function classeBadgeStatus(status: StatusAluno): string {
   switch (status) {
-    case "Em risco":
+    case "Crítico":
       return "badge badge--em-risco";
-    case "Atenção":
+    case "Acima do limite":
+      return "badge badge--alta";
+    case "Perto do limite":
       return "badge badge--atencao";
     case "Regular":
       return "badge badge--regular";
-    case "Excelente":
-      return "badge badge--excelente";
     default:
       return "badge badge--neutral";
   }
@@ -92,31 +92,51 @@ export function classeBadgePrioridade(prioridade: PrioridadeAlerta): string {
   return `badge badge--${prioridade}`;
 }
 
-export function classeBarraStatus(status: StatusFrequencia): string {
-  switch (status) {
-    case "Em risco":
-      return "var(--indigo)";
-    case "Atenção":
-      return "#9c8cfb";
-    case "Regular":
-      return "var(--emerald)";
-    case "Excelente":
-      return "var(--emerald)";
+export function rotuloTipoAlerta(tipo: string): string {
+  switch (tipo) {
+    case "atrasos":
+      return "Entradas atrasadas";
+    case "saidas":
+      return "Saídas antecipadas";
     default:
-      return "var(--ink-300)";
+      return tipo;
   }
 }
 
-export function rotuloTipoAlerta(tipo: string): string {
-  switch (tipo) {
-    case "frequencia":
-      return "Frequência";
-    case "faltas":
-      return "Faltas consecutivas";
-    case "atrasos":
-      return "Atrasos recorrentes";
+/** "22,5%" (ou "—" quando ainda não há dia de aula para calcular). */
+export function formatarPercentual(valor: number | null | undefined, casas = 1): string {
+  if (valor === null || valor === undefined || Number.isNaN(valor)) return "—";
+  return `${valor.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: casas })}%`;
+}
+
+/** "+2,3 p.p." / "−1 p.p." - diferença entre duas porcentagens. */
+export function formatarDeltaPontos(delta: number | null | undefined): string {
+  if (delta === null || delta === undefined) return "";
+  const sinal = delta > 0 ? "+" : delta < 0 ? "−" : "";
+  return `${sinal}${Math.abs(delta).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} p.p.`;
+}
+
+/** "jan", "fev"... a partir de "AAAA-MM-01". */
+export function nomeMesCurto(iso: string): string {
+  const [ano, mes] = iso.split("-").map(Number);
+  return new Date(Date.UTC(ano, mes - 1, 15)).toLocaleDateString("pt-BR", { month: "short", timeZone: "UTC" }).replace(".", "");
+}
+
+/** "novembro de 2026" a partir de "AAAA-MM-01". */
+export function nomeMesLongo(iso: string): string {
+  const [ano, mes] = iso.split("-").map(Number);
+  return new Date(Date.UTC(ano, mes - 1, 15)).toLocaleDateString("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+/** De onde veio a entrada atrasada: lançada, detectada pela presença do app ou aprovada do celular. */
+export function rotuloOrigemAtraso(origem: OrigemAtraso | null | undefined): string {
+  switch (origem) {
+    case "presenca":
+      return "Pela presença do app";
+    case "ocorrencia":
+      return "Enviada pelo celular do aluno";
     default:
-      return tipo;
+      return "Lançada pela coordenação";
   }
 }
 

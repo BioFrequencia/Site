@@ -58,7 +58,8 @@ export default function PresencasPage() {
       mostrarToast(resposta.mensagem, true);
       return;
     }
-    mostrarToast(resposta.dados?.presenca.nova === false ? "A presença já estava registrada." : "Presença registrada.");
+    // A API já diz se a presença virou entrada atrasada (depois da tolerância).
+    mostrarToast(resposta.dados?.presenca.nova === false ? "A presença já estava registrada." : resposta.mensagem);
     carregar();
   }
 

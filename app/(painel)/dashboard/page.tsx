@@ -6,11 +6,11 @@ import { Api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
 import { Icon } from "@/components/Icon";
-import { classeBadgePrioridade, iniciais, rotuloTipoAlerta } from "@/lib/format";
+import { NumeroAnimado } from "@/components/NumeroAnimado";
+import { GraficoEntradasSaidas, GraficoPontualidade } from "@/components/Graficos";
+import { classeBadgePrioridade, formatarData, formatarPercentual, iniciais, nomeMesLongo, rotuloTipoAlerta } from "@/lib/format";
+import { barraPontualidade } from "@/lib/graficos";
 import type { Dashboard } from "@/lib/types";
-
-const RAIO = 80;
-const CIRCUNFERENCIA = 2 * Math.PI * RAIO;
 
 export default function DashboardPage() {
   const { coordenacao } = useAuth();
@@ -39,110 +39,114 @@ export default function DashboardPage() {
   }, []);
 
   const primeiroNome = coordenacao?.nome_coordenacao?.split(" ")[0] ?? "";
+  const mesAnterior = dados
+    ? nomeMesLongo(dados.evolucao_mensal.length > 1 ? dados.evolucao_mensal[dados.evolucao_mensal.length - 2].mes : dados.mes).split(" ")[0]
+    : "";
 
   return (
     <>
-      <Topbar titulo={`Olá, ${primeiroNome}`} subtitulo="Aqui está um resumo da frequência da sua rede hoje." />
+      <Topbar titulo={`Olá, ${primeiroNome}`} subtitulo="Entradas atrasadas, saídas antecipadas e quem precisa de atenção na sua escola." />
 
       {erro && <div className="error-block">{erro}</div>}
-      {carregando && !dados && <div className="loading-block">Carregando dashboard…</div>}
+      {carregando && !dados && <div className="loading-block skeleton-bloco">Carregando dashboard…</div>}
 
       {dados && (
-        <>
+        <div className="entrada-em-cascata">
+          {!dados.hoje.letivo && (
+            <div className="aviso-dia">
+              <Icon name="calendar" />
+              <span>
+                Hoje ({formatarData(dados.hoje.data)}) não tem aula: <b>{dados.hoje.motivo}</b>. Entradas atrasadas e saídas
+                antecipadas não podem ser registradas.
+              </span>
+            </div>
+          )}
+
           <div className="hero">
             <div className="hero-gauge">
-              <div className="gauge-wrap">
-                <svg viewBox="0 0 188 188">
-                  <circle cx="94" cy="94" r={RAIO} fill="none" stroke="var(--mist-200)" strokeWidth="14" />
-                  <circle
-                    cx="94"
-                    cy="94"
-                    r={RAIO}
-                    fill="none"
-                    stroke="var(--indigo)"
-                    strokeWidth="14"
-                    strokeLinecap="round"
-                    strokeDasharray={CIRCUNFERENCIA}
-                    strokeDashoffset={CIRCUNFERENCIA * (1 - Math.min(100, Math.max(0, dados.frequencia_geral)) / 100)}
-                  />
-                </svg>
-                <div className="gauge-center">
-                  <div className="gauge-value">{dados.frequencia_geral}%</div>
-                  <div className="gauge-label">Frequência geral do mês</div>
-                </div>
-              </div>
-              <div className={`gauge-delta${dados.delta_frequencia < 0 ? " negativo" : ""}`}>
-                <Icon name="trend" />
-                {dados.delta_frequencia >= 0 ? "+" : ""}
-                {dados.delta_frequencia}% vs. mês anterior
-              </div>
+              <GraficoPontualidade
+                valor={dados.pontualidade}
+                delta={dados.delta_pontualidade}
+                mesAnterior={mesAnterior}
+                alunoDias={dados.aluno_dias_mes}
+                totalAlunos={dados.total_alunos}
+                diasLetivos={dados.dias_letivos_mes}
+              />
             </div>
             <div className="hero-stats">
-              <div className="stat-row">
+              <Link href="/alertas" className="stat-row stat-link">
                 <div>
                   <div className="stat-label">Alertas ativos</div>
                   <div className="stat-sub">{dados.alertas_alta_prioridade} de alta prioridade</div>
                 </div>
-                <div className="stat-value">{dados.alertas_ativos}</div>
-              </div>
-              <div className="stat-row">
-                <div>
-                  <div className="stat-label">Alunos em observação</div>
-                  <div className="stat-sub">Frequência entre 80% e 90%</div>
+                <div className="stat-value">
+                  <NumeroAnimado valor={dados.alertas_ativos} />
                 </div>
-                <div className="stat-value">{dados.alunos_observacao}</div>
-              </div>
+              </Link>
               <div className="stat-row">
                 <div>
-                  <div className="stat-label">Atrasos no mês</div>
+                  <div className="stat-label">Acima do limite</div>
                   <div className="stat-sub">
-                    {dados.delta_atrasos >= 0 ? "+" : ""}
-                    {dados.delta_atrasos} vs. mês anterior
+                    {dados.limite_alerta}% dos dias de aula nos últimos {dados.janela_alerta_dias} dias
                   </div>
                 </div>
-                <div className="stat-value">{dados.atrasos_mes}</div>
-              </div>
-              <div className="stat-row">
-                <div>
-                  <div className="stat-label">Contatos pendentes</div>
-                  <div className="stat-sub">Alunos com alerta sem contato recente</div>
+                <div className="stat-value">
+                  <NumeroAnimado valor={dados.alunos_acima_limite} />
                 </div>
-                <div className="stat-value">{dados.contatos_pendentes}</div>
               </div>
+              <Link href="/registros" className="stat-row stat-link">
+                <div>
+                  <div className="stat-label">Entradas atrasadas no mês</div>
+                  <div className="stat-sub">
+                    {dados.saidas_mes} {dados.saidas_mes === 1 ? "saída antecipada" : "saídas antecipadas"}
+                  </div>
+                </div>
+                <div className="stat-value">
+                  <NumeroAnimado valor={dados.atrasos_mes} />
+                </div>
+              </Link>
+              <Link href="/notificacoes" className="stat-row stat-link">
+                <div>
+                  <div className="stat-label">Famílias avisadas no mês</div>
+                  <div className="stat-sub">
+                    {dados.contatos_pendentes} {dados.contatos_pendentes === 1 ? "aluno" : "alunos"} com alerta sem acompanhamento
+                  </div>
+                </div>
+                <div className="stat-value">
+                  <NumeroAnimado valor={dados.responsaveis_avisados_mes} />
+                </div>
+              </Link>
             </div>
           </div>
 
           <div className="grid-2">
-            <div className="panel">
-              <div className="panel-head">
-                <h2>Evolução da frequência</h2>
-                <span className="panel-meta">Últimos 6 meses</span>
-              </div>
-              <GraficoEvolucao pontos={dados.evolucao_mensal} />
-              <div className="chart-legend">
-                <span>
-                  <span className="legend-dot" /> Frequência geral (%)
-                </span>
-              </div>
-            </div>
+            <GraficoEntradasSaidas meses={dados.evolucao_mensal} />
 
             <div className="panel">
               <div className="panel-head">
-                <h2>Frequência por turma</h2>
+                <h2>Pontualidade por turma</h2>
+                <span className="panel-meta">{nomeMesLongo(dados.mes)}</span>
               </div>
               {dados.turmas.length === 0 && <p className="results-caption">Nenhuma turma cadastrada.</p>}
-              {dados.turmas.map((turma) => (
-                <div className="turma-row" key={turma.nome_sala}>
-                  <span className="turma-name">{turma.nome_sala}</span>
-                  <div className="turma-bar-track">
-                    <div
-                      className="turma-bar-fill"
-                      style={{ width: `${turma.frequencia}%`, background: "var(--indigo)" }}
-                    />
+              {dados.turmas.map((turma) => {
+                const barra = barraPontualidade(turma.pontualidade, dados.limite_alerta);
+                return (
+                  <div
+                    className="turma-row"
+                    key={turma.id_sala}
+                    title={`${turma.nome_sala}: ${turma.atrasos} ${turma.atrasos === 1 ? "entrada atrasada" : "entradas atrasadas"}, ${turma.saidas} ${
+                      turma.saidas === 1 ? "saída antecipada" : "saídas antecipadas"
+                    } no mês`}
+                  >
+                    <span className="turma-name">{turma.nome_sala}</span>
+                    <div className="turma-bar-track">
+                      <div className={`turma-bar-fill turma-bar-fill--${barra.classe}`} style={{ width: `${barra.largura}%` }} />
+                    </div>
+                    <span className="turma-pct">{formatarPercentual(turma.pontualidade, 0)}</span>
                   </div>
-                  <span className="turma-pct">{turma.frequencia}%</span>
-                </div>
-              ))}
+                );
+              })}
+              <p className="results-caption">Dias de aula sem entrada atrasada, somando os alunos da turma.</p>
             </div>
           </div>
 
@@ -156,7 +160,7 @@ export default function DashboardPage() {
             {dados.prioridade_lista.length === 0 ? (
               <div className="empty-state">
                 <Icon name="check" />
-                <p>Nenhum alerta ativo no momento.</p>
+                <p>Nenhum aluno passou do limite de entradas atrasadas ou saídas antecipadas.</p>
               </div>
             ) : (
               <table className="priority-list">
@@ -172,13 +176,13 @@ export default function DashboardPage() {
                   {dados.prioridade_lista.map((alerta) => (
                     <tr key={alerta.id_alerta}>
                       <td>
-                        <div className="student-cell">
+                        <Link href={`/turmas/${alerta.id_aluno}`} className="student-cell">
                           <div className="avatar">{iniciais(alerta.nome_aluno)}</div>
                           <div>
                             <div className="student-name">{alerta.nome_aluno}</div>
                             <div className="student-turma">{alerta.turma ?? "Sem turma"}</div>
                           </div>
-                        </div>
+                        </Link>
                       </td>
                       <td>{rotuloTipoAlerta(alerta.tipo)}</td>
                       <td>{alerta.motivo}</td>
@@ -191,43 +195,16 @@ export default function DashboardPage() {
               </table>
             )}
           </div>
-        </>
+
+          {dados.fora_do_calendario > 0 && (
+            <p className="results-caption nota-dados">
+              <Icon name="alert" /> {dados.fora_do_calendario}{" "}
+              {dados.fora_do_calendario === 1 ? "registro antigo foi feito" : "registros antigos foram feitos"} num fim de semana,
+              feriado ou dia sem aula e não {dados.fora_do_calendario === 1 ? "entra" : "entram"} nas contas.
+            </p>
+          )}
+        </div>
       )}
     </>
-  );
-}
-
-function GraficoEvolucao({ pontos }: { pontos: Dashboard["evolucao_mensal"] }) {
-  if (pontos.length === 0) return <p className="results-caption">Sem dados suficientes ainda.</p>;
-
-  const largura = 600;
-  const altura = 180;
-  const valores = pontos.map((p) => p.frequencia);
-  const min = Math.max(0, Math.min(...valores) - 5);
-  const max = Math.min(100, Math.max(...valores) + 5) || 100;
-  const escalaX = (i: number) => (pontos.length > 1 ? (i / (pontos.length - 1)) * largura : largura / 2);
-  const escalaY = (v: number) => altura - ((v - min) / (max - min || 1)) * altura;
-
-  const linha = pontos.map((p, i) => `${escalaX(i)},${escalaY(p.frequencia)}`).join(" ");
-  const area = `0,${altura} ${linha} ${largura},${altura}`;
-
-  const nomeMes = (iso: string) => {
-    const data = new Date(iso + "T00:00:00");
-    return data.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
-  };
-
-  return (
-    <svg className="chart-svg" viewBox={`0 0 ${largura} ${altura + 24}`} preserveAspectRatio="none">
-      <polygon points={area} fill="var(--indigo-50)" />
-      <polyline points={linha} fill="none" stroke="var(--indigo)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-      {pontos.map((p, i) => (
-        <circle key={p.mes} cx={escalaX(i)} cy={escalaY(p.frequencia)} r="3.5" fill="var(--indigo)" />
-      ))}
-      {pontos.map((p, i) => (
-        <text key={p.mes} x={escalaX(i)} y={altura + 18} fontSize="11" fill="var(--ink-500)" textAnchor="middle">
-          {nomeMes(p.mes)}
-        </text>
-      ))}
-    </svg>
   );
 }

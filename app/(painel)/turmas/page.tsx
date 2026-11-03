@@ -7,8 +7,18 @@ import { Topbar } from "@/components/Topbar";
 import { Modal } from "@/components/Modal";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
-import { classeBadgeStatus } from "@/lib/format";
-import { GENEROS_ALUNO, PERIODOS_SALA, type AlunoFiltro, type Dashboard, type Sala } from "@/lib/types";
+import { classeBadgeStatus, formatarPercentual } from "@/lib/format";
+import { barraPontualidade } from "@/lib/graficos";
+import { GENEROS_ALUNO, PERIODOS_SALA, STATUS_ALUNO, type AlunoFiltro, type Dashboard, type Sala } from "@/lib/types";
+
+/** Horário padrão de cada período - o mesmo de helpers/calendario.php na API. */
+const HORARIO_PADRAO: Record<string, { inicio: string; fim: string }> = {
+  Matutino: { inicio: "07:00", fim: "12:20" },
+  Vespertino: { inicio: "13:00", fim: "18:20" },
+  Noturno: { inicio: "19:00", fim: "23:00" },
+  Integral: { inicio: "07:00", fim: "16:00" },
+  Indefinido: { inicio: "07:00", fim: "23:00" },
+};
 
 export default function TurmasPage() {
   const router = useRouter();
@@ -16,6 +26,8 @@ export default function TurmasPage() {
 
   const [salas, setSalas] = useState<Sala[]>([]);
   const [turmasResumo, setTurmasResumo] = useState<Dashboard["turmas"]>([]);
+  const [limite, setLimite] = useState(20);
+  const [janelaDias, setJanelaDias] = useState(30);
   const [turmaSelecionada, setTurmaSelecionada] = useState<string | null>(null);
 
   const [busca, setBusca] = useState("");
@@ -36,7 +48,10 @@ export default function TurmasPage() {
     const salasResp = await Api.listarSalas();
     if (salasResp.sucesso && salasResp.dados) setSalas(salasResp.dados);
     const dashboardResp = await Api.dashboard();
-    if (dashboardResp.sucesso && dashboardResp.dados) setTurmasResumo(dashboardResp.dados.turmas);
+    if (dashboardResp.sucesso && dashboardResp.dados) {
+      setTurmasResumo(dashboardResp.dados.turmas);
+      setLimite(dashboardResp.dados.limite_alerta);
+    }
   }
 
   useEffect(() => {
@@ -54,6 +69,7 @@ export default function TurmasPage() {
       setLista(resposta.dados.alunos);
       setTotalPaginas(resposta.dados.total_paginas);
       setTotalRegistros(resposta.dados.total_registros);
+      if (resposta.dados.janela) setJanelaDias(resposta.dados.janela.dias);
       setErro(null);
     } else {
       setErro(resposta.mensagem);
@@ -113,26 +129,34 @@ export default function TurmasPage() {
               <div className="ts-count">{totalRegistros} aluno(s)</div>
             </div>
           </button>
-          {turmasResumo.map((turma) => (
-            <button
-              type="button"
-              key={turma.nome_sala}
-              className={`turma-summary-item${turmaSelecionada === turma.nome_sala ? " selected" : ""}`}
-              onClick={() => {
-                setTurmaSelecionada(turma.nome_sala);
-                setPagina(1);
-              }}
-            >
-              <span className="ts-name">{turma.nome_sala}</span>
-              <div className="ts-info">
-                <div className="ts-count">{turma.total_alunos} aluno(s)</div>
-                <div className="ts-bar-track">
-                  <div className="ts-bar-fill" style={{ width: `${turma.frequencia}%`, background: "var(--indigo)" }} />
+          {turmasResumo.map((turma) => {
+            const barra = barraPontualidade(turma.pontualidade, limite);
+            const sala = salas.find((s) => s.id_sala === turma.id_sala);
+            return (
+              <button
+                type="button"
+                key={turma.id_sala}
+                className={`turma-summary-item${turmaSelecionada === turma.nome_sala ? " selected" : ""}`}
+                onClick={() => {
+                  setTurmaSelecionada(turma.nome_sala);
+                  setPagina(1);
+                }}
+                title="Pontualidade no mês: dias de aula sem entrada atrasada"
+              >
+                <span className="ts-name">{turma.nome_sala}</span>
+                <div className="ts-info">
+                  <div className="ts-count">
+                    {turma.total_alunos} aluno(s)
+                    {sala?.horario && ` · ${sala.horario.inicio}–${sala.horario.fim}`}
+                  </div>
+                  <div className="ts-bar-track">
+                    <div className={`ts-bar-fill turma-bar-fill--${barra.classe}`} style={{ width: `${barra.largura}%` }} />
+                  </div>
                 </div>
-              </div>
-              <span className="ts-pct">{turma.frequencia}%</span>
-            </button>
-          ))}
+                <span className="ts-pct">{formatarPercentual(turma.pontualidade, 0)}</span>
+              </button>
+            );
+          })}
         </div>
 
         <div className="panel">
@@ -156,13 +180,18 @@ export default function TurmasPage() {
                 setPagina(1);
               }}
             >
-              <option value="">Todos os status</option>
-              <option value="Em risco">Em risco</option>
-              <option value="Atenção">Atenção</option>
-              <option value="Regular">Regular</option>
-              <option value="Excelente">Excelente</option>
+              <option value="">Todas as situações</option>
+              {STATUS_ALUNO.map((situacao) => (
+                <option key={situacao} value={situacao}>
+                  {situacao}
+                </option>
+              ))}
             </select>
           </div>
+          <p className="results-caption" style={{ marginTop: -8, marginBottom: 14 }}>
+            Entradas atrasadas e saídas antecipadas nos últimos {janelaDias} dias, contando só os dias de aula. Limite da escola:{" "}
+            {limite}%.
+          </p>
 
           {erro && <div className="error-block">{erro}</div>}
           {carregando && <div className="loading-block">Carregando alunos…</div>}
@@ -180,10 +209,10 @@ export default function TurmasPage() {
                     <tr>
                       <th>Aluno</th>
                       <th>Turma</th>
-                      <th>Faltas</th>
-                      <th>Atrasos</th>
-                      <th>Frequência</th>
-                      <th>Status</th>
+                      <th>Entradas atrasadas</th>
+                      <th>Saídas antecipadas</th>
+                      <th>Dias de aula</th>
+                      <th>Situação</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -191,9 +220,19 @@ export default function TurmasPage() {
                       <tr key={aluno.id_aluno} className="clickable" onClick={() => router.push(`/turmas/${aluno.id_aluno}`)}>
                         <td>{aluno.nome_aluno}</td>
                         <td>{aluno.turma ?? "-"}</td>
-                        <td className="num">{aluno.faltas}</td>
-                        <td className="num">{aluno.atrasos}</td>
-                        <td className="num">{aluno.frequencia}</td>
+                        <td className="num">
+                          {aluno.atrasos}
+                          {aluno.taxa_atrasos !== null && aluno.atrasos > 0 && (
+                            <span className="taxa"> ({formatarPercentual(aluno.taxa_atrasos, 0)})</span>
+                          )}
+                        </td>
+                        <td className="num">
+                          {aluno.saidas}
+                          {aluno.taxa_saidas !== null && aluno.saidas > 0 && (
+                            <span className="taxa"> ({formatarPercentual(aluno.taxa_saidas, 0)})</span>
+                          )}
+                        </td>
+                        <td className="num">{aluno.dias_letivos}</td>
                         <td>
                           <span className={classeBadgeStatus(aluno.status)}>{aluno.status}</span>
                         </td>
@@ -250,7 +289,11 @@ export default function TurmasPage() {
   );
 }
 
-/** Cada coordenação cadastra as próprias turmas (antes só entravam direto no banco). */
+/**
+ * Cada coordenação cadastra as próprias turmas. O horário decide o que é
+ * entrada atrasada e saída antecipada; sem mexer, vale o padrão do
+ * período (a gestão ajusta depois em Escola > Turmas e horários).
+ */
 function ModalNovaTurma({
   aberto,
   onFechar,
@@ -262,6 +305,8 @@ function ModalNovaTurma({
 }) {
   const [nome, setNome] = useState("");
   const [periodo, setPeriodo] = useState<string>("Matutino");
+  const [inicio, setInicio] = useState(HORARIO_PADRAO.Matutino.inicio);
+  const [fim, setFim] = useState(HORARIO_PADRAO.Matutino.fim);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -269,9 +314,17 @@ function ModalNovaTurma({
     if (aberto) {
       setNome("");
       setPeriodo("Matutino");
+      setInicio(HORARIO_PADRAO.Matutino.inicio);
+      setFim(HORARIO_PADRAO.Matutino.fim);
       setErro(null);
     }
   }, [aberto]);
+
+  function trocarPeriodo(novo: string) {
+    setPeriodo(novo);
+    setInicio(HORARIO_PADRAO[novo]?.inicio ?? "07:00");
+    setFim(HORARIO_PADRAO[novo]?.fim ?? "23:00");
+  }
 
   async function aoEnviar(evento: FormEvent) {
     evento.preventDefault();
@@ -280,7 +333,13 @@ function ModalNovaTurma({
       return;
     }
     setEnviando(true);
-    const resposta = await Api.cadastrarTurma(nome.trim(), periodo);
+    if (fim <= inicio) {
+      setErro("O fim da aula precisa ser depois do início.");
+      return;
+    }
+    const padrao = HORARIO_PADRAO[periodo];
+    const horarioProprio = !padrao || padrao.inicio !== inicio || padrao.fim !== fim ? { inicio, fim } : undefined;
+    const resposta = await Api.cadastrarTurma(nome.trim(), periodo, horarioProprio);
     setEnviando(false);
     if (!resposta.sucesso || !resposta.dados) {
       setErro(resposta.mensagem);
@@ -298,7 +357,7 @@ function ModalNovaTurma({
         </div>
         <div className="modal-field">
           <label htmlFor="periodoTurma">Período</label>
-          <select id="periodoTurma" value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
+          <select id="periodoTurma" value={periodo} onChange={(e) => trocarPeriodo(e.target.value)}>
             {PERIODOS_SALA.map((p) => (
               <option key={p} value={p}>
                 {p}
@@ -306,6 +365,19 @@ function ModalNovaTurma({
             ))}
           </select>
         </div>
+        <div className="modal-field-row">
+          <div className="modal-field">
+            <label htmlFor="inicioTurma">Início da aula</label>
+            <input id="inicioTurma" type="time" value={inicio} onChange={(e) => setInicio(e.target.value)} required />
+          </div>
+          <div className="modal-field">
+            <label htmlFor="fimTurma">Fim da aula</label>
+            <input id="fimTurma" type="time" value={fim} onChange={(e) => setFim(e.target.value)} required />
+          </div>
+        </div>
+        <p className="results-caption">
+          Entrada depois do início (mais a tolerância da escola) é entrada atrasada; saída antes do fim é saída antecipada.
+        </p>
         {erro && <p className="field-error show">{erro}</p>}
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onFechar}>
