@@ -9,8 +9,10 @@ import { Logo } from "@/components/Logo";
 import { AlternarTema } from "@/components/AlternarTema";
 import { Icon } from "@/components/Icon";
 import { CampoSenha } from "@/components/CampoSenha";
+import { RequisitosSenha } from "@/components/RequisitosSenha";
 import { ReenviarLink } from "@/components/ReenviarLink";
-import type { ContaCriada, EscolaCatalogo } from "@/lib/types";
+import { mensagemSenhaFraca, SENHA_MAXIMA } from "@/lib/senha";
+import { CARGOS_NA_ESCOLA, ROTULOS_CARGO, type CargoNaEscola, type ContaCriada, type EscolaCatalogo } from "@/lib/types";
 
 /** "SAO BERNARDO DO CAMPO" -> "Sao Bernardo do Campo" (o catálogo vem em maiúsculas). */
 function emTitulo(texto: string | null): string {
@@ -27,6 +29,7 @@ export default function CadastroPage() {
   const router = useRouter();
 
   const [nome, setNome] = useState("");
+  const [cargo, setCargo] = useState<CargoNaEscola | "">("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
@@ -84,8 +87,13 @@ export default function CadastroPage() {
       setErro("Preencha seu nome, o email e a senha.");
       return;
     }
-    if (senha.length < 6) {
-      setErro("A senha deve ter pelo menos 6 caracteres.");
+    if (!cargo) {
+      setErro("Escolha o seu cargo na escola.");
+      return;
+    }
+    const senhaFraca = mensagemSenhaFraca(senha);
+    if (senhaFraca) {
+      setErro(senhaFraca);
       return;
     }
     if (senha !== confirmarSenha) {
@@ -98,6 +106,7 @@ export default function CadastroPage() {
       nome.trim(),
       email.trim(),
       senha,
+      cargo,
       escola ? { id_escola: escola.id_escola } : { nome_escola: nomeEscola.trim(), municipio: municipio.trim() }
     );
     setEnviando(false);
@@ -230,7 +239,22 @@ export default function CadastroPage() {
               )}
 
               <label htmlFor="nome">Seu nome</label>
-              <input id="nome" type="text" value={nome} onChange={(e) => setNome(e.target.value)} required />
+              <input id="nome" type="text" autoComplete="name" value={nome} onChange={(e) => setNome(e.target.value)} required />
+
+              <label htmlFor="cargo">Seu cargo na escola</label>
+              <select id="cargo" value={cargo} onChange={(e) => setCargo(e.target.value as CargoNaEscola | "")} required aria-describedby="cargoDica">
+                <option value="" disabled>
+                  Escolha
+                </option>
+                {CARGOS_NA_ESCOLA.map((opcao) => (
+                  <option key={opcao} value={opcao}>
+                    {ROTULOS_CARGO[opcao]}
+                  </option>
+                ))}
+              </select>
+              <p className="auth-dica" id="cargoDica">
+                Quem aprova o seu acesso escolhe a permissão: Gestão (configura a escola e aprova a equipe) ou Coordenação.
+              </p>
 
               <label htmlFor="email">Email</label>
               <input
@@ -247,15 +271,19 @@ export default function CadastroPage() {
               <CampoSenha
                 id="senha"
                 autoComplete="new-password"
+                maxLength={SENHA_MAXIMA}
+                aria-describedby="requisitosSenha"
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
                 required
               />
+              <RequisitosSenha senha={senha} id="requisitosSenha" />
 
               <label htmlFor="confirmarSenha">Confirmar senha</label>
               <CampoSenha
                 id="confirmarSenha"
                 autoComplete="new-password"
+                maxLength={SENHA_MAXIMA}
                 value={confirmarSenha}
                 onChange={(e) => setConfirmarSenha(e.target.value)}
                 required

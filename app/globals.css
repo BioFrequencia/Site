@@ -3924,3 +3924,140 @@ button.card-resumo:disabled {
   color: var(--aviso-texto);
   font-size: 12.5px;
 }
+
+/* ===================================================================
+   Senha forte, "Esqueci minha senha" e cargo na equipe (migração 010)
+   =================================================================== */
+.auth-form select {
+  width: 100%;
+  border: 1px solid var(--mist-200);
+  border-radius: var(--radius-sm);
+  padding: 11px 13px;
+  font-size: 13.5px;
+  background: var(--surface);
+}
+.auth-dica {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--ink-500);
+  line-height: 1.45;
+}
+.auth-esqueci {
+  margin-top: 8px;
+  text-align: right;
+  font-size: 12.5px;
+}
+.auth-esqueci a {
+  color: var(--indigo-texto);
+  font-weight: 700;
+}
+.auth-esqueci a:hover {
+  text-decoration: underline;
+}
+
+/* Os requisitos da senha nova: cada um ganha o check quando é cumprido. */
+.requisitos-senha ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 4px 14px;
+  margin-top: 8px;
+}
+.requisitos-senha li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--ink-500);
+  transition: color 0.2s;
+}
+.requisitos-senha li.ok {
+  color: var(--emerald-dark);
+}
+/* O texto mais longo ocupa a linha inteira: em duas colunas ele quebrava
+   no meio do exemplo "! @ # $ %". */
+.requisitos-senha li[data-requisito="especial"] {
+  grid-column: 1 / -1;
+}
+.requisito-marca {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 1.5px solid var(--mist-200);
+  transition: background-color 0.2s, border-color 0.2s;
+}
+.requisitos-senha li.ok .requisito-marca {
+  background: var(--emerald);
+  border-color: var(--emerald);
+}
+.requisito-marca svg {
+  width: 10px;
+  height: 10px;
+  stroke: #fff;
+  stroke-width: 3;
+}
+
+/* Aprovar um pedido escolhendo a permissão (Gestão ou Coordenação). */
+.escolha-papel {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 0;
+  border: 0;
+  padding: 0;
+}
+.escolha-papel:disabled .opcao-papel:not(.ativa) {
+  opacity: 0.45;
+}
+.opcao-papel {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border: 1px solid var(--mist-200);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.opcao-papel:hover,
+.opcao-papel.ativa {
+  border-color: var(--indigo);
+}
+.opcao-papel.ativa {
+  box-shadow: 0 0 0 2px var(--indigo-100);
+}
+.opcao-papel input {
+  margin-top: 3px;
+  accent-color: var(--indigo);
+}
+.opcao-papel b {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+}
+.opcao-papel small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--ink-500);
+  line-height: 1.45;
+}
+.selo-sugerido {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--indigo-texto);
+  background: var(--indigo-50);
+  border-radius: 99px;
+  padding: 1px 8px;
+}
+.modal .aviso-escola {
+  margin-top: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--aviso-texto);
+}

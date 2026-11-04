@@ -8,8 +8,19 @@ import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
 import { Interruptor } from "@/components/Interruptor";
 import { useToast } from "@/components/Toast";
+import { ModalAprovacao } from "@/components/ModalAprovacao";
 import { formatarData, formatarDataHora, iniciais } from "@/lib/format";
-import { PERIODOS_SALA, type AcaoEquipe, type ConfiguracaoEscola, type DadosEscola, type MembroEquipe, type TipoCalendario } from "@/lib/types";
+import {
+  PERIODOS_SALA,
+  ROTULOS_CARGO,
+  ROTULOS_PAPEL,
+  type AcaoEquipe,
+  type ConfiguracaoEscola,
+  type DadosEscola,
+  type MembroEquipe,
+  type PapelConta,
+  type TipoCalendario,
+} from "@/lib/types";
 
 type Aba = "escola" | "turmas" | "calendario" | "avisos" | "equipe";
 
@@ -555,6 +566,7 @@ function AbaEquipe() {
   const [podeEditar, setPodeEditar] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [acao, setAcao] = useState<number | null>(null);
+  const [aprovando, setAprovando] = useState<MembroEquipe | null>(null);
 
   const carregar = useCallback(async () => {
     const resposta = await Api.equipe();
@@ -592,6 +604,20 @@ function AbaEquipe() {
     carregar();
   }
 
+  /** Aprovação com a permissão escolhida no modal (cargo e permissão são coisas diferentes). */
+  async function aprovar(membro: MembroEquipe, papel: PapelConta) {
+    setAcao(membro.id_coordenacao);
+    const resposta = await Api.atualizarMembro(membro.id_coordenacao, "aprovar", papel);
+    setAcao(null);
+    if (!resposta.sucesso) {
+      mostrarToast(resposta.mensagem, true);
+      return;
+    }
+    setAprovando(null);
+    mostrarToast(`Acesso aprovado como ${ROTULOS_PAPEL[resposta.dados?.papel ?? papel]}: a pessoa recebe um e-mail e já pode entrar.`);
+    carregar();
+  }
+
   return (
     <div className="panel">
       <div className="panel-head">
@@ -612,7 +638,10 @@ function AbaEquipe() {
                 </b>
                 <span className="panel-meta">
                   {membro.email_coordenacao && `${membro.email_coordenacao} · `}
-                  {membro.papel === "gestor" ? "Gestão" : "Coordenação"} · {ROTULOS_SITUACAO[membro.situacao]}
+                  {membro.cargo && `${ROTULOS_CARGO[membro.cargo]} · `}
+                  {/* Pendente: a permissão ainda vai ser escolhida por quem aprova. */}
+                  {membro.situacao !== "pendente" && `${ROTULOS_PAPEL[membro.papel]} · `}
+                  {ROTULOS_SITUACAO[membro.situacao]}
                   {membro.criado_em && membro.situacao === "pendente" && ` · pediu em ${formatarDataHora(membro.criado_em)}`}
                 </span>
                 {membro.situacao === "pendente" && membro.email_verificado === false && (
@@ -629,7 +658,7 @@ function AbaEquipe() {
                       <button
                         type="button"
                         className="btn btn-sm btn-primary"
-                        onClick={() => aplicar(membro, "aprovar")}
+                        onClick={() => setAprovando(membro)}
                         disabled={acao !== null || membro.email_verificado === false}
                         title={membro.email_verificado === false ? "A pessoa ainda não confirmou o e-mail" : undefined}
                       >
@@ -663,6 +692,12 @@ function AbaEquipe() {
           ))}
         </ul>
       )}
+      <ModalAprovacao
+        key={aprovando?.id_coordenacao ?? "nenhum"}
+        pedido={aprovando && { nome: aprovando.nome_coordenacao, cargo: aprovando.cargo }}
+        onFechar={() => setAprovando(null)}
+        onAprovar={(papel) => (aprovando ? aprovar(aprovando, papel) : Promise.resolve())}
+      />
     </div>
   );
 }
