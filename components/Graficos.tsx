@@ -301,9 +301,10 @@ export function GraficoPontualidade({
         {valor === null ? (
           <span>Ainda não houve dia de aula neste mês.</span>
         ) : (
+          // Não é "alunos × dias": quem entrou no meio do mês só conta a partir daí.
           <span>
-            {alunoDias} {alunoDias === 1 ? "dia-aluno" : "dias-aluno"} ({totalAlunos} {totalAlunos === 1 ? "aluno" : "alunos"} ×{" "}
-            {diasLetivos} {diasLetivos === 1 ? "dia de aula" : "dias de aula"})
+            {alunoDias} {alunoDias === 1 ? "dia-aluno" : "dias-aluno"} em {diasLetivos} {diasLetivos === 1 ? "dia de aula" : "dias de aula"} ({totalAlunos}{" "}
+            {totalAlunos === 1 ? "aluno" : "alunos"})
           </span>
         )}
         {delta !== null && (

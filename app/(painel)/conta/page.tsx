@@ -11,10 +11,12 @@ import { useToast } from "@/components/Toast";
 import { usePreferencias } from "@/components/Preferencias";
 import { Interruptor } from "@/components/Interruptor";
 import { CampoSenha } from "@/components/CampoSenha";
+import { RequisitosSenha } from "@/components/RequisitosSenha";
 import { formatarDataHora, iniciais } from "@/lib/format";
+import { mensagemSenhaFraca, SENHA_MAXIMA } from "@/lib/senha";
 import { tocarSom, type TipoSom } from "@/lib/sons";
 import type { EscolhaTema, Preferencias } from "@/lib/preferencias";
-import type { PerfilConta, SessaoConectada } from "@/lib/types";
+import { CARGOS_NA_ESCOLA, ROTULOS_CARGO, type CargoNaEscola, type PerfilConta, type SessaoConectada } from "@/lib/types";
 
 type Aba = "perfil" | "senha" | "preferencias" | "dispositivos";
 
@@ -102,7 +104,10 @@ function AbaPerfil() {
 
   const trocaEmail = form.email_coordenacao.trim().toLowerCase() !== original.email_coordenacao.toLowerCase();
   const mudou =
-    trocaEmail || form.nome_coordenacao.trim() !== original.nome_coordenacao || form.nome_escola.trim() !== original.nome_escola;
+    trocaEmail ||
+    form.nome_coordenacao.trim() !== original.nome_coordenacao ||
+    form.nome_escola.trim() !== original.nome_escola ||
+    (form.cargo ?? null) !== (original.cargo ?? null);
 
   function campo(nome: keyof PerfilConta, valor: string) {
     setForm((atual) => ({ ...atual, [nome]: valor }));
@@ -122,6 +127,7 @@ function AbaPerfil() {
         nome_coordenacao: form.nome_coordenacao.trim(),
         email_coordenacao: form.email_coordenacao.trim(),
         nome_escola: form.nome_escola.trim(),
+        ...(form.cargo ? { cargo: form.cargo } : {}),
       },
       trocaEmail ? senhaAtual : undefined
     );
@@ -145,6 +151,7 @@ function AbaPerfil() {
           <strong>{original.nome_coordenacao}</strong>
           <span>
             {original.email_coordenacao} · {original.nome_escola}
+            {original.cargo && ` · ${ROTULOS_CARGO[original.cargo]}`}
           </span>
         </div>
       </div>
@@ -192,6 +199,27 @@ function AbaPerfil() {
             </p>
           </div>
         )}
+        <div className="modal-field">
+          <label htmlFor="perfilCargo">Cargo na escola</label>
+          <select
+            id="perfilCargo"
+            value={form.cargo ?? ""}
+            onChange={(e) => setForm((atual) => ({ ...atual, cargo: (e.target.value || null) as CargoNaEscola | null }))}
+          >
+            <option value="" disabled>
+              Escolha
+            </option>
+            {CARGOS_NA_ESCOLA.map((opcao) => (
+              <option key={opcao} value={opcao}>
+                {ROTULOS_CARGO[opcao]}
+              </option>
+            ))}
+          </select>
+          <p className="dica-campo">
+            O cargo descreve a sua função. A permissão no sistema (
+            {original.papel === "gestor" ? "Gestão" : "Coordenação"}, no seu caso) é definida pela gestão da escola.
+          </p>
+        </div>
         <div className="modal-field">
           <label htmlFor="perfilEscola">Escola</label>
           <input
@@ -254,7 +282,8 @@ function AbaSenha() {
   async function trocar(evento: FormEvent) {
     evento.preventDefault();
     setErro(null);
-    if (nova.length < 6) return recusar("A nova senha precisa ter pelo menos 6 caracteres.");
+    const senhaFraca = mensagemSenhaFraca(nova);
+    if (senhaFraca) return recusar(senhaFraca);
     if (nova !== confirmacao) return recusar("A confirmação não é igual à nova senha.");
     if (nova === atual) return recusar("A nova senha precisa ser diferente da atual.");
 
@@ -289,17 +318,20 @@ function AbaSenha() {
           <CampoSenha
             id="senhaNova"
             autoComplete="new-password"
-            minLength={6}
+            maxLength={SENHA_MAXIMA}
+            aria-describedby="requisitosTroca"
             value={nova}
             onChange={(e) => setNova(e.target.value)}
             required
           />
+          <RequisitosSenha senha={nova} id="requisitosTroca" />
         </div>
         <div className="modal-field">
           <label htmlFor="senhaConfirmacao">Repita a nova senha</label>
           <CampoSenha
             id="senhaConfirmacao"
             autoComplete="new-password"
+            maxLength={SENHA_MAXIMA}
             value={confirmacao}
             onChange={(e) => setConfirmacao(e.target.value)}
             required

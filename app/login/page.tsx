@@ -129,6 +129,9 @@ export default function LoginPage() {
             onChange={(e) => setSenha(e.target.value)}
             required
           />
+          <p className="auth-esqueci">
+            <Link href="/esqueci-senha">Esqueci minha senha</Link>
+          </p>
 
           {/* 30 dias neste navegador em vez de 2 horas. A sessão aparece em
               Minha conta > Dispositivos, de onde pode ser desconectada. */}

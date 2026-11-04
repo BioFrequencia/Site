@@ -7,16 +7,20 @@ import { Topbar } from "@/components/Topbar";
 import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
+import { ModalAprovacao } from "@/components/ModalAprovacao";
 import { useToast } from "@/components/Toast";
 import { formatarDataHora } from "@/lib/format";
 import {
+  ROTULOS_CARGO,
   ROTULOS_CATEGORIA_CHAMADO,
+  ROTULOS_PAPEL,
   ROTULOS_STATUS_CHAMADO,
   type AcaoEquipe,
   type ChamadoAdmin,
   type ContaAdmin,
   type EscolaAdmin,
   type EscolaCatalogo,
+  type PapelConta,
   type ResumoSistema,
   type SituacaoConta,
   type StatusChamado,
@@ -189,6 +193,7 @@ function AbaContas() {
   const [pagina, setPagina] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [movendo, setMovendo] = useState<ContaAdmin | null>(null);
+  const [aprovando, setAprovando] = useState<ContaAdmin | null>(null);
 
   const carregar = useCallback(async () => {
     const resposta = await Api.adminContas(busca.trim(), situacao || null, pagina);
@@ -205,13 +210,18 @@ function AbaContas() {
     return () => clearTimeout(espera);
   }, [carregar]);
 
-  async function aplicar(conta: ContaAdmin, acao: AcaoEquipe | "confirmar_email") {
-    const resposta = await Api.adminAtualizarConta(conta.id_coordenacao, acao);
+  async function aplicar(conta: ContaAdmin, acao: AcaoEquipe | "confirmar_email", papel?: PapelConta) {
+    const resposta = await Api.adminAtualizarConta(conta.id_coordenacao, acao, { papel });
     if (!resposta.sucesso) {
       mostrarToast(resposta.mensagem, true);
       return;
     }
-    mostrarToast(MENSAGENS_ACAO[acao] ?? "Conta atualizada.");
+    setAprovando(null);
+    mostrarToast(
+      acao === "aprovar" && resposta.dados
+        ? `Conta aprovada como ${ROTULOS_PAPEL[resposta.dados.papel]}: a pessoa recebe um e-mail e já pode entrar.`
+        : (MENSAGENS_ACAO[acao] ?? "Conta atualizada.")
+    );
     carregar();
   }
 
@@ -279,7 +289,11 @@ function AbaContas() {
                   {conta.nome_escola}
                   {conta.municipio && <div className="panel-meta">{conta.municipio}</div>}
                 </td>
-                <td>{conta.papel === "gestor" ? "Gestão" : "Coordenação"}</td>
+                <td>
+                  {/* Pendente: a permissão ainda vai ser escolhida por quem aprova. */}
+                  {conta.situacao === "pendente" ? <span className="panel-meta">a definir</span> : ROTULOS_PAPEL[conta.papel]}
+                  {conta.cargo && <div className="panel-meta">{ROTULOS_CARGO[conta.cargo]}</div>}
+                </td>
                 <td>
                   <span className={`badge ${conta.situacao === "ativo" ? "badge--regular" : conta.situacao === "pendente" ? "badge--atencao" : "badge--neutral"}`}>
                     {ROTULOS_SITUACAO[conta.situacao]}
@@ -290,7 +304,7 @@ function AbaContas() {
                   {conta.situacao === "pendente" && (
                     <>
                       {conta.email_verificado ? (
-                        <button type="button" className="btn btn-sm btn-primary" onClick={() => aplicar(conta, "aprovar")}>
+                        <button type="button" className="btn btn-sm btn-primary" onClick={() => setAprovando(conta)}>
                           Aprovar
                         </button>
                       ) : (
@@ -341,6 +355,18 @@ function AbaContas() {
           carregar();
         }}
       />
+      <ModalAprovacao
+        key={aprovando?.id_coordenacao ?? "nenhum"}
+        pedido={
+          aprovando && {
+            nome: aprovando.nome_coordenacao,
+            cargo: aprovando.cargo,
+            escolaSemGestao: aprovando.escola_tem_gestao === false,
+          }
+        }
+        onFechar={() => setAprovando(null)}
+        onAprovar={(papel) => (aprovando ? aplicar(aprovando, "aprovar", papel) : Promise.resolve())}
+      />
     </div>
   );
 }
@@ -377,7 +403,7 @@ function ModalMoverEscola({ conta, onFechar, onMovida }: { conta: ContaAdmin | n
   async function mover(escola: EscolaCatalogo) {
     if (!conta) return;
     if (!confirm(`Mover ${conta.nome_coordenacao} para ${escola.nome_escola}? Ela passa a ver só os alunos da escola nova.`)) return;
-    const resposta = await Api.adminAtualizarConta(conta.id_coordenacao, "mover_escola", escola.id_escola);
+    const resposta = await Api.adminAtualizarConta(conta.id_coordenacao, "mover_escola", { idEscola: escola.id_escola });
     if (!resposta.sucesso) {
       mostrarToast(resposta.mensagem, true);
       return;

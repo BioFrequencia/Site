@@ -9,6 +9,8 @@ import { iniciarCarregamento } from "./carregamento";
 import type {
   AcaoEquipe,
   Alerta,
+  CargoNaEscola,
+  PapelConta,
   ContaCriada,
   EmailConfirmado,
   AvisosDoRegistro,
@@ -276,8 +278,14 @@ export const Api = {
     nome: string,
     email: string,
     senha: string,
+    cargo: CargoNaEscola,
     escola: { id_escola: number } | { nome_escola: string; municipio: string }
-  ) => post<ContaCriada>("user/addCoord.php", { nome, email, senha, ...escola }, { autenticado: false }),
+  ) => post<ContaCriada>("user/addCoord.php", { nome, email, senha, cargo, ...escola }, { autenticado: false }),
+  /** "Esqueci minha senha": a resposta é a mesma com ou sem conta para o e-mail. */
+  esqueciSenha: (email: string) => post<null>("conta/esqueciSenha.php", { email }, { autenticado: false }),
+  /** Cria a senha nova pelo link do e-mail (página /redefinir-senha); todos os aparelhos saem da conta. */
+  redefinirSenha: (codigo: string, senhaNova: string) =>
+    post<{ sessoes_encerradas: number }>("conta/redefinirSenha.php", { codigo, senha_nova: senhaNova }, { autenticado: false }),
   /** Abre o link do e-mail (página /confirmar-email). */
   confirmarEmail: (codigo: string) => post<EmailConfirmado>("conta/confirmarEmail.php", { codigo }, { autenticado: false }),
   /** Manda outro link de confirmação; pede a senha para ninguém encher a caixa de outra pessoa. */
@@ -531,8 +539,9 @@ export const Api = {
   removerCalendario: (idCalendario: number) => post<null>("escola/removerCalendario.php", { id_calendario: idCalendario }),
   equipe: (opcoes?: OpcoesChamada) =>
     post<{ equipe: MembroEquipe[]; pendentes: number; pode_editar: boolean }>("escola/equipe.php", {}, opcoes),
-  atualizarMembro: (idCoordenacao: number, acao: AcaoEquipe) =>
-    post<MembroEquipe>("escola/atualizarMembro.php", { id_coordenacao: idCoordenacao, acao }),
+  /** papel: na aprovação, a permissão escolhida (sem ela, vale a sugerida pelo cargo). */
+  atualizarMembro: (idCoordenacao: number, acao: AcaoEquipe, papel?: PapelConta) =>
+    post<MembroEquipe>("escola/atualizarMembro.php", { id_coordenacao: idCoordenacao, acao, ...(papel ? { papel } : {}) }),
 
   // Equipe do sistema (tela /admin; a API responde 404 para as outras contas)
   adminResumo: (opcoes?: OpcoesChamada) => post<ResumoSistema>("admin/resumo.php", {}, opcoes),
@@ -540,8 +549,17 @@ export const Api = {
     post<ListaPaginada & { escolas: EscolaAdmin[] }>("admin/escolas.php", { busca, em_uso: emUso, pagina }),
   adminContas: (busca: string, situacao: SituacaoConta | null, pagina: number) =>
     post<ListaPaginada & { contas: ContaAdmin[] }>("admin/contas.php", { busca, situacao, pagina }),
-  adminAtualizarConta: (idCoordenacao: number, acao: AcaoEquipe | "mover_escola" | "confirmar_email", idEscola?: number) =>
-    post<MembroEquipe>("admin/atualizarConta.php", { id_coordenacao: idCoordenacao, acao, ...(idEscola ? { id_escola: idEscola } : {}) }),
+  adminAtualizarConta: (
+    idCoordenacao: number,
+    acao: AcaoEquipe | "mover_escola" | "confirmar_email",
+    extra: { idEscola?: number; papel?: PapelConta } = {}
+  ) =>
+    post<MembroEquipe>("admin/atualizarConta.php", {
+      id_coordenacao: idCoordenacao,
+      acao,
+      ...(extra.idEscola ? { id_escola: extra.idEscola } : {}),
+      ...(extra.papel ? { papel: extra.papel } : {}),
+    }),
   adminChamados: (status: StatusChamado | null, pagina: number) =>
     post<ListaPaginada & { chamados: ChamadoAdmin[] }>("admin/chamados.php", { status, pagina }),
   adminResponderChamado: (idChamado: number, status: Exclude<StatusChamado, "aberto">, resposta: string | null) =>

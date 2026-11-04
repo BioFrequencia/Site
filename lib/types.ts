@@ -12,6 +12,30 @@ export interface RespostaApi<T> {
 
 export type PapelConta = "gestor" | "coordenador";
 
+/**
+ * Cargo na escola (migração 010): a função da pessoa, só descritiva. A
+ * permissão no sistema é o papel (Gestão ou Coordenação), escolhida por
+ * quem aprova - com a sugerida pelo cargo já marcada.
+ */
+export type CargoNaEscola = "direcao" | "vice_direcao" | "coordenacao" | "secretaria" | "outro";
+
+export const ROTULOS_CARGO: Record<CargoNaEscola, string> = {
+  direcao: "Direção",
+  vice_direcao: "Vice-direção",
+  coordenacao: "Coordenação pedagógica",
+  secretaria: "Secretaria",
+  outro: "Outro",
+};
+
+export const CARGOS_NA_ESCOLA = Object.keys(ROTULOS_CARGO) as CargoNaEscola[];
+
+export const ROTULOS_PAPEL: Record<PapelConta, string> = { gestor: "Gestão", coordenador: "Coordenação" };
+
+/** A mesma sugestão da API: direção e vice-direção ficam com a Gestão. */
+export function papelSugeridoPeloCargo(cargo: CargoNaEscola | null | undefined): PapelConta {
+  return cargo === "direcao" || cargo === "vice_direcao" ? "gestor" : "coordenador";
+}
+
 export interface Coordenacao {
   id_coordenacao: number;
   nome_coordenacao: string;
@@ -31,6 +55,8 @@ export interface PerfilConta {
   email_coordenacao: string;
   nome_escola: string;
   papel?: PapelConta;
+  /** Contas de antes da migração 010 ficam sem cargo até alguém informar. */
+  cargo?: CargoNaEscola | null;
   municipio?: string | null;
   /** Escola do catálogo da SEDUC: o nome é o oficial e não muda pelo perfil. */
   escola_do_catalogo?: boolean;
@@ -45,6 +71,7 @@ export type QuemAprova = "gestao" | "equipe";
 export interface ContaCriada {
   nome_escola: string;
   papel: PapelConta;
+  cargo?: CargoNaEscola;
   situacao: SituacaoConta;
   email_verificado: boolean;
   /** O link de confirmação saiu (false: sem provedor de e-mail ou falha no envio). */
@@ -572,6 +599,7 @@ export interface MembroEquipe {
   nome_coordenacao: string;
   email_coordenacao?: string;
   papel: PapelConta;
+  cargo?: CargoNaEscola | null;
   situacao: SituacaoConta;
   /** A aprovação só libera depois que a pessoa confirma o e-mail (migração 009). */
   email_verificado?: boolean;
@@ -620,6 +648,7 @@ export interface ContaAdmin {
   nome_coordenacao: string;
   email_coordenacao: string;
   papel: PapelConta;
+  cargo?: CargoNaEscola | null;
   situacao: SituacaoConta;
   criado_em: string | null;
   id_escola: number;
@@ -628,6 +657,8 @@ export interface ContaAdmin {
   ultimo_acesso: string | null;
   administrador: boolean;
   email_verificado: boolean;
+  /** A escola já tem gestão ativa (sem ela, quem for aprovado vira a gestão). */
+  escola_tem_gestao?: boolean;
 }
 
 export interface ChamadoAdmin extends ChamadoSuporte {
