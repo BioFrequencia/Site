@@ -49,7 +49,9 @@ import type {
   ListaNotificacoes,
   PresencasDoDia,
   PreviaImportacao,
+  PreviaOcorrencias,
   ResultadoImportacao,
+  ResultadoOcorrencias,
   Responsavel,
   Sala,
   StatusNotificacao,
@@ -527,6 +529,29 @@ export const Api = {
     corpo.append("arquivo", arquivo);
     corpo.append("hash", hash);
     return post<ResultadoImportacao>("importacao/confirmar.php", corpo);
+  },
+
+  // Importação das entradas atrasadas e saídas antecipadas anotadas no
+  // Excel sem internet: o modelo (com o código de cada aluno), a prévia e
+  // a confirmação com o mesmo arquivo.
+  baixarModeloOcorrencias: () =>
+    baixarArquivo(
+      "registro/modeloImportacao.php",
+      {},
+      "modelo-entradas-e-saidas.xlsx",
+      "Modelo baixado: anote nele quando estiver sem internet e importe aqui quando a conexão voltar.",
+      "Não foi possível gerar o modelo da planilha."
+    ),
+  previaOcorrencias: (arquivo: File) => {
+    const corpo = new FormData();
+    corpo.append("arquivo", arquivo);
+    return post<PreviaOcorrencias>("registro/previaImportacao.php", corpo);
+  },
+  confirmarOcorrencias: (arquivo: File, hash: string) => {
+    const corpo = new FormData();
+    corpo.append("arquivo", arquivo);
+    corpo.append("hash", hash);
+    return post<ResultadoOcorrencias>("registro/confirmarImportacao.php", corpo);
   },
 
   // Check-ins enviados pelo celular do próprio aluno (fluxo anterior ao
