@@ -7,6 +7,7 @@ import { Api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Icon } from "@/components/Icon";
 import { Logo } from "@/components/Logo";
+import { IconesEscola } from "@/components/IconesEscola";
 import { AlternarTema } from "@/components/AlternarTema";
 import { CampoSenha } from "@/components/CampoSenha";
 import { ReenviarLink } from "@/components/ReenviarLink";
@@ -78,6 +79,7 @@ export default function LoginPage() {
   return (
     <div className="auth-shell">
       <div className="auth-illustration">
+        <IconesEscola />
         <div className="auth-illustration-inner">
           <Logo tamanho={56} className="logo-sobre-indigo auth-logo" />
           <h1>Biofrequência</h1>

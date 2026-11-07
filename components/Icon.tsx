@@ -94,6 +94,13 @@ const PATHS: Record<string, React.ReactNode> = {
     </>
   ),
   check: <path d="M20 6 9 17l-5-5" />,
+  menu: (
+    <>
+      <path d="M4 6h16" />
+      <path d="M4 12h16" />
+      <path d="M4 18h16" />
+    </>
+  ),
   plus: (
     <>
       <path d="M12 5v14" />

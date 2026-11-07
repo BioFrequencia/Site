@@ -229,7 +229,7 @@ function AbaTurmas({ dados, podeEditar, aoMudar }: { dados: DadosEscola; podeEdi
           <p>Nenhuma turma cadastrada. Cadastre em Turmas e alunos.</p>
         </div>
       ) : (
-        <table className="data-table">
+        <table className="data-table tabela-cartoes">
           <thead>
             <tr>
               <th>Turma</th>
@@ -243,8 +243,8 @@ function AbaTurmas({ dados, podeEditar, aoMudar }: { dados: DadosEscola; podeEdi
             {dados.turmas.map((turma) =>
               editando === turma.id_sala ? (
                 <tr key={turma.id_sala} className="linha-editando">
-                  <td>{turma.nome_sala}</td>
-                  <td>
+                  <td className="celula-titulo">{turma.nome_sala}</td>
+                  <td data-label="Período">
                     <select
                       className="filter-select"
                       value={periodo}
@@ -264,15 +264,15 @@ function AbaTurmas({ dados, podeEditar, aoMudar }: { dados: DadosEscola; podeEdi
                       ))}
                     </select>
                   </td>
-                  <td>
+                  <td data-label="Horário">
                     <div className="horario-edicao">
                       <input type="time" value={inicio} onChange={(e) => setInicio(e.target.value)} aria-label="Início da aula" />
                       <span>às</span>
                       <input type="time" value={fim} onChange={(e) => setFim(e.target.value)} aria-label="Fim da aula" />
                     </div>
                   </td>
-                  <td className="num">{turma.total_alunos}</td>
-                  <td className="acoes-linha">
+                  <td data-label="Alunos" className="num">{turma.total_alunos}</td>
+                  <td className="acoes-linha celula-acoes">
                     <button type="button" className="btn btn-sm" onClick={() => setEditando(null)}>
                       Cancelar
                     </button>
@@ -283,15 +283,15 @@ function AbaTurmas({ dados, podeEditar, aoMudar }: { dados: DadosEscola; podeEdi
                 </tr>
               ) : (
                 <tr key={turma.id_sala}>
-                  <td>{turma.nome_sala}</td>
-                  <td>{turma.periodo_sala}</td>
-                  <td>
+                  <td className="celula-titulo">{turma.nome_sala}</td>
+                  <td data-label="Período">{turma.periodo_sala}</td>
+                  <td data-label="Horário">
                     {turma.horario.inicio} às {turma.horario.fim}
                     {!turma.horario_inicio && <span className="panel-meta"> (padrão do período)</span>}
                   </td>
-                  <td className="num">{turma.total_alunos}</td>
+                  <td data-label="Alunos" className="num">{turma.total_alunos}</td>
                   {podeEditar && (
-                    <td style={{ textAlign: "right" }}>
+                    <td className="celula-acoes" style={{ textAlign: "right" }}>
                       <button type="button" className="btn btn-sm" onClick={() => comecar(turma.id_sala)}>
                         Mudar horário
                       </button>

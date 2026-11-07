@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Api } from "@/lib/api";
 import { Logo } from "@/components/Logo";
+import { IconesEscola } from "@/components/IconesEscola";
 import { AlternarTema } from "@/components/AlternarTema";
 import { CampoSenha } from "@/components/CampoSenha";
 import { RequisitosSenha } from "@/components/RequisitosSenha";
@@ -80,6 +81,7 @@ export default function RedefinirSenhaPage() {
   return (
     <div className="auth-shell">
       <div className="auth-illustration">
+        <IconesEscola />
         <div className="auth-illustration-inner">
           <Logo tamanho={56} className="logo-sobre-indigo auth-logo" />
           <h1>Senha nova</h1>

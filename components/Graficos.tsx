@@ -28,7 +28,7 @@ import {
 import { Icon } from "./Icon";
 import { formatarDeltaPontos, formatarPercentual, nomeMesCurto, nomeMesLongo } from "@/lib/format";
 import { tendenciaDoMes } from "@/lib/graficos";
-import { useContagem, useMenosMovimento } from "@/lib/movimento";
+import { useMenosMovimento } from "@/lib/movimento";
 import type { EvolucaoMensal } from "@/lib/types";
 
 const SERIES = [
@@ -38,19 +38,17 @@ const SERIES = [
 
 type ChaveSerie = (typeof SERIES)[number]["chave"];
 
-/** Duração da entrada do anel - o número do meio conta no mesmo ritmo. */
-const DURACAO_ANEL_MS = 1100;
+/**
+ * Entrada curta e única dos gráficos (meio segundo, sem escalonar as
+ * séries): o desenho acompanha a tela abrindo, sem chamar atenção.
+ */
+const DURACAO_GRAFICO_MS = 500;
 
-/** O mês mais recente de cada série ganha um ponto que pulsa: é o "agora" do gráfico. */
+/** O mês mais recente de cada série ganha um ponto fixo: é o "agora" do gráfico. */
 function pontoDoMesAtual(cor: string, total: number) {
   return function PontoDoMesAtual({ cx, cy, index }: DotItemDotProps) {
     if (index !== total - 1 || cx === undefined || cy === undefined) return null;
-    return (
-      <g className="ponto-atual">
-        <circle className="ponto-atual-pulso" cx={cx} cy={cy} r={5} fill={cor} />
-        <circle cx={cx} cy={cy} r={4} fill={cor} stroke="var(--surface)" strokeWidth={2} />
-      </g>
-    );
+    return <circle className="ponto-atual" cx={cx} cy={cy} r={4} fill={cor} stroke="var(--surface)" strokeWidth={2} />;
   };
 }
 
@@ -145,7 +143,7 @@ export function GraficoEntradasSaidas({ meses }: { meses: EvolucaoMensal[] }) {
                   cursor={{ stroke: "var(--ink-300)", strokeWidth: 1, strokeDasharray: "4 4" }}
                   content={(props) => <DicaDoMes {...(props as TooltipContentProps<number, string>)} />}
                 />
-                {SERIES.map((serie, indice) => (
+                {SERIES.map((serie) => (
                   <Area
                     key={serie.chave}
                     dataKey={serie.chave}
@@ -160,9 +158,8 @@ export function GraficoEntradasSaidas({ meses }: { meses: EvolucaoMensal[] }) {
                     dot={pontoDoMesAtual(serie.cor, dados.length)}
                     activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--surface)", className: "ponto-ativo" }}
                     isAnimationActive={!menosMovimento}
-                    animationDuration={1000}
+                    animationDuration={DURACAO_GRAFICO_MS}
                     animationEasing="ease-out"
-                    animationBegin={indice * 180}
                   />
                 ))}
               </AreaChart>
@@ -195,7 +192,7 @@ export function GraficoEntradasSaidas({ meses }: { meses: EvolucaoMensal[] }) {
             )}
             <details className="grafico-tabela">
               <summary>Ver os números</summary>
-              <table>
+              <table className="tabela-cartoes">
                 <thead>
                   <tr>
                     <th>Mês</th>
@@ -208,11 +205,11 @@ export function GraficoEntradasSaidas({ meses }: { meses: EvolucaoMensal[] }) {
                 <tbody>
                   {meses.map((mes) => (
                     <tr key={mes.mes}>
-                      <td>{nomeMesLongo(mes.mes)}</td>
-                      <td className="num">{mes.dias_letivos}</td>
-                      <td className="num">{mes.atrasos}</td>
-                      <td className="num">{mes.saidas}</td>
-                      <td className="num">{formatarPercentual(mes.pontualidade)}</td>
+                      <td className="celula-titulo">{nomeMesLongo(mes.mes)}</td>
+                      <td className="num" data-label="Dias de aula">{mes.dias_letivos}</td>
+                      <td className="num" data-label="Entradas atrasadas">{mes.atrasos}</td>
+                      <td className="num" data-label="Saídas antecipadas">{mes.saidas}</td>
+                      <td className="num" data-label="Pontualidade">{formatarPercentual(mes.pontualidade)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -247,8 +244,6 @@ export function GraficoPontualidade({
 }) {
   const menosMovimento = useMenosMovimento();
   const percentual = valor ?? 0;
-  // O número do meio conta junto com o anel.
-  const contado = useContagem(percentual, DURACAO_ANEL_MS);
   // O anel começa no alto e anda no sentido horário até a porcentagem.
   const dados = [{ nome: "pontualidade", valor: percentual, fill: "var(--grafico-atrasos)" }];
 
@@ -273,7 +268,7 @@ export function GraficoPontualidade({
               cornerRadius={10}
               className="anel-pontualidade"
               isAnimationActive={!menosMovimento}
-              animationDuration={DURACAO_ANEL_MS}
+              animationDuration={DURACAO_GRAFICO_MS}
               animationEasing="ease-out"
             />
             <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
@@ -283,7 +278,7 @@ export function GraficoPontualidade({
                   return (
                     <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
                       <tspan x={viewBox.cx} y={viewBox.cy - 4} className="grafico-radial-valor">
-                        {valor === null ? "—" : formatarPercentual(contado)}
+                        {valor === null ? "—" : formatarPercentual(valor)}
                       </tspan>
                       <tspan x={viewBox.cx} y={viewBox.cy + 20} className="grafico-radial-rotulo">
                         pontualidade

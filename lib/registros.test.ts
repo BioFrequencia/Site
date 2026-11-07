@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import { mensagemDoRegistro, rotuloTipoAviso } from "./avisos.ts";
 import { barraPontualidade, tendenciaDoMes } from "./graficos.ts";
 import { formatarDeltaPontos, formatarPercentual, nomeMesCurto, nomeMesLongo, rotuloOrigemAtraso, rotuloTipoAlerta } from "./format.ts";
-import { valorAnimado } from "./movimento.ts";
 
 test("mensagem depois do registro diz o que aconteceu com os avisos", () => {
   assert.equal(mensagemDoRegistro("atraso", { registro: null, limite: [] }), "Entrada atrasada registrada.");
@@ -63,11 +62,4 @@ test("formatação das porcentagens e dos meses", () => {
   assert.equal(rotuloTipoAlerta("saidas"), "Saídas antecipadas");
   assert.equal(rotuloOrigemAtraso("presenca"), "Pela presença do app");
   assert.equal(rotuloOrigemAtraso(null), "Lançada pela coordenação");
-});
-
-test("contagem animada termina exatamente no valor", () => {
-  assert.equal(valorAnimado(40, 0), 0);
-  assert.equal(valorAnimado(40, 1), 40);
-  assert.equal(valorAnimado(40, 2), 40);
-  assert.ok(valorAnimado(40, 0.5) > 20, "ease-out: passa da metade na metade do tempo");
 });
