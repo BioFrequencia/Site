@@ -215,7 +215,7 @@ export default function AlunoDetalhePage() {
                   <p>Nenhuma entrada atrasada ou saída antecipada nos últimos 90 dias.</p>
                 </div>
               ) : (
-                <table className="data-table">
+                <table className="data-table tabela-cartoes">
                   <thead>
                     <tr>
                       <th>Data</th>
@@ -228,25 +228,25 @@ export default function AlunoDetalhePage() {
                   <tbody>
                     {eventos.map((evento) => (
                       <tr key={`${evento.tipo}-${evento.id}`}>
-                        <td>
+                        <td className="celula-titulo">
                           {formatarData(evento.data)} <span className="panel-meta">{formatarHora(evento.data)}</span>
                         </td>
-                        <td>
+                        <td data-label="Tipo">
                           <span className={`badge ${evento.tipo === "atraso" ? "badge--atraso" : "badge--saida"}`}>
                             {evento.tipo === "atraso" ? "Entrada atrasada" : "Saída antecipada"}
                           </span>
                           {evento.justificado && <span className="badge badge--regular">Justificado</span>}
                         </td>
-                        <td>
+                        <td data-label="Motivo">
                           {evento.motivo ?? "-"}
                           {evento.retirado_por && <div className="panel-meta">Buscou: {evento.retirado_por}</div>}
                         </td>
-                        <td className="panel-meta">
+                        <td data-label="Registro" className="panel-meta">
                           {evento.tipo === "atraso" ? rotuloOrigemAtraso(evento.origem) : "Lançada pela coordenação"}
                           {evento.registrado_por && <div>por {evento.registrado_por}</div>}
                         </td>
                         {gestao && (
-                          <td>
+                          <td className="celula-acoes">
                             <button
                               type="button"
                               className="icon-btn"
@@ -330,7 +330,7 @@ export default function AlunoDetalhePage() {
                 <span>Sem responsável cadastrado: a escola não consegue avisar a família quando o aluno passar do limite.</span>
               </div>
             ) : (
-              <table className="data-table">
+              <table className="data-table tabela-cartoes">
                 <thead>
                   <tr>
                     <th>Nome</th>
@@ -343,17 +343,17 @@ export default function AlunoDetalhePage() {
                 <tbody>
                   {responsaveis.map((responsavel) => (
                     <tr key={responsavel.id_responsavel}>
-                      <td>
+                      <td className="celula-titulo">
                         {responsavel.nome_responsavel}
                         <div className="panel-meta">CPF {formatarCpf(responsavel.cpf_responsavel)}</div>
                       </td>
-                      <td>{responsavel.parentesco ?? "-"}</td>
-                      <td>
+                      <td data-label="Parentesco">{responsavel.parentesco ?? "-"}</td>
+                      <td data-label="Contato">
                         {formatarTelefone(responsavel.telefone_responsavel)}
                         {responsavel.email_responsavel && <div className="panel-meta">{responsavel.email_responsavel}</div>}
                       </td>
-                      <td>{ROTULOS_CANAL_RESPONSAVEL[responsavel.canal_preferido ?? "whatsapp"]}</td>
-                      <td className="acoes-linha">
+                      <td data-label="Avisos por">{ROTULOS_CANAL_RESPONSAVEL[responsavel.canal_preferido ?? "whatsapp"]}</td>
+                      <td className="acoes-linha celula-acoes">
                         <button type="button" className="btn-text" onClick={() => setEditando(responsavel)}>
                           Editar
                         </button>

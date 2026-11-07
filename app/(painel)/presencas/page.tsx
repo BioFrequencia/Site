@@ -121,7 +121,7 @@ export default function PresencasPage() {
                 </p>
               </div>
             ) : (
-              <table className="data-table">
+              <table className="data-table tabela-cartoes">
                 <thead>
                   <tr>
                     <th>Hora</th>
@@ -133,8 +133,8 @@ export default function PresencasPage() {
                 <tbody>
                   {dia.presentes.map((presenca) => (
                     <tr key={presenca.id_presenca}>
-                      <td className="num">{formatarHora(presenca.registrada_em)}</td>
-                      <td>
+                      <td data-label="Hora" className="num">{formatarHora(presenca.registrada_em)}</td>
+                      <td className="celula-titulo">
                         <div className="student-cell">
                           <div className="avatar">{iniciais(presenca.nome_aluno)}</div>
                           <Link href={`/turmas/${presenca.id_aluno}`} className="student-name">
@@ -142,8 +142,8 @@ export default function PresencasPage() {
                           </Link>
                         </div>
                       </td>
-                      <td>{presenca.nome_sala}</td>
-                      <td>
+                      <td data-label="Turma">{presenca.nome_sala}</td>
+                      <td data-label="Registro">
                         <span className={`badge ${presenca.metodo === "manual" ? "badge--neutral" : "badge--regular"}`}>
                           {ROTULOS_METODO_PRESENCA[presenca.metodo]}
                         </span>
@@ -167,11 +167,11 @@ export default function PresencasPage() {
                 <p>Todos os alunos foram registrados.</p>
               </div>
             ) : (
-              <table className="data-table">
+              <table className="data-table tabela-cartoes">
                 <tbody>
                   {dia.ausentes.map((aluno) => (
                     <tr key={aluno.id_aluno}>
-                      <td>
+                      <td className="celula-titulo">
                         <div className="student-cell">
                           <div className="avatar">{iniciais(aluno.nome_aluno)}</div>
                           <Link href={`/turmas/${aluno.id_aluno}`} className="student-name">
@@ -179,8 +179,8 @@ export default function PresencasPage() {
                           </Link>
                         </div>
                       </td>
-                      <td>{aluno.nome_sala}</td>
-                      <td style={{ textAlign: "right" }}>
+                      <td data-label="Turma">{aluno.nome_sala}</td>
+                      <td className="celula-acoes" style={{ textAlign: "right" }}>
                         {ehHoje && (
                           <button
                             type="button"

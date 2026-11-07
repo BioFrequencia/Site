@@ -171,7 +171,16 @@ svg {
   --logo-moldura: #ffffff;
   --logo-check: #25db6c;
 }
-/* Botão de tema: lua no claro, sol no escuro. */
+/* Botão de tema: lua no claro, sol no escuro. Mesmo formato e altura dos
+   botões ao lado dele (cantos de botão, não círculo). */
+.alternar-tema.icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+}
+.alternar-tema.icon-btn:hover {
+  background: var(--mist-100);
+}
 .alternar-tema .tema-sol,
 :root[data-tema="escuro"] .alternar-tema .tema-lua {
   display: none;
@@ -225,6 +234,117 @@ svg {
 .nav-item .label {
   flex: 1;
 }
+.label-curto {
+  display: none;
+}
+/* "Mais" e o menu inteiro só existem no celular (ver o @media de 720px). */
+.nav-mais {
+  display: none;
+  position: relative;
+}
+.nav-ponto {
+  position: absolute;
+  top: 5px;
+  right: calc(50% - 15px);
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--indigo);
+  border: 2px solid var(--surface);
+}
+.menu-celular-fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: var(--sombreado);
+  animation: aparecer 0.15s ease-out;
+}
+.menu-celular {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 86vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border-radius: 18px 18px 0 0;
+  padding: 10px 16px calc(18px + env(safe-area-inset-bottom));
+  animation: abrir-folha 0.2s ease-out;
+}
+@keyframes abrir-folha {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.menu-celular-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 4px 2px;
+}
+.menu-celular-topo strong {
+  font-family: var(--font-display);
+  font-size: 17px;
+}
+.menu-celular-grupo h2 {
+  margin: 14px 10px 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-300);
+}
+.menu-celular-grupo a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--ink-700);
+  font-size: 14px;
+  font-weight: 600;
+}
+.menu-celular-grupo a > span:not(.nav-badge) {
+  flex: 1;
+}
+.menu-celular-grupo a.active {
+  background: var(--indigo-50);
+  color: var(--indigo-texto);
+}
+.menu-celular-grupo .nav-badge {
+  position: static;
+}
+.menu-celular-conta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 14px 4px 0;
+  border-top: 1px solid var(--mist-200);
+}
+.menu-celular-quem {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.menu-celular-quem span {
+  font-size: 12px;
+  color: var(--ink-500);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (min-width: 721px) {
+  .menu-celular-fundo {
+    display: none;
+  }
+}
 .nav-badge {
   background: var(--indigo);
   color: #fff;
@@ -272,13 +392,25 @@ svg {
   max-width: 1240px;
 }
 
+/* Título à esquerda; as ações da tela e o botão de tema à direita, na
+   mesma linha e com a mesma altura (38px). */
 .topbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: "titulo acoes tema";
   align-items: center;
-  justify-content: space-between;
-  gap: 24px;
+  gap: 14px 12px;
   margin-bottom: 30px;
-  flex-wrap: wrap;
+}
+.topbar .greeting {
+  grid-area: titulo;
+  padding-right: 12px;
+}
+.topbar-tema {
+  grid-area: tema;
+}
+.topbar-actions > .btn {
+  min-height: 38px;
 }
 .greeting h1 {
   font-family: var(--font-display);
@@ -292,6 +424,7 @@ svg {
   margin-top: 3px;
 }
 .topbar-actions {
+  grid-area: acoes;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1284,6 +1417,8 @@ svg {
   display: flex;
   align-items: center;
   padding: 64px;
+  position: relative;
+  overflow: hidden;
 }
 :root[data-tema="escuro"] .auth-illustration {
   background: linear-gradient(150deg, #3a27d6, #241a7a);
@@ -1292,8 +1427,63 @@ svg {
   margin-bottom: 22px;
 }
 .auth-illustration-inner {
+  position: relative;
+  z-index: 1;
   max-width: 420px;
   color: #fff;
+}
+/* Ícones da escola no painel (components/IconesEscola.tsx): translúcidos,
+   aparecem, sobem 12px em ~9 s e somem, um depois do outro. */
+.auth-icones {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.auth-icone {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  color: rgba(255, 255, 255, 0.85);
+  opacity: 0;
+  animation: icone-da-escola 18s ease-in-out infinite;
+}
+.auth-icone .icon {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.8;
+}
+@keyframes icone-da-escola {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  12% {
+    opacity: 0.75;
+  }
+  45% {
+    opacity: 0.75;
+  }
+  58%,
+  100% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+/* Painel mais estreito: o ícone do meio da borda direita chegaria perto do texto. */
+@media (max-width: 1180px) {
+  .auth-icone:nth-child(3) {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-icone {
+    opacity: 0.4;
+  }
 }
 .auth-illustration h1 {
   font-family: var(--font-display);
@@ -1495,14 +1685,39 @@ svg {
   }
   .brand-name,
   .brand-sub,
-  .nav-item .label,
-  .nav-badge,
   .user-name,
   .user-role {
     display: none;
   }
+  /* Tablet: só os ícones. O nome sai da tela mas continua no link (o
+     leitor de tela lê, e o title mostra ao passar o mouse). */
+  .nav-item .label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
   .nav-item {
     justify-content: center;
+    position: relative;
+  }
+  .nav-badge {
+    position: absolute;
+    top: 3px;
+    right: 5px;
+    min-width: 17px;
+    padding: 0 5px;
+    font-size: 10px;
+    line-height: 17px;
+    text-align: center;
+  }
+  .nav {
+    scrollbar-width: none;
+  }
+  .nav::-webkit-scrollbar {
+    display: none;
   }
   .sidebar-footer {
     justify-content: center;
@@ -1528,20 +1743,22 @@ svg {
   .app {
     flex-direction: column;
   }
+  /* Celular: barra embaixo com as quatro telas do dia a dia e o "Mais",
+     que abre o menu inteiro (components/Sidebar.tsx). Nada rola para o
+     lado e nenhum item fica cortado. */
   .sidebar {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
     top: auto;
-    width: 100%;
+    width: auto;
     height: auto;
     flex-direction: row;
-    padding: 8px 10px;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
     border-right: none;
     border-top: 1px solid var(--mist-200);
     z-index: 60;
-    justify-content: space-around;
   }
   .brand,
   .sidebar-footer {
@@ -1551,44 +1768,85 @@ svg {
     flex-direction: row;
     justify-content: space-around;
     flex: 1;
-    gap: 0;
+    gap: 4px;
+    overflow: visible;
+  }
+  .nav-item:not(.nav-principal):not(.nav-mais) {
+    display: none;
   }
   .nav-item {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
     flex-direction: column;
-    gap: 4px;
-    padding: 6px 4px;
-    font-size: 10px;
+    gap: 3px;
+    padding: 7px 2px;
+    font-size: 10.5px;
   }
   .nav-item .label {
+    position: static;
+    width: auto;
+    height: auto;
+    clip: auto;
     display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+  }
+  .nav-badge {
+    top: 2px;
+    right: calc(50% - 24px);
+  }
+  .nav-mais {
+    display: flex;
+  }
+  /* "Entradas e saídas" e "Turmas e alunos" não cabem: a barra mostra o
+     nome curto e o completo continua no link para o leitor de tela. */
+  .nav-item.tem-curto .label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .nav-item .label-curto {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .main {
     padding: 20px 16px 96px;
   }
+  /* No celular, o botão de tema fica ao lado do título (centrado na
+     primeira linha dele) e as ações da tela descem para a linha de baixo,
+     dividindo a largura. */
   .topbar {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 14px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "titulo tema"
+      "acoes acoes";
+    align-items: start;
+    margin-bottom: 22px;
+  }
+  .greeting h1 {
+    font-size: 23px;
+    line-height: 1.25;
+  }
+  .topbar-tema {
+    margin-top: -5px;
   }
   .search-box {
     width: 100%;
   }
   .topbar-actions {
     width: 100%;
-    justify-content: space-between;
   }
-  /* No celular, o botão de tema fica no canto, ao lado do título, em vez
-     de ocupar uma linha sozinho. */
-  .topbar {
-    position: relative;
-  }
-  .topbar .greeting {
-    padding-right: 52px;
-  }
-  .topbar-actions .alternar-tema {
-    position: absolute;
-    top: 0;
-    right: 0;
+  .topbar-actions > .btn {
+    flex: 1 1 0;
+    justify-content: center;
   }
   .alert-item {
     flex-wrap: wrap;
@@ -2175,22 +2433,6 @@ svg {
   }
 }
 @media (max-width: 720px) {
-  /* Barra de baixo: com Suporte e Minha conta, os itens passaram do que cabe
-     na largura de um celular - ela rola para o lado em vez de espremer. */
-  .nav {
-    justify-content: flex-start;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: none;
-  }
-  .nav::-webkit-scrollbar {
-    display: none;
-  }
-  .nav-item {
-    flex: 0 0 auto;
-    width: auto;
-    min-width: 72px;
-  }
   .opcoes-tema {
     grid-template-columns: 1fr;
   }
@@ -2249,9 +2491,6 @@ svg {
   text-transform: uppercase;
   color: var(--ink-300);
   padding: 4px 14px 2px;
-}
-.nav-badge {
-  animation: pulsar-badge 0.45s ease;
 }
 @media (max-width: 1080px) {
   .nav-grupo-titulo {
@@ -2436,8 +2675,7 @@ svg {
 /* Barras de pontualidade por turma: a cor é a faixa (com o número ao lado). */
 .turma-bar-fill,
 .ts-bar-fill {
-  transform-origin: left center;
-  animation: crescer-barra 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  transition: width 0.3s ease;
 }
 .turma-bar-fill--ok {
   background: var(--faixa-ok);
@@ -2489,12 +2727,6 @@ svg {
 .stat-link:hover .stat-label {
   color: var(--indigo-texto);
 }
-.stat-link:hover .stat-value {
-  transform: translateX(-3px);
-}
-.stat-value {
-  transition: transform 0.2s ease;
-}
 .nota-dados {
   display: flex;
   align-items: center;
@@ -2533,12 +2765,11 @@ svg {
 }
 button.card-resumo {
   cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 button.card-resumo:hover:not(:disabled) {
-  transform: translateY(-2px);
-  border-color: var(--indigo-100);
-  box-shadow: 0 10px 24px rgba(69, 47, 246, 0.1);
+  border-color: var(--indigo);
+  background: var(--indigo-50);
 }
 button.card-resumo:disabled {
   cursor: default;
@@ -2628,8 +2859,7 @@ button.card-resumo:disabled {
 .alert-taxa-barra {
   height: 100%;
   border-radius: 99px;
-  transform-origin: left center;
-  animation: crescer-barra 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  transition: width 0.3s ease;
 }
 .alert-taxa-barra--atrasos {
   background: var(--grafico-atrasos);
@@ -3110,12 +3340,11 @@ button.card-resumo:disabled {
   border-radius: var(--radius-md);
   color: inherit;
   text-decoration: none;
-  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 .guia-pagina:hover {
-  transform: translateY(-2px);
-  border-color: var(--indigo-100);
-  box-shadow: 0 10px 24px rgba(69, 47, 246, 0.1);
+  border-color: var(--indigo);
+  background: var(--indigo-50);
 }
 .guia-pagina > span:last-child {
   display: flex;
@@ -3209,132 +3438,67 @@ button.card-resumo:disabled {
   stroke: var(--aviso-texto);
 }
 
-/* ---------- Animações ---------- */
+/* ---------- Animações ----------
+   Discretas, como no começo do projeto: a página aparece com um fade
+   curto, modais e menus abrem rápido, e nada fica se mexendo sozinho.
+   O que se move é resposta a algo que a pessoa fez (hover, clique) ou
+   aviso de que algo está carregando. */
 @keyframes subir {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
     transform: none;
   }
 }
-@keyframes crescer-barra {
+@keyframes aparecer {
   from {
-    transform: scaleX(0);
+    opacity: 0;
   }
   to {
-    transform: scaleX(1);
+    opacity: 1;
   }
 }
-@keyframes pulsar-badge {
-  0% {
-    transform: scale(0.6);
-  }
-  60% {
-    transform: scale(1.15);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-@keyframes brilho {
-  from {
-    background-position: 200% 0;
-  }
-  to {
-    background-position: -200% 0;
-  }
-}
-@keyframes flutuar {
+/* Esqueleto: um pulso suave de opacidade no lugar do brilho correndo. */
+@keyframes pulsar-esqueleto {
   0%,
   100% {
-    transform: translateY(0);
+    opacity: 1;
   }
   50% {
-    transform: translateY(-6px);
+    opacity: 0.55;
   }
-}
-
-/* Os blocos de cada tela entram um depois do outro. */
-.entrada-em-cascata > * {
-  animation: subir 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-}
-.entrada-em-cascata > *:nth-child(2) {
-  animation-delay: 0.05s;
-}
-.entrada-em-cascata > *:nth-child(3) {
-  animation-delay: 0.1s;
-}
-.entrada-em-cascata > *:nth-child(4) {
-  animation-delay: 0.15s;
-}
-.entrada-em-cascata > *:nth-child(5) {
-  animation-delay: 0.2s;
-}
-.entrada-em-cascata > *:nth-child(n + 6) {
-  animation-delay: 0.25s;
-}
-.hero-stats .stat-row {
-  animation: subir 0.4s ease both;
-}
-.hero-stats .stat-row:nth-child(2) {
-  animation-delay: 0.08s;
-}
-.hero-stats .stat-row:nth-child(3) {
-  animation-delay: 0.16s;
-}
-.hero-stats .stat-row:nth-child(4) {
-  animation-delay: 0.24s;
 }
 .skeleton-bloco {
   border-radius: var(--radius-md);
-  background: linear-gradient(90deg, var(--mist-100) 25%, var(--mist-200) 37%, var(--mist-100) 63%);
-  background-size: 400% 100%;
-  animation: brilho 1.4s ease infinite;
+  background: var(--esqueleto-base);
+  animation: pulsar-esqueleto 1.6s ease-in-out infinite;
 }
 .btn {
   transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .btn:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: scale(0.98);
 }
 .panel,
 .alert-item {
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: border-color 0.15s ease;
 }
 .alert-item:hover {
-  box-shadow: 0 8px 22px rgba(33, 31, 43, 0.08);
-}
-.auth-logo {
-  animation: flutuar 6s ease-in-out infinite;
-}
-.nav-item svg {
-  transition: transform 0.2s ease;
-}
-.nav-item:hover svg {
-  transform: translateX(2px);
+  border-color: var(--indigo-100);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .entrada-em-cascata > *,
-  .hero-stats .stat-row,
-  .turma-bar-fill,
-  .ts-bar-fill,
-  .alert-taxa-barra,
-  .nav-badge,
   .skeleton-bloco,
-  .auth-logo,
   .escola-escolhida,
   .auth-concluido {
     animation: none;
   }
   .btn,
   .guia-pagina,
-  button.card-resumo,
-  .stat-value,
-  .nav-item svg {
+  button.card-resumo {
     transition: none;
   }
 }
@@ -3390,17 +3554,7 @@ button.card-resumo:disabled {
 .campo-senha-olho .icon {
   width: 18px;
   height: 18px;
-  animation: trocar-olho 0.22s ease;
-}
-@keyframes trocar-olho {
-  from {
-    opacity: 0.2;
-    transform: scale(0.6);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+  animation: aparecer 0.15s ease-out;
 }
 
 /* ---------- Carregando (components/Carregando.tsx) ---------- */
@@ -3430,28 +3584,28 @@ button.card-resumo:disabled {
   height: 64px;
 }
 .carregando-canto {
-  animation: focar-canto 1.6s ease-in-out infinite;
+  animation: focar-canto 2.2s ease-in-out infinite;
 }
 .canto-1 {
-  --dx: 3px;
-  --dy: 3px;
+  --dx: 2px;
+  --dy: 2px;
 }
 .canto-2 {
-  --dx: -3px;
-  --dy: 3px;
+  --dx: -2px;
+  --dy: 2px;
 }
 .canto-3 {
-  --dx: 3px;
-  --dy: -3px;
+  --dx: 2px;
+  --dy: -2px;
 }
 .canto-4 {
-  --dx: -3px;
-  --dy: -3px;
+  --dx: -2px;
+  --dy: -2px;
 }
 .carregando-check {
   stroke-dasharray: 34;
   stroke-dashoffset: 34;
-  animation: desenhar-check 1.6s ease-in-out infinite;
+  animation: desenhar-check 2.2s ease-in-out infinite;
 }
 @keyframes focar-canto {
   0%,
@@ -3479,11 +3633,9 @@ button.card-resumo:disabled {
 /* ---------- Esqueletos (components/Esqueleto.tsx) ---------- */
 :root {
   --esqueleto-base: #eee9ec;
-  --esqueleto-brilho: #faf8fa;
 }
 :root[data-tema="escuro"] {
   --esqueleto-base: #2a2735;
-  --esqueleto-brilho: #3a3747;
 }
 .sr-only {
   position: absolute;
@@ -3505,9 +3657,8 @@ button.card-resumo:disabled {
 .esq {
   display: block;
   border-radius: var(--radius-sm);
-  background: linear-gradient(90deg, var(--esqueleto-base) 25%, var(--esqueleto-brilho) 37%, var(--esqueleto-base) 63%);
-  background-size: 400% 100%;
-  animation: brilho 1.4s ease infinite;
+  background: var(--esqueleto-base);
+  animation: pulsar-esqueleto 1.6s ease-in-out infinite;
 }
 .esq-cartao {
   background: var(--surface);
@@ -3665,17 +3816,7 @@ button.card-resumo:disabled {
 
 /* ---------- Troca de página (app/(painel)/template.tsx) ---------- */
 .transicao-pagina {
-  animation: entrar-pagina 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-}
-@keyframes entrar-pagina {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+  animation: aparecer 0.2s ease-out both;
 }
 
 /* ---------- Botão trabalhando (aria-busy) ---------- */
@@ -3700,21 +3841,6 @@ button.card-resumo:disabled {
 .grafico-area[data-destaque="atrasos"] .recharts-area:not(.serie-atrasos),
 .grafico-area[data-destaque="saidas"] .recharts-area:not(.serie-saidas) {
   opacity: 0.15;
-}
-.ponto-atual-pulso {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: pulso-ponto 1.8s ease-out infinite;
-}
-@keyframes pulso-ponto {
-  from {
-    opacity: 0.55;
-    transform: scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: scale(3.2);
-  }
 }
 .ponto-ativo {
   transform-box: fill-box;
@@ -3749,26 +3875,14 @@ button.card-resumo:disabled {
 .legenda-serie.apagada {
   opacity: 0.45;
 }
-.anel-pontualidade .recharts-radial-bar-sector {
-  filter: drop-shadow(0 3px 8px rgba(69, 47, 246, 0.32));
-}
-:root[data-tema="escuro"] .anel-pontualidade .recharts-radial-bar-sector {
-  filter: drop-shadow(0 3px 10px rgba(123, 108, 255, 0.45));
-}
 .turma-row {
   transition: background-color 0.15s ease;
 }
-.turma-row:hover .turma-bar-fill {
-  filter: brightness(1.08) saturate(1.1);
-}
 
 @media (prefers-reduced-motion: reduce) {
-  /* Sem animação, o check do símbolo aparece pronto e o pulso some. */
+  /* Sem animação, o check do símbolo aparece pronto. */
   .carregando-check {
     stroke-dashoffset: 0;
-  }
-  .ponto-atual-pulso {
-    display: none;
   }
 }
 
@@ -3778,9 +3892,6 @@ button.card-resumo:disabled {
 }
 .auth-concluido.erro > svg {
   stroke: var(--danger-dark);
-}
-.auth-concluido-icone {
-  animation: flutuar 2.6s ease-in-out infinite;
 }
 /* Os passos até entrar: o feito ganha o check, o atual pulsa. */
 .passos-acesso {
@@ -3799,13 +3910,6 @@ button.card-resumo:disabled {
   position: relative;
   padding-left: 36px;
   color: var(--ink-500);
-  animation: subir 0.4s ease both;
-}
-.passos-acesso li:nth-child(2) {
-  animation-delay: 0.08s;
-}
-.passos-acesso li:nth-child(3) {
-  animation-delay: 0.16s;
 }
 .passos-acesso li::before {
   content: counter(passo);
@@ -3837,7 +3941,7 @@ button.card-resumo:disabled {
 .passos-acesso li.atual::before {
   background: var(--indigo);
   color: #fff;
-  animation: pulsar-passo 1.8s ease-in-out infinite;
+  box-shadow: 0 0 0 4px var(--indigo-100);
 }
 .passos-acesso small {
   display: block;
@@ -3845,15 +3949,6 @@ button.card-resumo:disabled {
   font-size: 12px;
   font-weight: 400;
   color: var(--ink-500);
-}
-@keyframes pulsar-passo {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(69, 47, 246, 0.4);
-  }
-  50% {
-    box-shadow: 0 0 0 7px rgba(69, 47, 246, 0);
-  }
 }
 .reenviar-link {
   width: 100%;
@@ -4061,3 +4156,112 @@ button.card-resumo:disabled {
   font-weight: 600;
   color: var(--aviso-texto);
 }
+
+/* ===================================================================
+   Responsividade: tablet (até 1080px) e celular (até 720px)
+   =================================================================== */
+.busca-estreita {
+  width: 260px;
+  max-width: 100%;
+}
+/* Itens de grade com tabela dentro: sem isto, a largura mínima da tabela
+   empurra o painel para fora da tela. */
+.turmas-grid > *,
+.grid-2 > * {
+  min-width: 0;
+}
+
+@media (max-width: 720px) {
+  .busca-estreita {
+    width: 100%;
+  }
+  .filter-bar > .filter-select,
+  .filter-bar > input {
+    flex: 1 1 140px;
+  }
+  .panel {
+    padding: 18px 16px;
+  }
+  .panel-head {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .panel-head .panel-meta {
+    flex-shrink: 1;
+    white-space: normal;
+  }
+  .auth-card {
+    padding: 32px 18px;
+  }
+  .modal-overlay {
+    padding: 12px;
+  }
+  .modal {
+    padding: 22px 18px;
+    max-height: 90vh;
+  }
+}
+
+/* Tabelas largas viram cartões até 900px (celular e tablet em pé): a de
+   contas da Administração, por exemplo, rolava para o lado no tablet. */
+@media (max-width: 900px) {
+  /* Tabelas largas viram cartões: o dado principal (aluno, conta, escola)
+     é o título, cada valor leva o nome da coluna em cima e os botões
+     ocupam a largura toda. Nada rola para o lado. */
+  .tabela-cartoes thead {
+    display: none;
+  }
+  .tabela-cartoes,
+  .tabela-cartoes tbody {
+    display: block;
+  }
+  .tabela-cartoes tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--mist-200);
+  }
+  .tabela-cartoes tr:last-child {
+    border-bottom: 0;
+  }
+  .tabela-cartoes tr:hover td {
+    background: none;
+  }
+  .tabela-cartoes td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    overflow-wrap: anywhere;
+  }
+  .tabela-cartoes td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 2px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-500);
+  }
+  .tabela-cartoes td.celula-titulo {
+    grid-column: 1 / -1;
+    order: -1;
+    font-weight: 600;
+  }
+  .tabela-cartoes td.celula-acoes {
+    grid-column: 1 / -1;
+    /* algumas células de ação alinham à direita com style inline */
+    text-align: left !important;
+  }
+  .tabela-cartoes td.acoes-linha {
+    display: flex;
+    justify-content: flex-start;
+  }
+  .tabela-cartoes td.celula-acoes:empty {
+    display: none;
+  }
+  .tabela-cartoes td.num {
+    text-align: left;
+  }
+}
+

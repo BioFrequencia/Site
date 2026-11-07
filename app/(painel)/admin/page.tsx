@@ -237,7 +237,7 @@ function AbaContas() {
   return (
     <div className="panel">
       <div className="filter-bar" style={{ marginBottom: 18 }}>
-        <div className="search-box" style={{ width: 260 }}>
+        <div className="search-box busca-estreita">
           <Icon name="search" />
           <input
             placeholder="Nome, e-mail ou escola"
@@ -265,7 +265,7 @@ function AbaContas() {
         </select>
       </div>
       <div className="tabela-rolavel">
-        <table className="data-table">
+        <table className="data-table tabela-cartoes">
           <thead>
             <tr>
               <th>Conta</th>
@@ -279,28 +279,28 @@ function AbaContas() {
           <tbody>
             {contas.map((conta) => (
               <tr key={conta.id_coordenacao}>
-                <td>
+                <td className="celula-titulo">
                   <b>{conta.nome_coordenacao}</b>
                   {conta.administrador && <span className="badge badge--media">equipe</span>}
                   <div className="panel-meta">{conta.email_coordenacao}</div>
                   {!conta.email_verificado && <span className="selo-email">e-mail não confirmado</span>}
                 </td>
-                <td>
+                <td data-label="Escola">
                   {conta.nome_escola}
                   {conta.municipio && <div className="panel-meta">{conta.municipio}</div>}
                 </td>
-                <td>
+                <td data-label="Papel">
                   {/* Pendente: a permissão ainda vai ser escolhida por quem aprova. */}
                   {conta.situacao === "pendente" ? <span className="panel-meta">a definir</span> : ROTULOS_PAPEL[conta.papel]}
                   {conta.cargo && <div className="panel-meta">{ROTULOS_CARGO[conta.cargo]}</div>}
                 </td>
-                <td>
+                <td data-label="Situação">
                   <span className={`badge ${conta.situacao === "ativo" ? "badge--regular" : conta.situacao === "pendente" ? "badge--atencao" : "badge--neutral"}`}>
                     {ROTULOS_SITUACAO[conta.situacao]}
                   </span>
                 </td>
-                <td className="panel-meta">{conta.ultimo_acesso ? formatarDataHora(conta.ultimo_acesso) : "-"}</td>
-                <td className="acoes-linha">
+                <td data-label="Último acesso" className="panel-meta">{conta.ultimo_acesso ? formatarDataHora(conta.ultimo_acesso) : "-"}</td>
+                <td className="acoes-linha celula-acoes">
                   {conta.situacao === "pendente" && (
                     <>
                       {conta.email_verificado ? (
@@ -463,7 +463,7 @@ function AbaEscolas() {
   return (
     <div className="panel">
       <div className="filter-bar" style={{ marginBottom: 18 }}>
-        <div className="search-box" style={{ width: 260 }}>
+        <div className="search-box busca-estreita">
           <Icon name="search" />
           <input
             placeholder="Nome, município ou código CIE"
@@ -485,7 +485,7 @@ function AbaEscolas() {
         <span className="panel-meta">{total.toLocaleString("pt-BR")} escola(s)</span>
       </div>
       <div className="tabela-rolavel">
-        <table className="data-table">
+        <table className="data-table tabela-cartoes">
           <thead>
             <tr>
               <th>Escola</th>
@@ -498,17 +498,17 @@ function AbaEscolas() {
           <tbody>
             {escolas.map((escola) => (
               <tr key={escola.id_escola}>
-                <td>
+                <td className="celula-titulo">
                   <b>{escola.nome_escola}</b>
                   <div className="panel-meta">{escola.codigo_cie ? `CIE ${escola.codigo_cie} · ${escola.diretoria_ensino ?? ""}` : "Fora do catálogo"}</div>
                 </td>
-                <td>{escola.municipio ?? "-"}</td>
-                <td className="num">
+                <td data-label="Município">{escola.municipio ?? "-"}</td>
+                <td data-label="Contas" className="num">
                   {escola.contas_ativas}
                   {escola.contas_pendentes > 0 && <span className="badge badge--atencao">{escola.contas_pendentes} pendente(s)</span>}
                 </td>
-                <td className="num">{escola.turmas}</td>
-                <td className="num">{escola.alunos}</td>
+                <td data-label="Turmas" className="num">{escola.turmas}</td>
+                <td data-label="Alunos" className="num">{escola.alunos}</td>
               </tr>
             ))}
           </tbody>

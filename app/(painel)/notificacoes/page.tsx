@@ -93,7 +93,7 @@ export default function NotificacoesPage() {
               <p>Nenhuma notificação neste filtro.</p>
             </div>
           ) : (
-            <table className="data-table">
+            <table className="data-table tabela-cartoes">
               <thead>
                 <tr>
                   <th>Aluno</th>
@@ -106,24 +106,24 @@ export default function NotificacoesPage() {
               <tbody>
                 {notificacoes.map((notificacao) => (
                   <tr key={notificacao.id_notificacao}>
-                    <td>
+                    <td className="celula-titulo">
                       <Link href={`/turmas/${notificacao.id_aluno}`}>{notificacao.nome_aluno}</Link>
                     </td>
-                    <td>
+                    <td data-label="Responsável">
                       {notificacao.nome_responsavel}
                       <div className="panel-meta">
                         {formatarTelefone(notificacao.telefone_responsavel)}
                         {notificacao.email_responsavel ? ` · ${notificacao.email_responsavel}` : ""}
                       </div>
                     </td>
-                    <td style={{ maxWidth: 320 }}>
+                    <td data-label="Mensagem" style={{ maxWidth: 320 }}>
                       <div className="panel-meta">
                         {rotuloTipoAviso(notificacao.tipo_aviso)}
                         {notificacao.canal && notificacao.canal !== "manual" && ` · ${notificacao.canal === "email" ? "e-mail" : "WhatsApp"}`}
                       </div>
                       <MensagemNotificacao mensagem={notificacao.mensagem} />
                     </td>
-                    <td>
+                    <td data-label="Status">
                       <span className={`badge badge--${notificacao.status_notificacao === "enviada" ? "enviada" : "pendente"}`}>
                         {notificacao.status_notificacao === "erro" ? "falha no envio" : notificacao.status_notificacao}
                       </span>
@@ -131,7 +131,7 @@ export default function NotificacoesPage() {
                         <div className="panel-meta">{formatarDataHora(notificacao.data_envio_notificacao)}</div>
                       )}
                     </td>
-                    <td>
+                    <td className="celula-acoes">
                       {notificacao.status_notificacao !== "enviada" && (
                         <button
                           type="button"

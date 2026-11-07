@@ -98,7 +98,7 @@ export default function ResponsaveisPage() {
             </button>
           </div>
           {aba === "responsaveis" && (
-            <div className="search-box" style={{ width: 280 }}>
+            <div className="search-box busca-estreita">
               <Icon name="search" />
               <input placeholder="Nome, CPF, telefone ou aluno" value={busca} onChange={(e) => setBusca(e.target.value)} />
             </div>
@@ -116,7 +116,7 @@ export default function ResponsaveisPage() {
             </div>
           ) : (
             <div className="tabela-rolavel">
-              <table className="data-table">
+              <table className="data-table tabela-cartoes">
                 <thead>
                   <tr>
                     <th>Responsável</th>
@@ -129,16 +129,16 @@ export default function ResponsaveisPage() {
                 <tbody>
                   {dados.responsaveis.map((r) => (
                     <tr key={r.id_responsavel}>
-                      <td>
+                      <td className="celula-titulo">
                         <b>{r.nome_responsavel}</b>
                         <div className="panel-meta">CPF {formatarCpf(r.cpf_responsavel)}</div>
                       </td>
-                      <td>
+                      <td data-label="Contato">
                         {formatarTelefone(r.telefone_responsavel)}
                         {r.email_responsavel && <div className="panel-meta">{r.email_responsavel}</div>}
                       </td>
-                      <td>{ROTULOS_CANAL_RESPONSAVEL[r.canal_preferido ?? "whatsapp"]}</td>
-                      <td>
+                      <td data-label="Avisos por">{ROTULOS_CANAL_RESPONSAVEL[r.canal_preferido ?? "whatsapp"]}</td>
+                      <td data-label="Alunos">
                         <ul className="lista-responsaveis">
                           {r.alunos.map((a) => (
                             <li key={a.id_aluno}>
@@ -153,7 +153,7 @@ export default function ResponsaveisPage() {
                           ))}
                         </ul>
                       </td>
-                      <td style={{ textAlign: "right" }}>
+                      <td className="celula-acoes" style={{ textAlign: "right" }}>
                         <button type="button" className="btn btn-sm" onClick={() => setEditando(r)}>
                           Editar
                         </button>
@@ -173,7 +173,7 @@ export default function ResponsaveisPage() {
               <p>Todos os alunos têm responsável cadastrado.</p>
             </div>
           ) : (
-            <table className="data-table">
+            <table className="data-table tabela-cartoes">
               <thead>
                 <tr>
                   <th>Aluno</th>
@@ -184,13 +184,13 @@ export default function ResponsaveisPage() {
               <tbody>
                 {semResponsavel.map((a) => (
                   <tr key={a.id_aluno}>
-                    <td>
+                    <td className="celula-titulo">
                       <Link href={`/turmas/${a.id_aluno}`} className="link-forte">
                         {a.nome_aluno}
                       </Link>
                     </td>
-                    <td>{a.nome_sala}</td>
-                    <td style={{ textAlign: "right" }}>
+                    <td data-label="Turma">{a.nome_sala}</td>
+                    <td className="celula-acoes" style={{ textAlign: "right" }}>
                       <button
                         type="button"
                         className="btn btn-sm btn-primary"

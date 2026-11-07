@@ -7,7 +7,6 @@ import { useAuth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
 import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
-import { NumeroAnimado } from "@/components/NumeroAnimado";
 import { GraficoEntradasSaidas, GraficoPontualidade } from "@/components/Graficos";
 import { classeBadgePrioridade, formatarData, formatarPercentual, iniciais, nomeMesLongo, rotuloTipoAlerta } from "@/lib/format";
 import { barraPontualidade } from "@/lib/graficos";
@@ -81,7 +80,7 @@ export default function DashboardPage() {
                   <div className="stat-sub">{dados.alertas_alta_prioridade} de alta prioridade</div>
                 </div>
                 <div className="stat-value">
-                  <NumeroAnimado valor={dados.alertas_ativos} />
+                  {dados.alertas_ativos.toLocaleString("pt-BR")}
                 </div>
               </Link>
               <div className="stat-row">
@@ -92,7 +91,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="stat-value">
-                  <NumeroAnimado valor={dados.alunos_acima_limite} />
+                  {dados.alunos_acima_limite.toLocaleString("pt-BR")}
                 </div>
               </div>
               <Link href="/registros" className="stat-row stat-link">
@@ -103,7 +102,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="stat-value">
-                  <NumeroAnimado valor={dados.atrasos_mes} />
+                  {dados.atrasos_mes.toLocaleString("pt-BR")}
                 </div>
               </Link>
               <Link href="/notificacoes" className="stat-row stat-link">
@@ -114,7 +113,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="stat-value">
-                  <NumeroAnimado valor={dados.responsaveis_avisados_mes} />
+                  {dados.responsaveis_avisados_mes.toLocaleString("pt-BR")}
                 </div>
               </Link>
             </div>
@@ -129,7 +128,7 @@ export default function DashboardPage() {
                 <span className="panel-meta">{nomeMesLongo(dados.mes)}</span>
               </div>
               {dados.turmas.length === 0 && <p className="results-caption">Nenhuma turma cadastrada.</p>}
-              {dados.turmas.map((turma, indice) => {
+              {dados.turmas.map((turma) => {
                 const barra = barraPontualidade(turma.pontualidade, dados.limite_alerta);
                 return (
                   <div
@@ -144,7 +143,7 @@ export default function DashboardPage() {
                       {/* As barras crescem uma depois da outra, de cima para baixo. */}
                       <div
                         className={`turma-bar-fill turma-bar-fill--${barra.classe}`}
-                        style={{ width: `${barra.largura}%`, animationDelay: `${Math.min(indice, 12) * 60}ms` }}
+                        style={{ width: `${barra.largura}%` }}
                       />
                     </div>
                     <span className="turma-pct">{formatarPercentual(turma.pontualidade, 0)}</span>

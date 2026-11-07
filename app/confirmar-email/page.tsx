@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Api } from "@/lib/api";
 import { Logo } from "@/components/Logo";
+import { IconesEscola } from "@/components/IconesEscola";
 import { AlternarTema } from "@/components/AlternarTema";
 import { Carregando } from "@/components/Carregando";
 import { Icon } from "@/components/Icon";
@@ -49,6 +50,7 @@ export default function ConfirmarEmailPage() {
   return (
     <div className="auth-shell">
       <div className="auth-illustration">
+        <IconesEscola />
         <div className="auth-illustration-inner">
           <Logo tamanho={56} className="logo-sobre-indigo auth-logo" />
           <h1>Confirmação de e-mail</h1>

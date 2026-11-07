@@ -164,7 +164,7 @@ export default function RegistrosPage() {
                 <p>Nenhuma entrada atrasada ou saída antecipada {hoje ? "hoje" : "neste dia"}.</p>
               </div>
             ) : (
-              <table className="data-table">
+              <table className="data-table tabela-cartoes">
                 <thead>
                   <tr>
                     <th>Horário</th>
@@ -178,8 +178,8 @@ export default function RegistrosPage() {
                 <tbody>
                   {dia.registros.map((registro) => (
                     <tr key={`${registro.tipo}-${registro.id}`}>
-                      <td className="num">{formatarHora(registro.momento)}</td>
-                      <td>
+                      <td data-label="Horário" className="num">{formatarHora(registro.momento)}</td>
+                      <td className="celula-titulo">
                         <Link href={`/turmas/${registro.id_aluno}`} className="student-cell">
                           <div className="avatar">{iniciais(registro.nome_aluno)}</div>
                           <div>
@@ -188,22 +188,22 @@ export default function RegistrosPage() {
                           </div>
                         </Link>
                       </td>
-                      <td>
+                      <td data-label="Tipo">
                         <span className={`badge ${registro.tipo === "atraso" ? "badge--atraso" : "badge--saida"}`}>
                           {registro.tipo === "atraso" ? "Entrada atrasada" : "Saída antecipada"}
                         </span>
                         {registro.justificado && <span className="badge badge--regular">Justificado</span>}
                       </td>
-                      <td>
+                      <td data-label="Motivo">
                         {registro.motivo ?? "-"}
                         {registro.retirado_por && <div className="panel-meta">Buscou: {registro.retirado_por}</div>}
                       </td>
-                      <td className="panel-meta">
+                      <td data-label="Registro" className="panel-meta">
                         {registro.tipo === "atraso" ? rotuloOrigemAtraso(registro.origem) : "Lançada pela coordenação"}
                         {registro.registrado_por && <div>por {registro.registrado_por}</div>}
                       </td>
                       {gestao && (
-                        <td>
+                        <td className="celula-acoes">
                           <button
                             type="button"
                             className="icon-btn"

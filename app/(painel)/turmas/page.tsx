@@ -162,7 +162,7 @@ export default function TurmasPage() {
 
         <div className="panel">
           <div className="filter-bar" style={{ marginBottom: 18 }}>
-            <div className="search-box" style={{ width: 240 }}>
+            <div className="search-box busca-estreita">
               <Icon name="search" />
               <input
                 placeholder="Buscar por nome ou ID"
@@ -205,7 +205,7 @@ export default function TurmasPage() {
                   <p>Nenhum aluno encontrado com esses filtros.</p>
                 </div>
               ) : (
-                <table className="data-table">
+                <table className="data-table tabela-cartoes">
                   <thead>
                     <tr>
                       <th>Aluno</th>
@@ -219,22 +219,22 @@ export default function TurmasPage() {
                   <tbody>
                     {lista.map((aluno) => (
                       <tr key={aluno.id_aluno} className="clickable" onClick={() => router.push(`/turmas/${aluno.id_aluno}`)}>
-                        <td>{aluno.nome_aluno}</td>
-                        <td>{aluno.turma ?? "-"}</td>
-                        <td className="num">
+                        <td className="celula-titulo">{aluno.nome_aluno}</td>
+                        <td data-label="Turma">{aluno.turma ?? "-"}</td>
+                        <td className="num" data-label="Entradas atrasadas">
                           {aluno.atrasos}
                           {aluno.taxa_atrasos !== null && aluno.atrasos > 0 && (
                             <span className="taxa"> ({formatarPercentual(aluno.taxa_atrasos, 0)})</span>
                           )}
                         </td>
-                        <td className="num">
+                        <td className="num" data-label="Saídas antecipadas">
                           {aluno.saidas}
                           {aluno.taxa_saidas !== null && aluno.saidas > 0 && (
                             <span className="taxa"> ({formatarPercentual(aluno.taxa_saidas, 0)})</span>
                           )}
                         </td>
-                        <td className="num">{aluno.dias_letivos}</td>
-                        <td>
+                        <td className="num" data-label="Dias de aula">{aluno.dias_letivos}</td>
+                        <td data-label="Situação">
                           <span className={classeBadgeStatus(aluno.status)}>{aluno.status}</span>
                         </td>
                       </tr>
