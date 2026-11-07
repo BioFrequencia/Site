@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Api } from "@/lib/api";
 import { Topbar } from "@/components/Topbar";
@@ -90,6 +91,9 @@ export default function TurmasPage() {
         subtitulo={`${totalRegistros} aluno(s) cadastrado(s).`}
         acoes={
           <>
+            <Link href="/turmas/importar" className="btn">
+              <Icon name="upload" /> Importar planilha
+            </Link>
             <button type="button" className="btn" onClick={() => setModalTurma(true)}>
               <Icon name="plus" /> Nova turma
             </button>
@@ -107,7 +111,8 @@ export default function TurmasPage() {
       {salas.length === 0 && !carregando && (
         <div className="panel" style={{ marginBottom: 20 }}>
           <p className="results-caption">
-            Sua escola ainda não tem turmas. Comece por &quot;Nova turma&quot; e depois cadastre os alunos de cada uma.
+            Sua escola ainda não tem turmas. Comece por &quot;Nova turma&quot; e depois cadastre os alunos de cada uma - ou
+            cadastre tudo de uma vez com <Link href="/turmas/importar">uma planilha do Excel</Link>.
           </p>
         </div>
       )}
@@ -333,11 +338,11 @@ function ModalNovaTurma({
       setErro("Informe o nome da turma.");
       return;
     }
-    setEnviando(true);
     if (fim <= inicio) {
       setErro("O fim da aula precisa ser depois do início.");
       return;
     }
+    setEnviando(true);
     const padrao = HORARIO_PADRAO[periodo];
     const horarioProprio = !padrao || padrao.inicio !== inicio || padrao.fim !== fim ? { inicio, fim } : undefined;
     const resposta = await Api.cadastrarTurma(nome.trim(), periodo, horarioProprio);
@@ -378,6 +383,9 @@ function ModalNovaTurma({
         </div>
         <p className="results-caption">
           Entrada depois do início (mais a tolerância da escola) é entrada atrasada; saída antes do fim é saída antecipada.
+        </p>
+        <p className="results-caption">
+          Muitas turmas? <Link href="/turmas/importar">Importe de uma planilha do Excel</Link>.
         </p>
         {erro && <p className="field-error show">{erro}</p>}
         <div className="modal-actions">
@@ -478,6 +486,9 @@ function ModalNovoAluno({
             ))}
           </select>
         </div>
+        <p className="results-caption">
+          A turma inteira numa planilha? <Link href="/turmas/importar">Importe os alunos do Excel</Link>, com os responsáveis.
+        </p>
         {erro && <p className="field-error show">{erro}</p>}
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onFechar}>

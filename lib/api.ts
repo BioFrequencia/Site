@@ -48,6 +48,8 @@ import type {
   ListaAlunos,
   ListaNotificacoes,
   PresencasDoDia,
+  PreviaImportacao,
+  ResultadoImportacao,
   Responsavel,
   Sala,
   StatusNotificacao,
@@ -170,7 +172,7 @@ export interface OpcoesChamada {
  */
 async function post<T>(
   caminho: string,
-  corpo: Record<string, unknown>,
+  corpo: Record<string, unknown> | FormData,
   { autenticado = true, segundoPlano = false }: { autenticado?: boolean } & OpcoesChamada = {}
 ): Promise<RespostaApi<T>> {
   const terminar = segundoPlano ? null : iniciarCarregamento();
@@ -181,7 +183,7 @@ async function post<T>(
   }
 }
 
-async function enviarPost<T>(caminho: string, corpo: Record<string, unknown>, autenticado: boolean): Promise<RespostaApi<T>> {
+async function enviarPost<T>(caminho: string, corpo: Record<string, unknown> | FormData, autenticado: boolean): Promise<RespostaApi<T>> {
   const base = obterBaseUrl();
   if (!base) {
     return { sucesso: false, mensagem: MENSAGEM_SEM_API, dados: null };
@@ -190,7 +192,9 @@ async function enviarPost<T>(caminho: string, corpo: Record<string, unknown>, au
   const controlador = new AbortController();
   const timeoutId = setTimeout(() => controlador.abort(), TEMPO_LIMITE_MS);
 
-  const cabecalhos: Record<string, string> = { "Content-Type": "application/json" };
+  // Arquivo (FormData): sem Content-Type aqui - o navegador põe o multipart com o boundary.
+  const comArquivo = corpo instanceof FormData;
+  const cabecalhos: Record<string, string> = comArquivo ? {} : { "Content-Type": "application/json" };
   if (autenticado) {
     const token = obterToken();
     if (!token) {
@@ -211,7 +215,7 @@ async function enviarPost<T>(caminho: string, corpo: Record<string, unknown>, au
     resposta = await fetch(base + caminho, {
       method: "POST",
       headers: cabecalhos,
-      body: JSON.stringify(corpo || {}),
+      body: comArquivo ? corpo : JSON.stringify(corpo || {}),
       signal: controlador.signal,
     });
   } catch (erro) {
@@ -251,6 +255,60 @@ async function enviarPost<T>(caminho: string, corpo: Record<string, unknown>, au
     aoSessaoExpirar?.();
   }
   return json;
+}
+
+/**
+ * Baixa um arquivo gerado no servidor (relatório XML, modelo da
+ * importação) e dispara o download com o nome do Content-Disposition;
+ * sem ele, usa o nome padrão (o navegador salvaria com um nome genérico).
+ */
+async function baixarArquivo(
+  caminho: string,
+  corpo: Record<string, unknown>,
+  nomePadrao: string,
+  mensagemOk: string,
+  mensagemErro: string
+): Promise<{ sucesso: boolean; mensagem: string }> {
+  const token = obterToken();
+  if (!token) {
+    aoSessaoExpirar?.();
+    return { sucesso: false, mensagem: "Sessão expirada. Faça login novamente." };
+  }
+  const base = obterBaseUrl();
+  if (!base) {
+    return { sucesso: false, mensagem: MENSAGEM_SEM_API };
+  }
+  const terminar = iniciarCarregamento();
+  try {
+    const resposta = await fetch(base + caminho, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(corpo),
+    });
+    if (resposta.status === 401) {
+      aoSessaoExpirar?.();
+      return { sucesso: false, mensagem: "Sessão expirada. Faça login novamente." };
+    }
+    if (!resposta.ok) {
+      return { sucesso: false, mensagem: mensagemErro };
+    }
+    const blob = await resposta.blob();
+    const disposicao = resposta.headers.get("Content-Disposition") ?? "";
+    const nome = /filename="?([^"]+)"?/.exec(disposicao)?.[1] ?? nomePadrao;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = nome;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    return { sucesso: true, mensagem: mensagemOk };
+  } catch {
+    return { sucesso: false, mensagem: "Não foi possível conectar ao servidor." };
+  } finally {
+    terminar();
+  }
 }
 
 export const Api = {
@@ -440,53 +498,35 @@ export const Api = {
    * concatenando string no cliente é exatamente como se produz um
    * arquivo .xml inválido. Aqui só se dispara o download do blob.
    */
-  baixarRelatorioXml: async (
-    relatorio: "alertas" | "alunos" | "registros" | "acompanhamentos" | "ocorrencias"
-  ): Promise<{ sucesso: boolean; mensagem: string }> => {
-    const token = obterToken();
-    if (!token) {
-      aoSessaoExpirar?.();
-      return { sucesso: false, mensagem: "Sessão expirada. Faça login novamente." };
-    }
-    const base = obterBaseUrl();
-    if (!base) {
-      return { sucesso: false, mensagem: MENSAGEM_SEM_API };
-    }
-    const terminar = iniciarCarregamento();
-    try {
-      const resposta = await fetch(base + "relatorio/exportarXml.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ relatorio }),
-      });
-      if (resposta.status === 401) {
-        aoSessaoExpirar?.();
-        return { sucesso: false, mensagem: "Sessão expirada. Faça login novamente." };
-      }
-      if (!resposta.ok) {
-        return { sucesso: false, mensagem: "Não foi possível gerar o relatório." };
-      }
-      const blob = await resposta.blob();
-      // Usa o nome vindo do Content-Disposition do servidor; sem ele o
-      // navegador salvaria com um nome genérico.
-      const disposicao = resposta.headers.get("Content-Disposition") ?? "";
-      const nome =
-        /filename="?([^"]+)"?/.exec(disposicao)?.[1] ??
-        `biofrequencia_${relatorio}_${new Date().toISOString().slice(0, 10)}.xml`;
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = nome;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      return { sucesso: true, mensagem: "Relatório XML baixado." };
-    } catch {
-      return { sucesso: false, mensagem: "Não foi possível conectar ao servidor." };
-    } finally {
-      terminar();
-    }
+  baixarRelatorioXml: (relatorio: "alertas" | "alunos" | "registros" | "acompanhamentos" | "ocorrencias") =>
+    baixarArquivo(
+      "relatorio/exportarXml.php",
+      { relatorio },
+      `biofrequencia_${relatorio}_${new Date().toISOString().slice(0, 10)}.xml`,
+      "Relatório XML baixado.",
+      "Não foi possível gerar o relatório."
+    ),
+
+  // Importação de turmas e alunos por planilha: o modelo .xlsx da escola,
+  // a prévia (nada é gravado) e a confirmação com o mesmo arquivo.
+  baixarModeloImportacao: () =>
+    baixarArquivo(
+      "importacao/modelo.php",
+      {},
+      "modelo-turmas-e-alunos.xlsx",
+      "Modelo baixado: preencha e volte aqui para importar.",
+      "Não foi possível gerar o modelo da planilha."
+    ),
+  previaImportacao: (arquivo: File) => {
+    const corpo = new FormData();
+    corpo.append("arquivo", arquivo);
+    return post<PreviaImportacao>("importacao/previa.php", corpo);
+  },
+  confirmarImportacao: (arquivo: File, hash: string) => {
+    const corpo = new FormData();
+    corpo.append("arquivo", arquivo);
+    corpo.append("hash", hash);
+    return post<ResultadoImportacao>("importacao/confirmar.php", corpo);
   },
 
   // Check-ins enviados pelo celular do próprio aluno (fluxo anterior ao
