@@ -673,3 +673,72 @@ export interface ListaPaginada {
   total_paginas: number;
   total_registros: number;
 }
+
+// ---------------------------------------------------------------------------
+// Importação de turmas e alunos por planilha (importacao/*.php na API)
+
+/** nova/novo: vai ser cadastrada; existente: a escola já tem (fica como está); erro: não entra. */
+export type SituacaoTurmaImportada = "nova" | "existente" | "erro";
+export type SituacaoAlunoImportado = "novo" | "existente" | "erro";
+
+export interface TurmaImportada {
+  linha: number;
+  nome: string;
+  periodo: string | null;
+  inicio: string | null;
+  fim: string | null;
+  situacao: SituacaoTurmaImportada;
+  erros: string[];
+  avisos: string[];
+}
+
+export interface ResponsavelImportado {
+  nome: string;
+  cpf: string;
+  telefone: string;
+  email: string | null;
+  parentesco: string | null;
+  canal: CanalResponsavel;
+  /** novo/reaproveitar: cadastrado; vincular: já está na escola; mesmo: o de outra linha (irmãos). */
+  situacao?: "novo" | "reaproveitar" | "vincular" | "mesmo";
+}
+
+export interface AlunoImportado {
+  linha: number;
+  nome: string;
+  turma: string;
+  /** aaaa-mm-dd */
+  nascimento: string | null;
+  genero: string | null;
+  responsavel: ResponsavelImportado | null;
+  situacao: SituacaoAlunoImportado;
+  erros: string[];
+  avisos: string[];
+}
+
+export interface ResumoImportacao {
+  turmas_novas: number;
+  turmas_existentes: number;
+  turmas_com_erro: number;
+  alunos_novos: number;
+  alunos_existentes: number;
+  alunos_com_erro: number;
+  responsaveis_novos: number;
+  responsaveis_vinculados: number;
+}
+
+export interface PreviaImportacao {
+  arquivo: { nome: string; hash: string };
+  avisos: string[];
+  turmas: TurmaImportada[];
+  alunos: AlunoImportado[];
+  resumo: ResumoImportacao;
+}
+
+export interface ResultadoImportacao {
+  turmas_criadas: number;
+  alunos_criados: number;
+  responsaveis_criados: number;
+  vinculos_criados: number;
+  resumo: ResumoImportacao;
+}

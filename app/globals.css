@@ -765,6 +765,11 @@ svg {
   background: var(--mist-200);
   color: var(--ink-700);
 }
+/* Erro de dado (ex.: linha da planilha que não entra), não situação de aluno. */
+.badge--erro {
+  background: var(--danger-100);
+  color: var(--danger-dark);
+}
 
 /* buttons */
 .btn {
@@ -4265,3 +4270,171 @@ button.card-resumo:disabled {
   }
 }
 
+
+/* ===================================================================
+   Importar planilha de turmas e alunos (app/(painel)/turmas/importar)
+   =================================================================== */
+.importacao-passos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.importacao-passos .panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+.importacao-passos .panel-head {
+  margin-bottom: 0;
+}
+/* A área de arrastar é o rótulo do campo de arquivo: clicar ou usar o
+   teclado (o campo continua focável) abre a escolha do arquivo. */
+.area-arquivo {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 26px 18px;
+  border: 2px dashed var(--mist-200);
+  border-radius: var(--radius-md);
+  background: var(--mist-100);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.area-arquivo:hover,
+.area-arquivo.arrastando,
+.area-arquivo:focus-within {
+  border-color: var(--indigo);
+  background: var(--indigo-50);
+}
+.area-arquivo input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+.area-arquivo .icon {
+  width: 30px;
+  height: 30px;
+  color: var(--indigo-texto);
+}
+.area-arquivo strong {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.area-arquivo span {
+  font-size: 12px;
+  color: var(--ink-500);
+}
+.area-arquivo.lendo {
+  cursor: progress;
+}
+.importacao-avisos {
+  margin: 0 0 14px;
+  padding: 10px 14px 10px 30px;
+  border: 1px solid var(--aviso-borda);
+  border-radius: var(--radius-sm);
+  background: var(--aviso-fundo);
+  color: var(--aviso-texto);
+  font-size: 13px;
+}
+.importacao-filtro {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.importacao-titulo-tabela {
+  margin: 18px 0 4px;
+  font-family: var(--font-display);
+  font-size: 15px;
+}
+.importacao-observacoes {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+  color: var(--ink-500);
+}
+.importacao-observacoes .erro {
+  color: var(--danger-dark);
+  font-weight: 600;
+}
+.cor-erro {
+  color: var(--danger-dark);
+}
+.importacao-confirmar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--mist-200);
+}
+.importacao-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.importacao-pronta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 36px 24px;
+  text-align: center;
+}
+/* O título recebe o foco por script (o botão clicado some); não é um controle. */
+.importacao-pronta h2:focus {
+  outline: none;
+}
+.importacao-pronta .check-animado {
+  width: 64px;
+  height: 64px;
+  fill: none;
+  stroke: var(--emerald-dark);
+  stroke-linecap: round;
+}
+.importacao-numeros {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  color: var(--ink-700);
+}
+.importacao-numeros strong {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--ink-900);
+}
+@media (max-width: 900px) {
+  .importacao-passos {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 720px) {
+  .importacao-confirmar .importacao-acoes {
+    width: 100%;
+  }
+  .importacao-confirmar .importacao-acoes .btn {
+    flex: 1 1 0;
+    justify-content: center;
+  }
+}
