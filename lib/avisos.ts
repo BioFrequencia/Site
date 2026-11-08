@@ -44,6 +44,8 @@ export function rotuloTipoAviso(tipo: string | null | undefined): string {
       return "Limite de entradas atrasadas";
     case "limite_saidas":
       return "Limite de saídas antecipadas";
+    case "manual":
+      return "Mensagem da coordenação";
     default:
       return "Aviso";
   }

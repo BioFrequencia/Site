@@ -47,6 +47,11 @@ import type {
   ListaAlertas,
   ListaAlunos,
   ListaNotificacoes,
+  ModelosMensagem,
+  ContatosDoAluno,
+  DestinoMensagem,
+  EnvioPrevisto,
+  EnvioDeMensagem,
   PresencasDoDia,
   PreviaImportacao,
   PreviaOcorrencias,
@@ -473,11 +478,27 @@ export const Api = {
   removerVinculoResponsavel: (idAluno: number, idResponsavel: number) =>
     post<null>("responsavel/removerVinculo.php", { id_aluno: idAluno, id_responsavel: idResponsavel }),
 
-  // Notificações
-  listarNotificacoes: (status: StatusNotificacao | null, pagina: number, opcoes?: OpcoesChamada) =>
-    post<ListaNotificacoes>("notificacao/listarNotificacoes.php", { status, pagina, por_pagina: 20 }, opcoes),
+  // Notificações: avisos automáticos e mensagens da coordenação (o histórico).
+  listarNotificacoes: (
+    status: StatusNotificacao | null,
+    pagina: number,
+    opcoes?: OpcoesChamada,
+    origem: "manual" | "automatico" | null = null
+  ) => post<ListaNotificacoes>("notificacao/listarNotificacoes.php", { status, pagina, por_pagina: 20, origem }, opcoes),
   marcarNotificacaoEnviada: (idNotificacao: number) =>
     post<null>("notificacao/marcarEnviada.php", { id_notificacao: idNotificacao }),
+  /** "Tentar de novo" numa mensagem que deu erro no envio. */
+  reenviarNotificacao: (idNotificacao: number) =>
+    post<{ id_notificacao: number; status: StatusNotificacao }>("notificacao/reenviar.php", { id_notificacao: idNotificacao }),
+
+  // Enviar mensagem aos responsáveis (tela /notificacoes/enviar).
+  modelosDeMensagem: () => post<ModelosMensagem>("notificacao/modelos.php", {}),
+  contatosDoAluno: (idAluno: number) => post<ContatosDoAluno>("notificacao/contatos.php", { id_aluno: idAluno }),
+  previaDeMensagem: (idAluno: number, mensagem: string, destinos: DestinoMensagem[]) =>
+    post<{ envios: EnvioPrevisto[] }>("notificacao/previa.php", { id_aluno: idAluno, mensagem, destinos }),
+  /** "chave": uma por mensagem nova - o mesmo pedido repetido não manda de novo. */
+  enviarMensagem: (idAluno: number, mensagem: string, destinos: DestinoMensagem[], chave: string) =>
+    post<EnvioDeMensagem>("notificacao/enviar.php", { id_aluno: idAluno, mensagem, destinos, chave }),
 
   // Ocorrências enviadas pelo app do aluno (aguardando decisão)
   listarOcorrencias: (status: "pendente" | "aprovado" | "rejeitado" | "todos" = "pendente") =>

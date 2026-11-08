@@ -495,7 +495,11 @@ function AbaAvisos({ dados, podeEditar, aoMudar }: { dados: DadosEscola; podeEdi
     </div>
   );
 
-  const opcao = (campo: "aviso_automatico" | "aviso_cada_registro" | "atraso_pela_presenca", rotulo: string, ajuda: string) => (
+  const opcao = (
+    campo: "aviso_entrada_atrasada" | "aviso_saida_antecipada" | "aviso_limite_atrasos" | "aviso_limite_saidas" | "atraso_pela_presenca",
+    rotulo: string,
+    ajuda: string
+  ) => (
     <div className="linha-opcao">
       <div>
         <b>{rotulo}</b>
@@ -528,12 +532,24 @@ function AbaAvisos({ dados, podeEditar, aoMudar }: { dados: DadosEscola; podeEdi
         {numero("janela_alerta_dias", "Período analisado", "últimos dias", "As porcentagens olham os dias de aula desse período.")}
         {numero("intervalo_aviso_dias", "Intervalo entre avisos", "dias", "Se a situação continuar, a família é avisada de novo só depois disso.")}
       </div>
+      <h3 className="titulo-grupo-opcoes">Avisos automáticos aos responsáveis</h3>
+      <p className="results-caption">
+        Pelo canal de cada responsável (WhatsApp, e-mail ou os dois). Sem o envio automático configurado, a mensagem fica em
+        Notificações com o link pronto. Para mandar uma mensagem sua, use Notificações &gt; Enviar mensagem.
+      </p>
+      {opcao("aviso_entrada_atrasada", "A cada entrada atrasada", "Uma mensagem com a data, o horário e o motivo, se houver.")}
+      {opcao("aviso_saida_antecipada", "A cada saída antecipada", "Uma mensagem com a data, o horário, o motivo e quem buscou o aluno.")}
       {opcao(
-        "aviso_automatico",
-        "Avisar os responsáveis ao passar do limite",
-        "Mensagem pelo canal de cada responsável (WhatsApp, e-mail ou os dois). Sem o envio automático configurado, ela fica em Notificações com o link pronto."
+        "aviso_limite_atrasos",
+        "Ao passar do limite de entradas atrasadas",
+        "Uma mensagem quando o aluno passa do limite da escola; outra só depois do intervalo entre avisos, se continuar."
       )}
-      {opcao("aviso_cada_registro", "Avisar também a cada registro", "Uma mensagem a cada entrada atrasada ou saída antecipada.")}
+      {opcao(
+        "aviso_limite_saidas",
+        "Ao passar do limite de saídas antecipadas",
+        "O mesmo aviso, para as saídas antecipadas."
+      )}
+      <h3 className="titulo-grupo-opcoes">Presença pelo app</h3>
       {opcao(
         "atraso_pela_presenca",
         "Presença do app depois da tolerância vira entrada atrasada",

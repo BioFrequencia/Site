@@ -485,8 +485,92 @@ export interface Notificacao {
   data_envio_notificacao: string | null;
   canal?: string | null;
   nivel_alerta?: number | null;
-  /** registro_atraso, registro_saida, limite_atrasos, limite_saidas (migração 008). */
+  /** registro_atraso, registro_saida, limite_atrasos, limite_saidas (migração 008) ou manual (enviada pela coordenação). */
   tipo_aviso?: string | null;
+  /** Quando a mensagem foi criada (migração 011; antes disso, vazio). */
+  criado_em?: string | null;
+  assunto?: string | null;
+  id_coordenacao?: number | null;
+  /** Quem da coordenação enviou; vazio = aviso automático. */
+  enviado_por?: string | null;
+}
+
+// ---------------------------------------------------------------- mensagens da coordenação
+// notificacao/modelos.php, contatos.php, previa.php, enviar.php e reenviar.php.
+
+export type CanalMensagem = "whatsapp" | "email";
+
+export interface ModeloMensagem {
+  chave: string;
+  titulo: string;
+  texto: string;
+}
+
+export interface ProvedoresMensagem {
+  whatsapp: boolean;
+  email: boolean;
+}
+
+export interface ModelosMensagem {
+  modelos: ModeloMensagem[];
+  variaveis: { variavel: string; descricao: string }[];
+  maximo: number;
+  provedores: ProvedoresMensagem;
+}
+
+export interface ContatoResponsavel {
+  id_responsavel: number;
+  nome: string;
+  parentesco: string | null;
+  telefone: string;
+  email: string | null;
+  canal_preferido: string | null;
+  whatsapp: boolean;
+  email_disponivel: boolean;
+  sugeridos: CanalMensagem[];
+}
+
+export interface ContatosDoAluno {
+  aluno: { id_aluno: number; nome: string; turma: string };
+  responsaveis: ContatoResponsavel[];
+  provedores: ProvedoresMensagem;
+}
+
+export interface DestinoMensagem {
+  id_responsavel: number;
+  canal: CanalMensagem;
+}
+
+/** Como a mensagem sai: pelo provedor, pelo link do WhatsApp (sem provedor) ou na fila (e-mail sem provedor). */
+export type ComoSaiMensagem = "automatico" | "link" | "fila";
+
+export interface EnvioPrevisto {
+  id_responsavel: number;
+  nome: string;
+  parentesco: string | null;
+  canal: CanalMensagem;
+  contato: string;
+  assunto: string | null;
+  mensagem: string;
+  como: ComoSaiMensagem;
+}
+
+export interface ResultadoEnvioMensagem {
+  id_notificacao: number;
+  id_responsavel: number;
+  nome: string;
+  canal: CanalMensagem;
+  contato: string;
+  status: StatusNotificacao;
+  /** O mesmo envio já tinha sido feito (a chave repetiu): nada saiu de novo. */
+  repetido: boolean;
+  /** WhatsApp sem envio automático: o link pronto para mandar. */
+  link: string | null;
+}
+
+export interface EnvioDeMensagem {
+  resultados: ResultadoEnvioMensagem[];
+  resumo: { enviadas: number; pendentes: number; erros: number; repetidas: number };
 }
 
 export interface ListaNotificacoes {
@@ -545,6 +629,12 @@ export interface ConfiguracaoEscola {
   minimo_ocorrencias_alerta: number;
   janela_alerta_dias: number;
   intervalo_aviso_dias: number;
+  /** Avisos automáticos, um por tipo (migração 011). */
+  aviso_entrada_atrasada: boolean;
+  aviso_saida_antecipada: boolean;
+  aviso_limite_atrasos: boolean;
+  aviso_limite_saidas: boolean;
+  /** As duas chaves de antes (algum tipo de limite / de registro ligado): só leitura aqui. */
   aviso_automatico: boolean;
   aviso_cada_registro: boolean;
   atraso_pela_presenca: boolean;
