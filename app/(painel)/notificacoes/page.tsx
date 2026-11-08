@@ -143,8 +143,12 @@ export default function NotificacoesPage() {
                 {notificacoes.map((notificacao) => {
                   const selo = seloDoEnvio(notificacao.status_notificacao);
                   const quando = notificacao.criado_em ?? notificacao.data_envio_notificacao;
+                  // Com erro no WhatsApp: o link para mandar à mão. A mensagem de antes
+                  // da migração 011 já foi gravada como link (MensagemNotificacao mostra).
                   const linkManual =
-                    notificacao.status_notificacao === "erro" && notificacao.canal === "whatsapp"
+                    notificacao.status_notificacao === "erro" &&
+                    notificacao.canal === "whatsapp" &&
+                    !notificacao.mensagem.startsWith("https://wa.me/")
                       ? linkWhatsapp(notificacao.telefone_responsavel, notificacao.mensagem)
                       : null;
                   return (
