@@ -1,45 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import Link from "next/link";
 import { Api } from "@/lib/api";
 import { Topbar } from "@/components/Topbar";
 import { Icon } from "@/components/Icon";
-import { useToast } from "@/components/Toast";
-import { tocarSom } from "@/lib/sons";
+import {
+  AvisosEFiltro,
+  Observacoes,
+  PainelConcluido,
+  PassoArquivo,
+  PassoModelo,
+  RodapeDaPrevia,
+  useImportacao,
+} from "@/components/Importacao";
 import { formatarData } from "@/lib/format";
+import { SELO_SITUACAO, foraPorErro, formatarTelefone, oQueEntraTurmas, quantidade } from "@/lib/importacao";
 import type { AlunoImportado, PreviaImportacao, ResultadoImportacao, TurmaImportada } from "@/lib/types";
-
-const EXTENSOES = [".xlsx", ".xls", ".ods", ".csv"];
-const TAMANHO_MAXIMO = 2 * 1024 * 1024;
-
-type Etapa =
-  | { tipo: "escolher" }
-  | { tipo: "lendo"; arquivo: File }
-  | { tipo: "previa"; arquivo: File; previa: PreviaImportacao }
-  | { tipo: "gravando"; arquivo: File; previa: PreviaImportacao }
-  | { tipo: "pronto"; resultado: ResultadoImportacao };
-
-const SELO_SITUACAO: Record<string, { classe: string; texto: string }> = {
-  nova: { classe: "badge badge--regular", texto: "Nova" },
-  novo: { classe: "badge badge--regular", texto: "Novo" },
-  existente: { classe: "badge badge--neutral", texto: "Já existe" },
-  erro: { classe: "badge badge--erro", texto: "Erro" },
-};
-
-/** "11988887777" => "(11) 98888-7777"; para a prévia ficar legível. */
-function formatarTelefone(digitos: string): string {
-  const m = /^(\d{2})(\d{4,5})(\d{4})$/.exec(digitos);
-  return m ? `(${m[1]}) ${m[2]}-${m[3]}` : digitos;
-}
-
-/** O que a confirmação vai cadastrar, em palavras ("2 turmas e 15 alunos"). */
-function oQueEntra(resumo: PreviaImportacao["resumo"]): string {
-  const partes = [];
-  if (resumo.turmas_novas > 0) partes.push(`${resumo.turmas_novas} ${resumo.turmas_novas === 1 ? "turma" : "turmas"}`);
-  if (resumo.alunos_novos > 0) partes.push(`${resumo.alunos_novos} ${resumo.alunos_novos === 1 ? "aluno" : "alunos"}`);
-  return partes.join(" e ");
-}
 
 /**
  * Importar turmas e alunos de uma planilha (item 4 do pedido): baixar o
@@ -49,91 +25,15 @@ function oQueEntra(resumo: PreviaImportacao["resumo"]): string {
  * transação só; importar a mesma planilha de novo não duplica nada.
  */
 export default function ImportarPlanilhaPage() {
-  const { mostrarToast } = useToast();
-  const [etapa, setEtapa] = useState<Etapa>({ tipo: "escolher" });
-  const [erro, setErro] = useState<string | null>(null);
-  const [arrastando, setArrastando] = useState(false);
-  const [soErros, setSoErros] = useState(false);
-  const [baixando, setBaixando] = useState(false);
-  const tituloPronto = useRef<HTMLHeadingElement>(null);
+  const { etapa, erro, previa, soErros, setSoErros, lerArquivo, confirmar, recomecar } = useImportacao<
+    PreviaImportacao,
+    ResultadoImportacao
+  >(Api.previaImportacao, Api.confirmarImportacao);
 
-  // O painel do resultado toma o lugar do botão clicado: o foco vai para o
-  // título dele, para quem usa teclado ou leitor de tela não ficar perdido.
-  useEffect(() => {
-    if (etapa.tipo === "pronto") tituloPronto.current?.focus();
-  }, [etapa.tipo]);
-
-  async function baixarModelo() {
-    setBaixando(true);
-    const resposta = await Api.baixarModeloImportacao();
-    setBaixando(false);
-    mostrarToast(resposta.mensagem, !resposta.sucesso);
-  }
-
-  async function lerArquivo(arquivo: File) {
-    setErro(null);
-    setSoErros(false);
-    const extensao = arquivo.name.slice(arquivo.name.lastIndexOf(".")).toLowerCase();
-    if (!EXTENSOES.includes(extensao)) {
-      setErro("Escolha uma planilha do Excel (.xlsx ou .xls), do LibreOffice (.ods) ou um .csv.");
-      void tocarSom("erro");
-      return;
-    }
-    if (arquivo.size > TAMANHO_MAXIMO) {
-      setErro("A planilha passa de 2 MB. Divida em arquivos menores.");
-      void tocarSom("erro");
-      return;
-    }
-    setEtapa({ tipo: "lendo", arquivo });
-    const resposta = await Api.previaImportacao(arquivo);
-    if (!resposta.sucesso || !resposta.dados) {
-      setEtapa({ tipo: "escolher" });
-      setErro(resposta.mensagem);
-      void tocarSom("erro");
-      return;
-    }
-    setEtapa({ tipo: "previa", arquivo, previa: resposta.dados });
-  }
-
-  function aoEscolher(evento: ChangeEvent<HTMLInputElement>) {
-    const arquivo = evento.target.files?.[0];
-    // Limpa o campo: escolher o mesmo arquivo de novo (corrigido) dispara de novo.
-    evento.target.value = "";
-    if (arquivo) void lerArquivo(arquivo);
-  }
-
-  function aoSoltar(evento: DragEvent<HTMLLabelElement>) {
-    evento.preventDefault();
-    setArrastando(false);
-    const arquivo = evento.dataTransfer.files?.[0];
-    if (arquivo) void lerArquivo(arquivo);
-  }
-
-  async function confirmar() {
-    if (etapa.tipo !== "previa") return;
-    setErro(null);
-    setEtapa({ ...etapa, tipo: "gravando" });
-    const resposta = await Api.confirmarImportacao(etapa.arquivo, etapa.previa.arquivo.hash);
-    if (!resposta.sucesso || !resposta.dados) {
-      setEtapa({ ...etapa, tipo: "previa" });
-      setErro(resposta.mensagem);
-      void tocarSom("erro");
-      return;
-    }
-    setEtapa({ tipo: "pronto", resultado: resposta.dados });
-    void tocarSom("confirmacao");
-  }
-
-  function recomecar() {
-    setErro(null);
-    setEtapa({ tipo: "escolher" });
-  }
-
-  const previa = etapa.tipo === "previa" || etapa.tipo === "gravando" ? etapa.previa : null;
   const turmas = previa ? previa.turmas.filter((t) => !soErros || t.situacao === "erro") : [];
   const alunos = previa ? previa.alunos.filter((a) => !soErros || a.situacao === "erro") : [];
   const comErro = previa ? previa.resumo.turmas_com_erro + previa.resumo.alunos_com_erro : 0;
-  const entra = previa ? oQueEntra(previa.resumo) : "";
+  const entra = previa ? oQueEntraTurmas(previa.resumo) : "";
 
   return (
     <>
@@ -148,76 +48,28 @@ export default function ImportarPlanilhaPage() {
       />
 
       {etapa.tipo === "pronto" ? (
-        <div className="panel importacao-pronta">
-          <svg className="check-animado" viewBox="0 0 52 52" aria-hidden="true">
-            <circle cx="26" cy="26" r="23" />
-            <path d="M15 27l7 7 15-16" />
-          </svg>
-          <h2 ref={tituloPronto} tabIndex={-1}>
-            Importação concluída
-          </h2>
+        <PainelConcluido
+          acoes={
+            <>
+              <Link href="/turmas" className="btn btn-primary">
+                Ver turmas e alunos
+              </Link>
+              <button type="button" className="btn" onClick={recomecar}>
+                Importar outra planilha
+              </button>
+            </>
+          }
+        >
           <ResultadoDaImportacao resultado={etapa.resultado} />
-          <div className="importacao-acoes">
-            <Link href="/turmas" className="btn btn-primary">
-              Ver turmas e alunos
-            </Link>
-            <button type="button" className="btn" onClick={recomecar}>
-              Importar outra planilha
-            </button>
-          </div>
-        </div>
+        </PainelConcluido>
       ) : (
         <>
           <div className="importacao-passos">
-            <section className="panel">
-              <div className="panel-head">
-                <h2>1. Baixe o modelo</h2>
-              </div>
-              <p className="results-caption">
-                O modelo tem as abas Turmas e Alunos, com listas de período e gênero e as turmas que a sua escola já tem. Uma
-                linha por turma ou por aluno; o responsável é opcional.
-              </p>
-              <button type="button" className="btn" onClick={baixarModelo} disabled={baixando} aria-busy={baixando}>
-                <Icon name="download" /> {baixando ? "Gerando…" : "Baixar o modelo (.xlsx)"}
-              </button>
-            </section>
-
-            <section className="panel">
-              <div className="panel-head">
-                <h2>2. Escolha a planilha</h2>
-              </div>
-              <label
-                className={`area-arquivo${arrastando ? " arrastando" : ""}${etapa.tipo === "lendo" ? " lendo" : ""}`}
-                onDragOver={(evento) => {
-                  evento.preventDefault();
-                  setArrastando(true);
-                }}
-                onDragLeave={() => setArrastando(false)}
-                onDrop={aoSoltar}
-              >
-                <input
-                  type="file"
-                  accept={EXTENSOES.join(",")}
-                  onChange={aoEscolher}
-                  disabled={etapa.tipo === "lendo" || etapa.tipo === "gravando"}
-                  aria-describedby="dicaArquivo"
-                />
-                <Icon name="fileText" />
-                <strong>
-                  {etapa.tipo === "lendo"
-                    ? `Lendo ${etapa.arquivo.name}…`
-                    : previa
-                      ? previa.arquivo.nome
-                      : "Arraste a planilha para cá ou clique para escolher"}
-                </strong>
-                <span id="dicaArquivo">Excel (.xlsx ou .xls), LibreOffice (.ods) ou .csv, até 2 MB.</span>
-              </label>
-              {erro && etapa.tipo === "escolher" && (
-                <p className="field-error show" role="alert">
-                  {erro}
-                </p>
-              )}
-            </section>
+            <PassoModelo baixar={Api.baixarModeloImportacao}>
+              O modelo tem as abas Turmas e Alunos, com listas de período e gênero e as turmas que a sua escola já tem. Uma
+              linha por turma ou por aluno; o responsável é opcional.
+            </PassoModelo>
+            <PassoArquivo etapa={etapa} nomeDaPrevia={previa?.arquivo.nome ?? null} erro={erro} onArquivo={lerArquivo} />
           </div>
 
           {previa && (
@@ -255,49 +107,25 @@ export default function ImportarPlanilhaPage() {
                 </div>
               </div>
 
-              {previa.avisos.length > 0 && (
-                <ul className="importacao-avisos">
-                  {previa.avisos.map((aviso) => (
-                    <li key={aviso}>{aviso}</li>
-                  ))}
-                </ul>
-              )}
-
-              {comErro > 0 && (
-                <label className="importacao-filtro">
-                  <input type="checkbox" checked={soErros} onChange={(e) => setSoErros(e.target.checked)} /> Mostrar só as linhas com erro
-                </label>
-              )}
+              <AvisosEFiltro avisos={previa.avisos} comErro={comErro} soErros={soErros} onSoErros={setSoErros} />
 
               {turmas.length > 0 && <TabelaTurmas turmas={turmas} />}
               {alunos.length > 0 && <TabelaAlunos alunos={alunos} />}
 
-              {erro && (
-                <p className="field-error show" role="alert">
-                  {erro}
-                </p>
-              )}
-              <div className="importacao-confirmar">
-                <p className="results-caption">
-                  {entra
-                    ? `Vai cadastrar ${entra}${comErro > 0 ? `; as ${comErro} linhas com erro ficam de fora` : ""}. Tudo entra de uma vez.`
-                    : "Não há nada novo para cadastrar nesta planilha."}
-                </p>
-                <div className="importacao-acoes">
-                  <button type="button" className="btn" onClick={recomecar} disabled={etapa.tipo === "gravando"}>
-                    Escolher outro arquivo
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={confirmar}
-                    disabled={!entra || etapa.tipo === "gravando"}
-                    aria-busy={etapa.tipo === "gravando"}
-                  >
-                    {etapa.tipo === "gravando" ? "Cadastrando…" : entra ? `Cadastrar ${entra}` : "Nada para cadastrar"}
-                  </button>
-                </div>
-              </div>
+              <RodapeDaPrevia
+                erro={erro}
+                legenda={
+                  entra
+                    ? `Vai cadastrar ${entra}${foraPorErro(comErro)}. Tudo entra de uma vez.`
+                    : "Não há nada novo para cadastrar nesta planilha."
+                }
+                gravando={etapa.tipo === "gravando"}
+                podeConfirmar={entra !== ""}
+                rotuloConfirmar={entra ? `Cadastrar ${entra}` : "Nada para cadastrar"}
+                rotuloGravando="Cadastrando…"
+                onConfirmar={confirmar}
+                onRecomecar={recomecar}
+              />
             </section>
           )}
         </>
@@ -340,9 +168,7 @@ function ResultadoDaImportacao({ resultado }: { resultado: ResultadoImportacao }
         )}
       </ul>
       {jaTinha > 0 && (
-        <p className="results-caption">
-          O que a escola já tinha ({jaTinha === 1 ? "1 linha" : `${jaTinha} linhas`}) ficou como estava.
-        </p>
+        <p className="results-caption">O que a escola já tinha ({quantidade(jaTinha, "linha", "linhas")}) ficou como estava.</p>
       )}
       {comErro > 0 && (
         <p className="results-caption">
@@ -351,22 +177,6 @@ function ResultadoDaImportacao({ resultado }: { resultado: ResultadoImportacao }
         </p>
       )}
     </>
-  );
-}
-
-function Observacoes({ erros, avisos }: { erros: string[]; avisos: string[] }) {
-  if (erros.length === 0 && avisos.length === 0) return <span className="panel-meta">-</span>;
-  return (
-    <ul className="importacao-observacoes">
-      {erros.map((texto) => (
-        <li key={texto} className="erro">
-          {texto}
-        </li>
-      ))}
-      {avisos.map((texto) => (
-        <li key={texto}>{texto}</li>
-      ))}
-    </ul>
   );
 }
 

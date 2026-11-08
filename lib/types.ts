@@ -742,3 +742,50 @@ export interface ResultadoImportacao {
   vinculos_criados: number;
   resumo: ResumoImportacao;
 }
+
+// ---------------------------------------------------------------- importação de entradas e saídas
+// Entradas atrasadas e saídas antecipadas anotadas no Excel sem internet
+// (registro/previaImportacao.php e confirmarImportacao.php).
+
+/** nova: vai ser registrada; existente: já está no sistema (fica como está); erro: não entra. */
+export type SituacaoOcorrenciaImportada = "nova" | "existente" | "erro";
+
+export interface OcorrenciaImportada {
+  linha: number;
+  situacao: SituacaoOcorrenciaImportada;
+  id_aluno: number | null;
+  aluno: string;
+  turma: string;
+  data: string | null;
+  hora: string | null;
+  tipo: "atraso" | "saida" | null;
+  motivo: string | null;
+  justificado: boolean;
+  observacao: string | null;
+  retirado_por: string | null;
+  erros: string[];
+  avisos: string[];
+}
+
+export interface ResumoOcorrenciasImportadas {
+  novas: number;
+  existentes: number;
+  com_erro: number;
+  atrasos_novos: number;
+  saidas_novas: number;
+}
+
+export interface PreviaOcorrencias {
+  arquivo: { nome: string; hash: string };
+  avisos: string[];
+  linhas: OcorrenciaImportada[];
+  resumo: ResumoOcorrenciasImportadas;
+}
+
+export interface ResultadoOcorrencias {
+  atrasos_criados: number;
+  saidas_criadas: number;
+  /** Alunos que passaram do limite e cujos responsáveis receberam o aviso. */
+  avisos_de_limite: number;
+  resumo: ResumoOcorrenciasImportadas;
+}

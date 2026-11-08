@@ -83,6 +83,9 @@ export default function RegistrosPage() {
         subtitulo="Entradas atrasadas e saídas antecipadas do dia - o que o BioFrequência registra."
         acoes={
           <>
+            <Link href="/registros/importar" className="btn">
+              <Icon name="upload" /> Importar planilha
+            </Link>
             <button type="button" className="btn" onClick={() => setModal("saida")} disabled={!dia?.dia.letivo}>
               <Icon name="logout" /> Saída antecipada
             </button>
