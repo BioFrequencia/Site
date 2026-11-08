@@ -18,7 +18,8 @@ type Origem = "" | "manual" | "automatico";
  * Notificações: o histórico do que saiu para os responsáveis - os avisos
  * automáticos e as mensagens da coordenação (quem enviou, quando, por qual
  * canal e a situação). Pendente: sem envio automático, a coordenação manda
- * pelo link e marca como enviada. Erro: dá para tentar de novo.
+ * pelo link e marca como enviada. Erro: dá para tentar de novo ou, se a
+ * família foi avisada por fora, marcar como enviada.
  */
 export default function NotificacoesPage() {
   const { mostrarToast } = useToast();
@@ -191,7 +192,7 @@ export default function NotificacoesPage() {
                             Abrir no WhatsApp
                           </a>
                         )}
-                        {notificacao.status_notificacao === "pendente" && (
+                        {notificacao.status_notificacao !== "enviada" && (
                           <button
                             type="button"
                             className="btn btn-sm"
