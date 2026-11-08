@@ -4438,3 +4438,126 @@ button.card-resumo:disabled {
     justify-content: center;
   }
 }
+
+/* ---------------------------------------------------------------- enviar mensagem (/notificacoes/enviar) */
+.enviar-mensagem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.enviar-mensagem-campos {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.enviar-mensagem-campos .panel,
+.enviar-mensagem-previa {
+  margin: 0;
+}
+.enviar-mensagem-previa {
+  position: sticky;
+  top: 18px;
+}
+.lista-contatos {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lista-contatos li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--mist-100);
+}
+.lista-contatos li:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.lista-contatos label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  color: var(--ink-700);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.lista-contatos label.desabilitado {
+  color: var(--ink-500);
+  cursor: default;
+}
+.contador-texto {
+  margin-top: 4px;
+  font-size: 12px;
+  text-align: right;
+  color: var(--ink-500);
+}
+.lista-previa {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+.lista-previa li {
+  padding: 12px 14px;
+  border: 1px solid var(--mist-200);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.lista-previa-topo {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px;
+}
+.lista-previa-texto {
+  margin: 8px 0 0;
+  font-size: 14px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--ink-900);
+}
+.lista-resultados {
+  display: flex;
+  flex-direction: column;
+  margin: 12px 0;
+  padding: 0;
+  list-style: none;
+}
+.lista-resultados li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--mist-100);
+}
+.lista-resultados li:last-child {
+  border-bottom: none;
+}
+.lista-resultados-acoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.titulo-grupo-opcoes {
+  margin: 20px 0 4px;
+  font-size: 14px;
+  color: var(--ink-900);
+}
+@media (max-width: 900px) {
+  .enviar-mensagem {
+    grid-template-columns: 1fr;
+  }
+  .enviar-mensagem-previa {
+    position: static;
+  }
+}

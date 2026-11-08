@@ -164,6 +164,9 @@ export default function AlunoDetalhePage() {
             subtitulo={[historico.aluno.nome_sala ?? "Sem turma", historico.aluno.periodo_sala, horario].filter(Boolean).join(" · ")}
             acoes={
               <>
+                <Link href={`/notificacoes/enviar?aluno=${idAluno}`} className="btn">
+                  <Icon name="send" /> Mensagem aos responsáveis
+                </Link>
                 <button type="button" className="btn" onClick={() => setModalRegistro("saida")}>
                   <Icon name="logout" /> Saída antecipada
                 </button>
