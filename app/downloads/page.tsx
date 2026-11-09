@@ -4,7 +4,7 @@ import { NavPublica } from "@/components/NavPublica";
 import { resolverApkUrl, resolverDesktopUrl } from "@/lib/config";
 
 export const metadata = {
-  title: "Downloads — Biofrequência",
+  title: "Downloads — BioFrequência",
 };
 
 // O link anterior apontava para github.com/jvvvv780/mobile-app, um
@@ -26,7 +26,7 @@ export default function DownloadsPage() {
         <div className="downloads-header">
           <h1>Baixe o software e o app</h1>
           <p>
-            Além do painel web, o Biofrequência tem um software desktop (Windows) para a coordenação e um
+            Além do painel web, o BioFrequência tem um software desktop (Windows) para a coordenação e um
             app de celular para o check-in biométrico do aluno.
           </p>
         </div>

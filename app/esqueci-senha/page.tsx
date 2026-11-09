@@ -54,7 +54,7 @@ export default function EsqueciSenhaPage() {
         <form className="auth-form" onSubmit={aoEnviar}>
           <div className="auth-marca">
             <Logo tamanho={30} />
-            Biofrequência
+            BioFrequência
           </div>
           <h2>Criar uma senha nova</h2>
 

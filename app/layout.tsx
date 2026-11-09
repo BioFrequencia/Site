@@ -20,8 +20,8 @@ const fonteBody = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Biofrequência",
-  description: "Painel de acompanhamento de frequência escolar Biofrequência.",
+  title: "BioFrequência",
+  description: "Painel de acompanhamento de frequência escolar BioFrequência.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

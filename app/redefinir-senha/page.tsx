@@ -96,7 +96,7 @@ export default function RedefinirSenhaPage() {
         <form className="auth-form" onSubmit={aoEnviar}>
           <div className="auth-marca">
             <Logo tamanho={30} />
-            Biofrequência
+            BioFrequência
           </div>
 
           {estado.tipo === "formulario" && (

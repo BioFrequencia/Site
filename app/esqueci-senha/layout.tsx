@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "Esqueci minha senha · Biofrequência",
+  title: "Esqueci minha senha · BioFrequência",
 };
 
 export default function LayoutEsqueciSenha({ children }: { children: ReactNode }) {

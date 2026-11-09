@@ -125,7 +125,7 @@ export function Sidebar({ contadores }: { contadores: Contadores }) {
         <div className="brand">
           <Logo tamanho={34} />
           <div>
-            <div className="brand-name">Biofrequência</div>
+            <div className="brand-name">BioFrequência</div>
             <div className="brand-sub">Coordenação escolar</div>
           </div>
         </div>

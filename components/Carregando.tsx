@@ -1,5 +1,5 @@
 /**
- * "Carregando" com o símbolo do Biofrequência animado: os cantos da
+ * "Carregando" com o símbolo do BioFrequência animado: os cantos da
  * moldura de reconhecimento focam e o check se desenha. Com "tela", ocupa
  * a página toda (abrir o site, conferir a sessão).
  */
