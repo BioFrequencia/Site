@@ -19,7 +19,7 @@ export function NavPublica() {
     <nav className="top-public-nav">
       <Link href="/" className="marca-publica">
         <Logo tamanho={28} />
-        Biofrequência
+        BioFrequência
       </Link>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         {carregando ? null : autenticado ? (

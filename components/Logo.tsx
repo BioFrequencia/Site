@@ -1,5 +1,5 @@
 /**
- * Símbolo do Biofrequência: a moldura de reconhecimento com o check. As
+ * Símbolo do BioFrequência: a moldura de reconhecimento com o check. As
  * cores seguem o tema (--logo-moldura e --logo-check, em app/globals.css);
  * com a classe "logo-sobre-indigo", sai a versão para fundo índigo.
  */

@@ -65,7 +65,7 @@ export default function ConfirmarEmailPage() {
         <div className="auth-form">
           <div className="auth-marca">
             <Logo tamanho={30} />
-            Biofrequência
+            BioFrequência
           </div>
 
           {estado.tipo === "confirmando" && <Carregando texto="Confirmando o seu e-mail…" />}

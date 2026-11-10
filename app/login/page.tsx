@@ -82,7 +82,7 @@ export default function LoginPage() {
         <IconesEscola />
         <div className="auth-illustration-inner">
           <Logo tamanho={56} className="logo-sobre-indigo auth-logo" />
-          <h1>Biofrequência</h1>
+          <h1>BioFrequência</h1>
           <p>
             Registre as entradas atrasadas e as saídas antecipadas, acompanhe quem precisa de atenção e avise as famílias -
             pelo navegador, pelo software desktop ou pelo app do tablet.
@@ -94,7 +94,7 @@ export default function LoginPage() {
         <form className="auth-form" onSubmit={aoEnviar}>
           <div className="auth-marca">
             <Logo tamanho={30} />
-            Biofrequência
+            BioFrequência
           </div>
           <h2>Entrar</h2>
           <p className="auth-sub">Acesse com a conta da sua coordenação.</p>

@@ -138,7 +138,7 @@ export default function CadastroPage() {
         <form className="auth-form" onSubmit={aoEnviar}>
           <div className="auth-marca">
             <Logo tamanho={30} />
-            Biofrequência
+            BioFrequência
           </div>
           <h2>Cadastrar coordenação</h2>
           <p className="auth-sub">Leva menos de um minuto.</p>

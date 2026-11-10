@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 // O endereço desta página leva o código do link: "no-referrer" impede que
 // ele vá junto para outro site num clique.
 export const metadata: Metadata = {
-  title: "Senha nova · Biofrequência",
+  title: "Senha nova · BioFrequência",
   referrer: "no-referrer",
 };
 
