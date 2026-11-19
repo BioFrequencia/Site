@@ -369,8 +369,14 @@ export const Api = {
       periodo_sala: periodoSala,
       ...(horario ? { horario_inicio: horario.inicio, horario_fim: horario.fim } : {}),
     }),
-  filtrarAlunos: (busca: string | null, idSala: number | null, status: string | null, pagina: number, porPagina: number) =>
-    post<ListaAlunos>("user/filtroAluno.php", { busca, id_sala: idSala, status, pagina, por_pagina: porPagina }),
+  filtrarAlunos: (
+    busca: string | null,
+    idSala: number | null,
+    status: string | null,
+    pagina: number,
+    porPagina: number,
+    opcoes?: OpcoesChamada
+  ) => post<ListaAlunos>("user/filtroAluno.php", { busca, id_sala: idSala, status, pagina, por_pagina: porPagina }, opcoes),
   cadastrarAluno: (nomeAluno: string, idSala: number, dtaNascAluno: string, generoAluno: string) =>
     post<{ id_aluno: number }>("user/addaluno.php", {
       nome_aluno: nomeAluno,

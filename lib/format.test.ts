@@ -1,6 +1,23 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { formatarData, formatarDataHora, formatarHora, hojeNaEscola, horarioLocalEscola, lerHorarioApi } from "./format.ts";
+import { dataPorExtenso, formatarData, formatarDataHora, formatarHora, hojeNaEscola, horarioLocalEscola, lerHorarioApi, saudacao } from "./format.ts";
+
+test("saudação pela hora da escola, não do computador (UTC menos 3 horas)", () => {
+  assert.equal(saudacao(new Date("2026-11-18T10:30:00Z")), "Bom dia"); // 07:30 em São Paulo
+  assert.equal(saudacao(new Date("2026-11-18T14:59:00Z")), "Bom dia"); // 11:59
+  assert.equal(saudacao(new Date("2026-11-18T15:00:00Z")), "Boa tarde"); // 12:00
+  assert.equal(saudacao(new Date("2026-11-18T20:59:00Z")), "Boa tarde"); // 17:59
+  assert.equal(saudacao(new Date("2026-11-18T21:00:00Z")), "Boa noite"); // 18:00
+  assert.equal(saudacao(new Date("2026-11-19T02:00:00Z")), "Boa noite"); // 23:00 do dia 18
+  assert.equal(saudacao(new Date("2026-11-19T07:59:00Z")), "Boa noite"); // 04:59
+  assert.equal(saudacao(new Date("2026-11-19T08:00:00Z")), "Bom dia"); // 05:00
+});
+
+test("data por extenso no calendário da escola", () => {
+  assert.equal(dataPorExtenso(new Date("2026-11-18T12:00:00Z")), "quarta-feira, 18 de novembro");
+  // 01:30 UTC do dia 19 ainda é dia 18 em São Paulo.
+  assert.equal(dataPorExtenso(new Date("2026-11-19T01:30:00Z")), "quarta-feira, 18 de novembro");
+});
 
 test("hora da presença no fuso da escola (UTC da API menos 3 horas)", () => {
   assert.equal(formatarHora("2026-10-30 10:42:07.123"), "07:42");

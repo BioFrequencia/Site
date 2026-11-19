@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { AlternarTema } from "./AlternarTema";
+import { BotaoBusca } from "./BuscaRapida";
 
 /**
  * Topo das telas do painel: título, as ações da tela e o botão de tema.
@@ -15,6 +16,7 @@ export function Topbar({ titulo, subtitulo, acoes }: { titulo: string; subtitulo
         {subtitulo && <p>{subtitulo}</p>}
       </div>
       {acoes && <div className="topbar-actions">{acoes}</div>}
+      <BotaoBusca className="topbar-busca" />
       <AlternarTema className="icon-btn topbar-tema" />
     </div>
   );

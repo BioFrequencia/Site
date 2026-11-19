@@ -7,8 +7,18 @@ import { useAuth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
 import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
+import { Contador } from "@/components/Contador";
 import { GraficoEntradasSaidas, GraficoPontualidade } from "@/components/Graficos";
-import { classeBadgePrioridade, formatarData, formatarPercentual, iniciais, nomeMesLongo, rotuloTipoAlerta } from "@/lib/format";
+import {
+  classeBadgePrioridade,
+  dataPorExtenso,
+  formatarData,
+  formatarPercentual,
+  iniciais,
+  nomeMesLongo,
+  rotuloTipoAlerta,
+  saudacao,
+} from "@/lib/format";
 import { barraPontualidade } from "@/lib/graficos";
 import type { Dashboard } from "@/lib/types";
 
@@ -45,7 +55,10 @@ export default function DashboardPage() {
 
   return (
     <>
-      <Topbar titulo={`Olá, ${primeiroNome}`} subtitulo="Entradas atrasadas, saídas antecipadas e quem precisa de atenção na sua escola." />
+      <Topbar
+        titulo={primeiroNome ? `${saudacao()}, ${primeiroNome}` : saudacao()}
+        subtitulo={`Hoje é ${dataPorExtenso()}. Veja as entradas atrasadas, as saídas antecipadas e quem precisa de atenção.`}
+      />
 
       {erro && <div className="error-block">{erro}</div>}
       {carregando && !dados && <Esqueleto variante="painel" texto="Carregando o dashboard…" />}
@@ -73,48 +86,49 @@ export default function DashboardPage() {
                 diasLetivos={dados.dias_letivos_mes}
               />
             </div>
+            {/* Os quatro números do mês em blocos de cor; cada um leva à tela que explica o número. */}
             <div className="hero-stats">
-              <Link href="/alertas" className="stat-row stat-link">
-                <div>
-                  <div className="stat-label">Alertas ativos</div>
-                  <div className="stat-sub">{dados.alertas_alta_prioridade} de alta prioridade</div>
-                </div>
-                <div className="stat-value">
-                  {dados.alertas_ativos.toLocaleString("pt-BR")}
-                </div>
+              <Link href="/alertas" className="kpi kpi--indigo">
+                <span className="kpi-topo">
+                  <span className="kpi-icone"><Icon name="alert" /></span>
+                  <Icon name="arrowUpRight" className="icon kpi-seta" />
+                </span>
+                <span className="kpi-valor"><Contador valor={dados.alertas_ativos} /></span>
+                <span className="kpi-rotulo">Alertas ativos</span>
+                <span className="kpi-sub">{dados.alertas_alta_prioridade} de alta prioridade</span>
               </Link>
-              <div className="stat-row">
-                <div>
-                  <div className="stat-label">Acima do limite</div>
-                  <div className="stat-sub">
-                    {dados.limite_alerta}% dos dias de aula nos últimos {dados.janela_alerta_dias} dias
-                  </div>
-                </div>
-                <div className="stat-value">
-                  {dados.alunos_acima_limite.toLocaleString("pt-BR")}
-                </div>
-              </div>
-              <Link href="/registros" className="stat-row stat-link">
-                <div>
-                  <div className="stat-label">Entradas atrasadas no mês</div>
-                  <div className="stat-sub">
-                    {dados.saidas_mes} {dados.saidas_mes === 1 ? "saída antecipada" : "saídas antecipadas"}
-                  </div>
-                </div>
-                <div className="stat-value">
-                  {dados.atrasos_mes.toLocaleString("pt-BR")}
-                </div>
+              <Link href="/alertas" className="kpi kpi--tinta">
+                <span className="kpi-topo">
+                  <span className="kpi-icone"><Icon name="trend" /></span>
+                  <Icon name="arrowUpRight" className="icon kpi-seta" />
+                </span>
+                <span className="kpi-valor"><Contador valor={dados.alunos_acima_limite} /></span>
+                <span className="kpi-rotulo">Acima do limite</span>
+                <span className="kpi-sub">
+                  {dados.limite_alerta}% dos dias de aula nos últimos {dados.janela_alerta_dias} dias
+                </span>
               </Link>
-              <Link href="/notificacoes" className="stat-row stat-link">
-                <div>
-                  <div className="stat-label">Famílias avisadas no mês</div>
-                  <div className="stat-sub">
-                    {dados.contatos_pendentes} {dados.contatos_pendentes === 1 ? "aluno" : "alunos"} com alerta sem acompanhamento
-                  </div>
-                </div>
-                <div className="stat-value">
-                  {dados.responsaveis_avisados_mes.toLocaleString("pt-BR")}
-                </div>
+              <Link href="/registros" className="kpi kpi--verde">
+                <span className="kpi-topo">
+                  <span className="kpi-icone"><Icon name="clock" /></span>
+                  <Icon name="arrowUpRight" className="icon kpi-seta" />
+                </span>
+                <span className="kpi-valor"><Contador valor={dados.atrasos_mes} /></span>
+                <span className="kpi-rotulo">Entradas atrasadas no mês</span>
+                <span className="kpi-sub">
+                  {dados.saidas_mes} {dados.saidas_mes === 1 ? "saída antecipada" : "saídas antecipadas"}
+                </span>
+              </Link>
+              <Link href="/notificacoes" className="kpi kpi--lilas">
+                <span className="kpi-topo">
+                  <span className="kpi-icone"><Icon name="send" /></span>
+                  <Icon name="arrowUpRight" className="icon kpi-seta" />
+                </span>
+                <span className="kpi-valor"><Contador valor={dados.responsaveis_avisados_mes} /></span>
+                <span className="kpi-rotulo">Famílias avisadas no mês</span>
+                <span className="kpi-sub">
+                  {dados.contatos_pendentes} {dados.contatos_pendentes === 1 ? "aluno" : "alunos"} com alerta sem acompanhamento
+                </span>
               </Link>
             </div>
           </div>
