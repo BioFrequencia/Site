@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Plus_Jakarta_Sans } from "next/font/google";
+import { Sora, Figtree } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import { SCRIPT_TEMA } from "@/lib/tema";
@@ -7,14 +7,16 @@ import { AplicarTema } from "@/components/AplicarTema";
 import { ToastProvider } from "@/components/Toast";
 import { PreferenciasProvider } from "@/components/Preferencias";
 
-const fonteDisplay = Space_Grotesk({
-  variable: "--font-space-grotesk",
+// Sora nos títulos e números, Figtree nos textos: a mesma dupla da
+// apresentação do projeto.
+const fonteDisplay = Sora({
+  variable: "--font-sora",
   subsets: ["latin"],
   weight: ["500", "600", "700"],
 });
 
-const fonteBody = Plus_Jakarta_Sans({
-  variable: "--font-plus-jakarta",
+const fonteBody = Figtree({
+  variable: "--font-figtree",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });

@@ -9,7 +9,7 @@ import { iniciais } from "@/lib/format";
 import { useAuth } from "@/lib/auth";
 import type { Contadores } from "@/lib/contadores";
 
-interface Item {
+export interface Item {
   href: string;
   label: string;
   icone: string;
@@ -26,7 +26,7 @@ interface Item {
 // alunos e das famílias, configurar e pedir ajuda. As telas do celular
 // do aluno (check-ins e ocorrências, fluxo anterior ao app da
 // coordenação) saíram do menu; o relatório delas continua em Relatórios.
-const GRUPOS: { titulo: string; itens: Item[] }[] = [
+export const GRUPOS: { titulo: string; itens: Item[] }[] = [
   {
     titulo: "Visão geral",
     itens: [

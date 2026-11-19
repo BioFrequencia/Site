@@ -66,6 +66,19 @@ export function hojeNaEscola(agora: Date = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: FUSO_ESCOLA, year: "numeric", month: "2-digit", day: "2-digit" }).format(agora);
 }
 
+/** "Bom dia", "Boa tarde" ou "Boa noite" pela hora da escola (manhã das 5h às 11h59). */
+export function saudacao(agora: Date = new Date()): string {
+  const hora = Number(new Intl.DateTimeFormat("en-GB", { timeZone: FUSO_ESCOLA, hour: "2-digit", hourCycle: "h23" }).format(agora));
+  if (hora >= 5 && hora < 12) return "Bom dia";
+  if (hora >= 12 && hora < 18) return "Boa tarde";
+  return "Boa noite";
+}
+
+/** Data por extenso no calendário da escola, ex.: "quarta-feira, 18 de novembro". */
+export function dataPorExtenso(agora: Date = new Date()): string {
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: FUSO_ESCOLA, weekday: "long", day: "numeric", month: "long" }).format(agora);
+}
+
 export function iniciais(nome: string): string {
   const partes = nome.trim().split(/\s+/).filter(Boolean);
   if (partes.length === 0) return "?";

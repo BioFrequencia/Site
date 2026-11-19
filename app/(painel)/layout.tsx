@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Api } from "@/lib/api";
 import { Sidebar } from "@/components/Sidebar";
+import { BuscaRapida } from "@/components/BuscaRapida";
 import { BarraProgresso } from "@/components/BarraProgresso";
 import { Carregando } from "@/components/Carregando";
 import { tocarSom } from "@/lib/sons";
@@ -89,6 +90,7 @@ export default function PainelLayout({ children }: { children: ReactNode }) {
       <main className="main">
         <div className="view">{children}</div>
       </main>
+      <BuscaRapida />
     </div>
   );
 }
