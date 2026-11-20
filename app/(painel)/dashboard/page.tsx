@@ -3,11 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Api } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
 import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
-import { Contador } from "@/components/Contador";
 import { GraficoEntradasSaidas, GraficoPontualidade } from "@/components/Graficos";
 import {
   classeBadgePrioridade,
@@ -16,14 +14,13 @@ import {
   formatarPercentual,
   iniciais,
   nomeMesLongo,
+  rotuloPrioridade,
   rotuloTipoAlerta,
-  saudacao,
 } from "@/lib/format";
 import { barraPontualidade } from "@/lib/graficos";
 import type { Dashboard } from "@/lib/types";
 
 export default function DashboardPage() {
-  const { coordenacao } = useAuth();
   const [dados, setDados] = useState<Dashboard | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -48,17 +45,14 @@ export default function DashboardPage() {
     };
   }, []);
 
-  const primeiroNome = coordenacao?.nome_coordenacao?.split(" ")[0] ?? "";
+  const hoje = dataPorExtenso();
   const mesAnterior = dados
     ? nomeMesLongo(dados.evolucao_mensal.length > 1 ? dados.evolucao_mensal[dados.evolucao_mensal.length - 2].mes : dados.mes).split(" ")[0]
     : "";
 
   return (
     <>
-      <Topbar
-        titulo={primeiroNome ? `${saudacao()}, ${primeiroNome}` : saudacao()}
-        subtitulo={`Hoje é ${dataPorExtenso()}. Veja as entradas atrasadas, as saídas antecipadas e quem precisa de atenção.`}
-      />
+      <Topbar titulo="Dashboard" subtitulo={hoje.charAt(0).toUpperCase() + hoje.slice(1)} />
 
       {erro && <div className="error-block">{erro}</div>}
       {carregando && !dados && <Esqueleto variante="painel" texto="Carregando o dashboard…" />}
@@ -86,46 +80,30 @@ export default function DashboardPage() {
                 diasLetivos={dados.dias_letivos_mes}
               />
             </div>
-            {/* Os quatro números do mês em blocos de cor; cada um leva à tela que explica o número. */}
+            {/* Os quatro números do mês; cada cartão leva à tela que explica o número. */}
             <div className="hero-stats">
               <Link href="/alertas" className="kpi kpi--indigo">
-                <span className="kpi-topo">
-                  <span className="kpi-icone"><Icon name="alert" /></span>
-                  <Icon name="arrowUpRight" className="icon kpi-seta" />
-                </span>
-                <span className="kpi-valor"><Contador valor={dados.alertas_ativos} /></span>
-                <span className="kpi-rotulo">Alertas ativos</span>
+                <span className="kpi-rotulo"><Icon name="alert" />Alertas ativos</span>
+                <span className="kpi-valor">{dados.alertas_ativos}</span>
                 <span className="kpi-sub">{dados.alertas_alta_prioridade} de alta prioridade</span>
               </Link>
               <Link href="/alertas" className="kpi kpi--tinta">
-                <span className="kpi-topo">
-                  <span className="kpi-icone"><Icon name="trend" /></span>
-                  <Icon name="arrowUpRight" className="icon kpi-seta" />
-                </span>
-                <span className="kpi-valor"><Contador valor={dados.alunos_acima_limite} /></span>
-                <span className="kpi-rotulo">Acima do limite</span>
+                <span className="kpi-rotulo"><Icon name="trend" />Acima do limite</span>
+                <span className="kpi-valor">{dados.alunos_acima_limite}</span>
                 <span className="kpi-sub">
                   {dados.limite_alerta}% dos dias de aula nos últimos {dados.janela_alerta_dias} dias
                 </span>
               </Link>
               <Link href="/registros" className="kpi kpi--verde">
-                <span className="kpi-topo">
-                  <span className="kpi-icone"><Icon name="clock" /></span>
-                  <Icon name="arrowUpRight" className="icon kpi-seta" />
-                </span>
-                <span className="kpi-valor"><Contador valor={dados.atrasos_mes} /></span>
-                <span className="kpi-rotulo">Entradas atrasadas no mês</span>
+                <span className="kpi-rotulo"><Icon name="clock" />Entradas atrasadas no mês</span>
+                <span className="kpi-valor">{dados.atrasos_mes}</span>
                 <span className="kpi-sub">
                   {dados.saidas_mes} {dados.saidas_mes === 1 ? "saída antecipada" : "saídas antecipadas"}
                 </span>
               </Link>
               <Link href="/notificacoes" className="kpi kpi--lilas">
-                <span className="kpi-topo">
-                  <span className="kpi-icone"><Icon name="send" /></span>
-                  <Icon name="arrowUpRight" className="icon kpi-seta" />
-                </span>
-                <span className="kpi-valor"><Contador valor={dados.responsaveis_avisados_mes} /></span>
-                <span className="kpi-rotulo">Famílias avisadas no mês</span>
+                <span className="kpi-rotulo"><Icon name="send" />Famílias avisadas no mês</span>
+                <span className="kpi-valor">{dados.responsaveis_avisados_mes}</span>
                 <span className="kpi-sub">
                   {dados.contatos_pendentes} {dados.contatos_pendentes === 1 ? "aluno" : "alunos"} com alerta sem acompanhamento
                 </span>
@@ -205,7 +183,7 @@ export default function DashboardPage() {
                       <td>{rotuloTipoAlerta(alerta.tipo)}</td>
                       <td>{alerta.motivo}</td>
                       <td>
-                        <span className={classeBadgePrioridade(alerta.prioridade)}>{alerta.prioridade}</span>
+                        <span className={classeBadgePrioridade(alerta.prioridade)}>{rotuloPrioridade(alerta.prioridade)}</span>
                       </td>
                     </tr>
                   ))}
