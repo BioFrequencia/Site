@@ -7,7 +7,7 @@ import { Topbar } from "@/components/Topbar";
 import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
-import { classeBadgePrioridade, formatarData, formatarPercentual, iniciais, rotuloTipoAlerta } from "@/lib/format";
+import { classeBadgePrioridade, formatarData, formatarPercentual, iniciais, rotuloPrioridade, rotuloTipoAlerta } from "@/lib/format";
 import type { Alerta, Sala } from "@/lib/types";
 
 export default function AlertasPage() {
@@ -162,7 +162,7 @@ export default function AlertasPage() {
                 </div>
                 <div className="alert-side">
                   <span className="alert-taxa-valor">{formatarPercentual(alerta.taxa)}</span>
-                  <span className={classeBadgePrioridade(alerta.prioridade)}>{alerta.prioridade}</span>
+                  <span className={classeBadgePrioridade(alerta.prioridade)}>{rotuloPrioridade(alerta.prioridade)}</span>
                   <div className="alert-actions">
                     <Link href={`/turmas/${alerta.id_aluno}`} className="btn btn-sm">
                       Ver aluno

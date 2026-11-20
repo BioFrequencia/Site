@@ -1,16 +1,20 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { dataPorExtenso, formatarData, formatarDataHora, formatarHora, hojeNaEscola, horarioLocalEscola, lerHorarioApi, saudacao } from "./format.ts";
+import {
+  dataPorExtenso,
+  formatarData,
+  formatarDataHora,
+  formatarHora,
+  hojeNaEscola,
+  horarioLocalEscola,
+  lerHorarioApi,
+  rotuloPrioridade,
+} from "./format.ts";
 
-test("saudação pela hora da escola, não do computador (UTC menos 3 horas)", () => {
-  assert.equal(saudacao(new Date("2026-11-18T10:30:00Z")), "Bom dia"); // 07:30 em São Paulo
-  assert.equal(saudacao(new Date("2026-11-18T14:59:00Z")), "Bom dia"); // 11:59
-  assert.equal(saudacao(new Date("2026-11-18T15:00:00Z")), "Boa tarde"); // 12:00
-  assert.equal(saudacao(new Date("2026-11-18T20:59:00Z")), "Boa tarde"); // 17:59
-  assert.equal(saudacao(new Date("2026-11-18T21:00:00Z")), "Boa noite"); // 18:00
-  assert.equal(saudacao(new Date("2026-11-19T02:00:00Z")), "Boa noite"); // 23:00 do dia 18
-  assert.equal(saudacao(new Date("2026-11-19T07:59:00Z")), "Boa noite"); // 04:59
-  assert.equal(saudacao(new Date("2026-11-19T08:00:00Z")), "Bom dia"); // 05:00
+test("prioridade do alerta escrita como na tela, com acento", () => {
+  assert.equal(rotuloPrioridade("alta"), "Alta");
+  assert.equal(rotuloPrioridade("media"), "Média");
+  assert.equal(rotuloPrioridade("baixa"), "Baixa");
 });
 
 test("data por extenso no calendário da escola", () => {

@@ -26,11 +26,15 @@
   --menu-suave: #8c89a6;
   --menu-hover: #241f55;
   --menu-ativo: #452ff6;
+  /* Item aberto: um tom acima do fundo e uma barra à esquerda, sem brilho. */
+  --menu-ativo-fundo: #2a2463;
+  --menu-ativo-barra: #8b7dff;
   --menu-borda: #2a2560;
   --menu-contador: #25db6c;
   --menu-contador-texto: #08311a;
-  /* Profundidade: uma sombra baixa para cartões e uma alta para o que flutua. */
-  --sombra-cartao: 0 1px 2px rgba(22, 18, 58, 0.04), 0 6px 20px rgba(22, 18, 58, 0.05);
+  /* Profundidade: nos cartões, só um traço de sombra (a borda já separa);
+     a sombra alta fica para o que flutua (modais, menus). */
+  --sombra-cartao: 0 1px 2px rgba(22, 18, 58, 0.06);
   --sombra-elevada: 0 18px 40px rgba(22, 18, 58, 0.14);
   --transicao: 0.18s cubic-bezier(0.2, 0.7, 0.3, 1);
   --aqua: #c8eae7;
@@ -52,9 +56,9 @@
   --sombreado: rgba(33, 31, 43, 0.45);
   --logo-moldura: #452ff6;
   --logo-check: #16a34a;
-  --radius-sm: 10px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
   --font-display: var(--font-sora), "Sora", sans-serif;
   --font-body: var(--font-figtree), "Figtree", sans-serif;
 }
@@ -75,7 +79,8 @@
   --menu-fundo: #0b0919;
   --menu-hover: #1d1940;
   --menu-borda: #221e44;
-  --sombra-cartao: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.25);
+  --menu-ativo-fundo: #221d4d;
+  --sombra-cartao: 0 1px 2px rgba(0, 0, 0, 0.35);
   --sombra-elevada: 0 18px 40px rgba(0, 0, 0, 0.55);
   --indigo: #6d5cff;
   --indigo-600: #c4baff;
@@ -252,19 +257,22 @@ svg {
   background: none;
   width: 100%;
   text-align: left;
-  transition: background var(--transicao), color var(--transicao), box-shadow var(--transicao), transform var(--transicao);
+  transition: background var(--transicao), color var(--transicao);
 }
 .nav-item:hover {
   background: var(--menu-hover);
   color: #ffffff;
 }
-.nav-item:active {
-  transform: scale(0.98);
-}
 .nav-item.active {
-  background: var(--menu-ativo);
+  background: var(--menu-ativo-fundo);
   color: #ffffff;
-  box-shadow: 0 8px 22px rgba(69, 47, 246, 0.35);
+  box-shadow: inset 3px 0 0 var(--menu-ativo-barra);
+}
+/* No celular o menu vira a barra de baixo: a marca do item aberto fica em cima dele. */
+@media (max-width: 720px) {
+  .nav-item.active {
+    box-shadow: inset 0 3px 0 var(--menu-ativo-barra);
+  }
 }
 .nav-item.active .icon-fundo {
   opacity: 0.35;
@@ -359,6 +367,8 @@ svg {
 }
 .menu-celular-grupo .nav-badge {
   position: static;
+  background: var(--emerald-100);
+  color: var(--emerald-dark);
 }
 .menu-celular-conta {
   display: flex;
@@ -387,8 +397,8 @@ svg {
   }
 }
 .nav-badge {
-  background: var(--menu-contador);
-  color: var(--menu-contador-texto);
+  background: rgba(37, 219, 108, 0.18);
+  color: #8ef0b5;
   font-size: 11px;
   font-weight: 700;
   padding: 1px 7px;
@@ -479,9 +489,9 @@ svg {
 }
 .greeting h1 {
   font-family: var(--font-display);
-  font-size: 30px;
+  font-size: 26px;
   font-weight: 700;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.01em;
   line-height: 1.2;
 }
 .greeting p {
@@ -530,14 +540,11 @@ svg {
   cursor: pointer;
   position: relative;
   flex-shrink: 0;
-  transition: border-color var(--transicao), background var(--transicao), transform var(--transicao);
+  transition: border-color var(--transicao), background var(--transicao);
 }
 .icon-btn:hover {
   border-color: var(--indigo);
   background: var(--indigo-50);
-}
-.icon-btn:active {
-  transform: scale(0.95);
 }
 .icon-btn svg {
   width: 18px;
@@ -619,19 +626,15 @@ svg {
   text-align: center;
 }
 .gauge-delta {
-  margin-top: 16px;
+  margin-top: 14px;
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: var(--emerald-100);
   color: var(--emerald-dark);
-  padding: 5px 13px;
-  border-radius: 999px;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
 }
 .gauge-delta.negativo {
-  background: var(--danger-100);
   color: var(--danger-dark);
 }
 .gauge-delta svg {
@@ -642,112 +645,64 @@ svg {
   stroke-linejoin: round;
 }
 
-/* Os quatro números do mês: blocos de cor da marca, cada um um link. */
+/* Os quatro números do mês: cartões brancos como os outros painéis, com o
+   ícone na cor do assunto; cada um é um link para a tela que o explica. */
 .hero-stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 .kpi {
-  --kpi-fundo: var(--indigo);
-  --kpi-texto: #ffffff;
-  --kpi-suave: #ddd8ff;
-  --kpi-icone-fundo: rgba(255, 255, 255, 0.16);
+  --kpi-cor: var(--indigo-texto);
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-height: 168px;
-  padding: 20px 22px;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 18px 20px;
   border-radius: var(--radius-lg);
-  background: var(--kpi-fundo);
-  color: var(--kpi-texto);
+  background: var(--surface);
+  border: 1px solid var(--mist-200);
+  color: var(--ink-900);
   box-shadow: var(--sombra-cartao);
-  transition: transform var(--transicao), box-shadow var(--transicao);
+  transition: border-color var(--transicao);
 }
 .kpi:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--sombra-elevada);
-}
-.kpi:active {
-  transform: translateY(-1px) scale(0.99);
+  border-color: var(--indigo);
 }
 .kpi:focus-visible {
   outline-offset: 3px;
 }
 .kpi--tinta {
-  --kpi-fundo: #16123a;
-  --kpi-suave: #bdb8da;
-  --kpi-icone-fundo: rgba(37, 219, 108, 0.16);
-}
-.kpi--tinta .kpi-icone {
-  color: #25db6c;
+  --kpi-cor: var(--ink-700);
 }
 .kpi--verde {
-  --kpi-fundo: #25db6c;
-  --kpi-texto: #08311a;
-  --kpi-suave: #0b3d20;
-  --kpi-icone-fundo: rgba(8, 49, 26, 0.12);
+  --kpi-cor: var(--emerald-dark);
 }
-.kpi--lilas {
-  --kpi-fundo: var(--indigo-100);
-  --kpi-texto: var(--ink-900);
-  --kpi-suave: var(--ink-500);
-  --kpi-icone-fundo: var(--surface);
-}
-.kpi--lilas .kpi-icone {
-  color: var(--indigo-texto);
-}
-:root[data-tema="escuro"] .kpi--tinta {
-  --kpi-fundo: #0b0919;
-  border: 1px solid var(--mist-200);
-}
-.kpi-topo {
+.kpi-rotulo {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 12px;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
 }
-.kpi-icone {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: var(--kpi-icone-fundo);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.kpi-icone .icon {
-  width: 22px;
-  height: 22px;
-}
-.kpi-seta {
-  width: 20px;
-  height: 20px;
-  opacity: 0;
-  transform: translate(-4px, 4px);
-  transition: opacity var(--transicao), transform var(--transicao);
-}
-.kpi:hover .kpi-seta,
-.kpi:focus-visible .kpi-seta {
-  opacity: 1;
-  transform: none;
+/* Alinhado à primeira linha do rótulo, mesmo quando ele quebra (celular). */
+.kpi-rotulo .icon {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  color: var(--kpi-cor);
 }
 .kpi-valor {
   font-family: var(--font-display);
-  font-size: 40px;
+  font-size: 32px;
   font-weight: 700;
-  line-height: 1.05;
-  letter-spacing: -0.03em;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
 }
-.kpi-rotulo {
-  font-size: 14.5px;
-  font-weight: 700;
-  margin-top: 4px;
-}
 .kpi-sub {
-  font-size: 12.5px;
-  color: var(--kpi-suave);
+  font-size: 13px;
+  color: var(--ink-500);
   line-height: 1.4;
 }
 .stat-label {
@@ -937,8 +892,7 @@ svg {
   border: 1px solid var(--mist-200);
   background: var(--surface);
   cursor: pointer;
-  transition: border-color var(--transicao), background var(--transicao), color var(--transicao), box-shadow var(--transicao),
-    transform var(--transicao);
+  transition: border-color var(--transicao), background var(--transicao), color var(--transicao);
   white-space: nowrap;
 }
 .btn:hover {
@@ -946,21 +900,15 @@ svg {
   background: var(--indigo-50);
   color: var(--indigo-texto);
 }
-.btn:active {
-  transform: scale(0.98);
-}
 .btn-primary {
   background: var(--indigo);
   color: #fff;
   border-color: var(--indigo);
-  box-shadow: 0 6px 16px rgba(69, 47, 246, 0.25);
 }
 .btn-primary:hover {
   background: var(--indigo-hover);
   color: #fff;
   border-color: var(--indigo-hover);
-  box-shadow: 0 10px 22px rgba(69, 47, 246, 0.32);
-  transform: translateY(-1px);
 }
 .btn-danger {
   color: var(--danger-dark);
@@ -1085,8 +1033,8 @@ svg {
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .filter-pill.active {
-  background: var(--indigo);
-  color: #fff;
+  background: var(--indigo-50);
+  color: var(--indigo-texto);
   border-color: var(--indigo);
 }
 .filter-divider {
@@ -1585,6 +1533,42 @@ svg {
   display: grid;
   grid-template-columns: 1fr 460px;
 }
+/* Login, cadastro e as outras telas de entrada ficam como eram: os cantos,
+   as sombras e o movimento dos botões de antes da limpeza visual, que vale
+   só para as telas de dentro do sistema. */
+.auth-shell {
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --sombra-cartao: 0 1px 2px rgba(22, 18, 58, 0.04), 0 6px 20px rgba(22, 18, 58, 0.05);
+}
+:root[data-tema="escuro"] .auth-shell {
+  --sombra-cartao: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+.auth-shell .btn {
+  transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.auth-shell .btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.auth-shell .btn-primary {
+  box-shadow: 0 6px 16px rgba(69, 47, 246, 0.25);
+}
+.auth-shell .btn-primary:hover {
+  box-shadow: 0 10px 22px rgba(69, 47, 246, 0.32);
+  transform: translateY(-1px);
+}
+.auth-shell .icon-btn {
+  transition: border-color var(--transicao), background var(--transicao), transform var(--transicao);
+}
+.auth-shell .icon-btn:active {
+  transform: scale(0.95);
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-shell .btn {
+    transition: none;
+  }
+}
 .auth-illustration {
   /* Índigo da marca nos dois temas (a logo branca e verde é feita para ele). */
   background: linear-gradient(150deg, #452ff6, #3823c9);
@@ -2008,8 +1992,7 @@ svg {
   .topbar-busca {
     margin-top: -5px;
   }
-  .busca-gatilho-texto,
-  .busca-gatilho-tecla {
+  .busca-gatilho-texto {
     display: none;
   }
   .busca-gatilho {
@@ -3633,10 +3616,7 @@ button.card-resumo:disabled {
   animation: pulsar-esqueleto 1.6s ease-in-out infinite;
 }
 .btn {
-  transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-}
-.btn:active:not(:disabled) {
-  transform: scale(0.98);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .panel,
 .alert-item {
@@ -4740,7 +4720,6 @@ button.card-resumo:disabled {
   width: 17px;
   height: 17px;
 }
-.busca-gatilho-tecla,
 .busca kbd {
   font-family: inherit;
   font-size: 11px;

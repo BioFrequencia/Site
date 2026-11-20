@@ -66,14 +66,6 @@ export function hojeNaEscola(agora: Date = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: FUSO_ESCOLA, year: "numeric", month: "2-digit", day: "2-digit" }).format(agora);
 }
 
-/** "Bom dia", "Boa tarde" ou "Boa noite" pela hora da escola (manhã das 5h às 11h59). */
-export function saudacao(agora: Date = new Date()): string {
-  const hora = Number(new Intl.DateTimeFormat("en-GB", { timeZone: FUSO_ESCOLA, hour: "2-digit", hourCycle: "h23" }).format(agora));
-  if (hora >= 5 && hora < 12) return "Bom dia";
-  if (hora >= 12 && hora < 18) return "Boa tarde";
-  return "Boa noite";
-}
-
 /** Data por extenso no calendário da escola, ex.: "quarta-feira, 18 de novembro". */
 export function dataPorExtenso(agora: Date = new Date()): string {
   return new Intl.DateTimeFormat("pt-BR", { timeZone: FUSO_ESCOLA, weekday: "long", day: "numeric", month: "long" }).format(agora);
@@ -103,6 +95,20 @@ export function classeBadgeStatus(status: StatusAluno): string {
 
 export function classeBadgePrioridade(prioridade: PrioridadeAlerta): string {
   return `badge badge--${prioridade}`;
+}
+
+/** Prioridade como aparece na tela: a API manda "alta", "media" e "baixa". */
+export function rotuloPrioridade(prioridade: PrioridadeAlerta): string {
+  switch (prioridade) {
+    case "alta":
+      return "Alta";
+    case "media":
+      return "Média";
+    case "baixa":
+      return "Baixa";
+    default:
+      return prioridade;
+  }
 }
 
 export function rotuloTipoAlerta(tipo: string): string {

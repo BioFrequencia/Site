@@ -20,7 +20,6 @@ export function BotaoBusca({ className = "" }: { className?: string }) {
     <button type="button" className={`busca-gatilho ${className}`} onClick={abrirBuscaRapida} aria-keyshortcuts="Control+K" title="Buscar (Ctrl+K)">
       <Icon name="search" />
       <span className="busca-gatilho-texto">Buscar</span>
-      <kbd className="busca-gatilho-tecla">Ctrl K</kbd>
     </button>
   );
 }

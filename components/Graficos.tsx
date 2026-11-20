@@ -1,14 +1,14 @@
 "use client";
 
-// Gráficos do dashboard (Recharts), no estilo dos exemplos do shadcn/ui
-// "Area Chart" e "Radial Chart - Shape", sem Tailwind: as cores vêm dos
+// Gráficos do dashboard (Recharts): linhas retas mês a mês com um
+// preenchimento claro e liso, e o anel de pontualidade. As cores vêm dos
 // tokens de app/globals.css (--grafico-*), que mudam no tema escuro.
 //
 // O par de cores (entradas atrasadas / saídas antecipadas) passou no
 // validador de paleta nos dois temas: separação para daltonismo, faixa
 // de luminosidade e contraste com o fundo do cartão.
 
-import { useId, useState } from "react";
+import { useState } from "react";
 import {
   Area,
   AreaChart,
@@ -81,7 +81,6 @@ function DicaDoMes({ active, payload }: TooltipContentProps<number, string>) {
  */
 export function GraficoEntradasSaidas({ meses }: { meses: EvolucaoMensal[] }) {
   const menosMovimento = useMenosMovimento();
-  const idGradiente = useId().replace(/:/g, "");
   // Passar o mouse (ou o foco) numa legenda destaca a série; clicar fixa.
   const [sobLegenda, setSobLegenda] = useState<ChaveSerie | null>(null);
   const [fixada, setFixada] = useState<ChaveSerie | null>(null);
@@ -113,16 +112,6 @@ export function GraficoEntradasSaidas({ meses }: { meses: EvolucaoMensal[] }) {
           >
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={dados} margin={{ left: 0, right: 12, top: 8, bottom: 0 }}>
-                {/* Degradê do "Area Chart - Gradient" do shadcn: a cor da série no
-                    alto, sumindo até a linha de base. */}
-                <defs>
-                  {SERIES.map((serie, indice) => (
-                    <linearGradient key={serie.chave} id={`${idGradiente}-${serie.chave}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" style={{ stopColor: serie.cor, stopOpacity: indice === 0 ? 0.55 : 0.45 }} />
-                      <stop offset="95%" style={{ stopColor: serie.cor, stopOpacity: 0.04 }} />
-                    </linearGradient>
-                  ))}
-                </defs>
                 <CartesianGrid vertical={false} stroke="var(--grafico-grade)" />
                 <XAxis
                   dataKey="rotulo"
@@ -148,11 +137,12 @@ export function GraficoEntradasSaidas({ meses }: { meses: EvolucaoMensal[] }) {
                     key={serie.chave}
                     dataKey={serie.chave}
                     name={serie.rotulo}
-                    // monotone e não natural: a curva natural "passa do
-                    // ponto" e desenharia contagens negativas entre os meses.
-                    type="monotone"
+                    // Reta de um mês ao outro: o dado é mensal, uma curva
+                    // sugeriria valores entre os meses que não existem.
+                    type="linear"
                     className={`serie-${serie.chave}`}
-                    fill={`url(#${idGradiente}-${serie.chave})`}
+                    fill={serie.cor}
+                    fillOpacity={0.08}
                     stroke={serie.cor}
                     strokeWidth={2}
                     dot={pontoDoMesAtual(serie.cor, dados.length)}
