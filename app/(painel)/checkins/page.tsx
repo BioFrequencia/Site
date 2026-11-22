@@ -7,7 +7,7 @@ import { Topbar } from "@/components/Topbar";
 import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
-import { formatarDataHora, horarioLocalEscola, iniciais } from "@/lib/format";
+import { formatarDataHora, horarioLocalEscola, iniciais, plural } from "@/lib/format";
 import type { CheckinPendente } from "@/lib/types";
 
 // Mesma lógica de BioFrequencia/Windows/CheckinsPendentes.xaml.cs: a
@@ -78,7 +78,7 @@ export default function CheckinsPage() {
 
   return (
     <>
-      <Topbar titulo="Check-ins" subtitulo={`${checkins.length} check-in(s) pendente(s) de confirmação.`} />
+      <Topbar titulo="Check-ins" subtitulo={`${plural(checkins.length, "check-in esperando", "check-ins esperando")} confirmação.`} />
 
       {erro && <div className="error-block">{erro}</div>}
       {carregando && <Esqueleto variante="lista" texto="Carregando check-ins…" />}
@@ -99,7 +99,7 @@ export default function CheckinsPage() {
                   <th>Tipo</th>
                   <th>Método</th>
                   <th>Data</th>
-                  <th></th>
+                  <th><span className="sr-only">Ações</span></th>
                 </tr>
               </thead>
               <tbody>

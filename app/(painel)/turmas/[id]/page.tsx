@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -20,6 +20,7 @@ import {
   formatarHora,
   formatarPercentual,
   formatarTelefone,
+  plural,
   rotuloOrigemAtraso,
 } from "@/lib/format";
 import {
@@ -34,7 +35,6 @@ import {
 export default function AlunoDetalhePage() {
   const params = useParams<{ id: string }>();
   const idAluno = Number(params.id);
-  const router = useRouter();
   const { coordenacao } = useAuth();
   const { mostrarToast } = useToast();
   const gestao = coordenacao?.papel === "gestor";
@@ -150,9 +150,10 @@ export default function AlunoDetalhePage() {
 
   return (
     <>
-      <button type="button" className="btn-text" onClick={() => router.push("/turmas")} style={{ marginBottom: 10 }}>
-        ← Voltar para turmas
-      </button>
+      <Link href="/turmas" className="link-voltar">
+        <Icon name="chevronLeft" />
+        Turmas e alunos
+      </Link>
 
       {erro && <div className="error-block">{erro}</div>}
       {carregando && !historico && <Esqueleto variante="ficha" texto="Carregando o aluno…" />}
@@ -180,7 +181,7 @@ export default function AlunoDetalhePage() {
           {indicador && (
             <div className="indicador-aluno">
               <div>
-                <div className="stat-label">Últimos {indicador.janela_dias} dias</div>
+                <div className="indicador-aluno-titulo">Últimos {indicador.janela_dias} dias</div>
                 <div className="indicador-numeros">
                   <span>
                     <b>{indicador.atrasos}</b> {indicador.atrasos === 1 ? "entrada atrasada" : "entradas atrasadas"} (
@@ -204,127 +205,78 @@ export default function AlunoDetalhePage() {
             </div>
           )}
 
-          <div className="grid-2">
-            <div className="panel">
-              <div className="panel-head">
-                <h2>Entradas e saídas</h2>
-                <span className="panel-meta">
-                  {formatarData(historico.periodo.inicio)} – {formatarData(historico.periodo.fim)}
-                </span>
+          <div className="panel panel-tabela secao">
+            <div className="panel-head">
+              <h2>Entradas e saídas</h2>
+              <span className="panel-meta">
+                {formatarData(historico.periodo.inicio)} – {formatarData(historico.periodo.fim)}
+              </span>
+            </div>
+            {eventos.length === 0 ? (
+              <div className="empty-state">
+                <Icon name="check" />
+                <p>Nenhuma entrada atrasada ou saída antecipada nos últimos 90 dias.</p>
               </div>
-              {eventos.length === 0 ? (
-                <div className="empty-state">
-                  <Icon name="check" />
-                  <p>Nenhuma entrada atrasada ou saída antecipada nos últimos 90 dias.</p>
-                </div>
-              ) : (
-                <table className="data-table tabela-cartoes">
-                  <thead>
-                    <tr>
-                      <th>Data</th>
-                      <th>Tipo</th>
-                      <th>Motivo</th>
-                      <th>Registro</th>
-                      {gestao && <th></th>}
+            ) : (
+              <table className="data-table tabela-cartoes">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Tipo</th>
+                    <th>Motivo</th>
+                    <th>Registro</th>
+                    {gestao && <th><span className="sr-only">Ações</span></th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {eventos.map((evento) => (
+                    <tr key={`${evento.tipo}-${evento.id}`}>
+                      <td className="celula-titulo">
+                        {formatarData(evento.data)} <span className="panel-meta">{formatarHora(evento.data)}</span>
+                      </td>
+                      <td data-label="Tipo">
+                        <span className={`badge ${evento.tipo === "atraso" ? "badge--atraso" : "badge--saida"}`}>
+                          {evento.tipo === "atraso" ? "Entrada atrasada" : "Saída antecipada"}
+                        </span>
+                        {evento.justificado && <span className="badge badge--regular">Justificado</span>}
+                      </td>
+                      <td data-label="Motivo">
+                        {evento.motivo ?? "-"}
+                        {evento.retirado_por && <div className="panel-meta">Buscou: {evento.retirado_por}</div>}
+                      </td>
+                      <td data-label="Registro" className="panel-meta">
+                        {evento.tipo === "atraso" ? rotuloOrigemAtraso(evento.origem) : "Lançada pela coordenação"}
+                        {evento.registrado_por && <div>por {evento.registrado_por}</div>}
+                      </td>
+                      {gestao && (
+                        <td className="celula-acoes">
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-danger"
+                            title="Apagar um registro feito por engano"
+                            onClick={() => removerRegistro(evento.tipo, evento.id)}
+                          >
+                            <Icon name="trash" />
+                            Apagar
+                            <span className="sr-only">
+                              {" "}
+                              {evento.tipo === "atraso" ? "a entrada atrasada" : "a saída antecipada"} de {formatarDataHora(evento.data)}
+                            </span>
+                          </button>
+                        </td>
+                      )}
                     </tr>
-                  </thead>
-                  <tbody>
-                    {eventos.map((evento) => (
-                      <tr key={`${evento.tipo}-${evento.id}`}>
-                        <td className="celula-titulo">
-                          {formatarData(evento.data)} <span className="panel-meta">{formatarHora(evento.data)}</span>
-                        </td>
-                        <td data-label="Tipo">
-                          <span className={`badge ${evento.tipo === "atraso" ? "badge--atraso" : "badge--saida"}`}>
-                            {evento.tipo === "atraso" ? "Entrada atrasada" : "Saída antecipada"}
-                          </span>
-                          {evento.justificado && <span className="badge badge--regular">Justificado</span>}
-                        </td>
-                        <td data-label="Motivo">
-                          {evento.motivo ?? "-"}
-                          {evento.retirado_por && <div className="panel-meta">Buscou: {evento.retirado_por}</div>}
-                        </td>
-                        <td data-label="Registro" className="panel-meta">
-                          {evento.tipo === "atraso" ? rotuloOrigemAtraso(evento.origem) : "Lançada pela coordenação"}
-                          {evento.registrado_por && <div>por {evento.registrado_por}</div>}
-                        </td>
-                        {gestao && (
-                          <td className="celula-acoes">
-                            <button
-                              type="button"
-                              className="icon-btn"
-                              title="Apagar (registro feito por engano)"
-                              aria-label="Apagar registro"
-                              onClick={() => removerRegistro(evento.tipo, evento.id)}
-                            >
-                              <Icon name="trash" />
-                            </button>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-
-            <div className="panel">
-              <div className="panel-head">
-                <h2>Biometria</h2>
-              </div>
-              <div className="modal-summary">
-                Consentimento do responsável:{" "}
-                {historico.aluno.consentimento_responsavel ? (
-                  <>
-                    <b>{historico.aluno.consentimento_responsavel}</b>, em {formatarData(historico.aluno.consentimento_em)}
-                  </>
-                ) : (
-                  <b>não registrado</b>
-                )}
-                <br />
-                Facial:{" "}
-                {historico.aluno.facial_atualizada_em ? (
-                  <b>
-                    cadastrada ({historico.aluno.facial_amostras ?? 1} foto(s)), em {formatarData(historico.aluno.facial_atualizada_em)}
-                  </b>
-                ) : (
-                  <b>não cadastrada</b>
-                )}
-                <br />
-                Digital: <b>{historico.aluno.digitais > 0 ? `${historico.aluno.digitais} cadastrada(s)` : "não cadastrada"}</b>
-              </div>
-              <p className="results-caption">
-                O consentimento e as fotos são registrados pelo app de biometria, no tablet da coordenação. A biometria fica
-                cifrada; as fotos não são guardadas. A presença registrada pelo app depois da tolerância já vira entrada
-                atrasada.
-              </p>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {historico.aluno.facial_atualizada_em && (
-                  <button type="button" className="btn btn-sm" onClick={apagarFacial} disabled={apagandoBiometria !== null}>
-                    {apagandoBiometria === "facial" ? "Apagando…" : "Apagar biometria facial"}
-                  </button>
-                )}
-                {historico.aluno.consentimento_responsavel && (
-                  <button type="button" className="btn btn-sm" onClick={revogarConsentimento} disabled={apagandoBiometria !== null}>
-                    {apagandoBiometria === "consentimento" ? "Revogando…" : "Revogar consentimento"}
-                  </button>
-                )}
-              </div>
-              <p className="panel-meta" style={{ marginTop: 14 }}>
-                As presenças registradas pelo app aparecem em{" "}
-                <Link href="/presencas" style={{ color: "var(--indigo-texto)", fontWeight: 700 }}>
-                  Presenças
-                </Link>
-                .
-              </p>
-            </div>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
 
-          <div className="panel" style={{ marginBottom: 20 }}>
+          <div className="panel panel-tabela secao">
             <div className="panel-head">
               <h2>Responsáveis</h2>
               <button type="button" className="btn btn-sm" onClick={() => setModalResponsavel(true)}>
-                <Icon name="plus" /> Responsável
+                <Icon name="plus" /> Adicionar responsável
               </button>
             </div>
             {responsaveis.length === 0 ? (
@@ -340,7 +292,7 @@ export default function AlunoDetalhePage() {
                     <th>Parentesco</th>
                     <th>Contato</th>
                     <th>Avisos por</th>
-                    <th></th>
+                    <th><span className="sr-only">Ações</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -358,7 +310,7 @@ export default function AlunoDetalhePage() {
                       <td data-label="Avisos por">{ROTULOS_CANAL_RESPONSAVEL[responsavel.canal_preferido ?? "whatsapp"]}</td>
                       <td className="acoes-linha celula-acoes">
                         <button type="button" className="btn-text" onClick={() => setEditando(responsavel)}>
-                          Editar
+                          Editar<span className="sr-only"> {responsavel.nome_responsavel}</span>
                         </button>
                         <button
                           type="button"
@@ -376,7 +328,7 @@ export default function AlunoDetalhePage() {
                             setResponsaveis((atual) => atual.filter((r) => r.id_responsavel !== responsavel.id_responsavel));
                           }}
                         >
-                          Remover vínculo
+                          Remover vínculo<span className="sr-only"> de {responsavel.nome_responsavel}</span>
                         </button>
                       </td>
                     </tr>
@@ -386,31 +338,85 @@ export default function AlunoDetalhePage() {
             )}
           </div>
 
-          <div className="panel">
-            <div className="panel-head">
-              <h2>Acompanhamento</h2>
-              <button type="button" className="btn btn-sm" onClick={() => setModalAcompanhamento(true)}>
-                <Icon name="plus" /> Registrar contato
-              </button>
-            </div>
-            {acompanhamentos.length === 0 ? (
-              <p className="results-caption">Nenhum registro de acompanhamento para este aluno.</p>
-            ) : (
-              <div className="timeline">
-                {acompanhamentos.map((registro) => (
-                  <div className="timeline-item" key={registro.id_acompanhamento}>
-                    <div className="timeline-date">{formatarDataHora(registro.data_registro)}</div>
-                    <div className="timeline-card">
-                      <div className="timeline-head">
-                        <span className="tag">{registro.canal}</span>
-                        <span className="panel-meta">por {registro.nome_coordenacao}</span>
-                      </div>
-                      {registro.observacao && <p className="timeline-note">{registro.observacao}</p>}
-                    </div>
-                  </div>
-                ))}
+          <div className="grid-2 grid-iguais">
+            <div className="panel">
+              <div className="panel-head">
+                <h2>Biometria</h2>
               </div>
-            )}
+              <dl className="lista-dados">
+                <div>
+                  <dt>Consentimento do responsável</dt>
+                  <dd>
+                    {historico.aluno.consentimento_responsavel
+                      ? `${historico.aluno.consentimento_responsavel}, em ${formatarData(historico.aluno.consentimento_em)}`
+                      : "Não registrado"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Biometria facial</dt>
+                  <dd>
+                    {historico.aluno.facial_atualizada_em
+                      ? `Cadastrada (${plural(historico.aluno.facial_amostras ?? 1, "foto", "fotos")}), em ${formatarData(historico.aluno.facial_atualizada_em)}`
+                      : "Não cadastrada"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Digital</dt>
+                  <dd>{historico.aluno.digitais > 0 ? plural(historico.aluno.digitais, "cadastrada", "cadastradas") : "Não cadastrada"}</dd>
+                </div>
+              </dl>
+              <p className="results-caption">
+                O consentimento e as fotos são registrados pelo app de biometria, no tablet da coordenação. A biometria fica
+                cifrada; as fotos não são guardadas. A presença registrada pelo app depois da tolerância já vira entrada
+                atrasada.
+              </p>
+              <div className="ficha-acoes">
+                {historico.aluno.facial_atualizada_em && (
+                  <button type="button" className="btn btn-sm btn-danger" onClick={apagarFacial} disabled={apagandoBiometria !== null}>
+                    {apagandoBiometria === "facial" ? "Apagando…" : "Apagar biometria facial"}
+                  </button>
+                )}
+                {historico.aluno.consentimento_responsavel && (
+                  <button type="button" className="btn btn-sm btn-danger" onClick={revogarConsentimento} disabled={apagandoBiometria !== null}>
+                    {apagandoBiometria === "consentimento" ? "Revogando…" : "Revogar consentimento"}
+                  </button>
+                )}
+              </div>
+              <p className="panel-meta ficha-nota">
+                As presenças registradas pelo app aparecem em{" "}
+                <Link href="/presencas" className="link-texto">
+                  Presenças
+                </Link>
+                .
+              </p>
+            </div>
+
+            <div className="panel">
+              <div className="panel-head">
+                <h2>Acompanhamento</h2>
+                <button type="button" className="btn btn-sm" onClick={() => setModalAcompanhamento(true)}>
+                  <Icon name="plus" /> Registrar contato
+                </button>
+              </div>
+              {acompanhamentos.length === 0 ? (
+                <p className="results-caption">Nenhum registro de acompanhamento para este aluno.</p>
+              ) : (
+                <div className="timeline">
+                  {acompanhamentos.map((registro) => (
+                    <div className="timeline-item" key={registro.id_acompanhamento}>
+                      <div className="timeline-date">{formatarDataHora(registro.data_registro)}</div>
+                      <div className="timeline-card">
+                        <div className="timeline-head">
+                          <span className="tag">{registro.canal}</span>
+                          <span className="panel-meta">por {registro.nome_coordenacao}</span>
+                        </div>
+                        {registro.observacao && <p className="timeline-note">{registro.observacao}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

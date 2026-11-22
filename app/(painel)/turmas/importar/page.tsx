@@ -187,7 +187,7 @@ function TabelaTurmas({ turmas }: { turmas: TurmaImportada[] }) {
       <table className="data-table tabela-cartoes">
         <thead>
           <tr>
-            <th>Linha</th>
+            <th className="num">Linha</th>
             <th>Turma</th>
             <th>Período</th>
             <th>Horário</th>
@@ -225,7 +225,7 @@ function TabelaAlunos({ alunos }: { alunos: AlunoImportado[] }) {
       <table className="data-table tabela-cartoes">
         <thead>
           <tr>
-            <th>Linha</th>
+            <th className="num">Linha</th>
             <th>Aluno</th>
             <th>Turma</th>
             <th>Nascimento</th>

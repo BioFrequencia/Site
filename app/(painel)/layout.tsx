@@ -85,9 +85,13 @@ export default function PainelLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="app">
+      {/* Para quem usa o teclado: o primeiro Tab oferece pular o menu. */}
+      <a href="#conteudo" className="pular-conteudo">
+        Pular para o conteúdo
+      </a>
       <BarraProgresso />
       <Sidebar contadores={contadores} />
-      <main className="main">
+      <main className="main" id="conteudo" tabIndex={-1}>
         <div className="view">{children}</div>
       </main>
       <BuscaRapida />

@@ -458,7 +458,7 @@ function AbaPreferencias() {
                 disabled={!preferencias.sonsAtivos}
                 onClick={() => tocarSom(som.tipo, { testar: true, volume: volume / 100 })}
               >
-                Ouvir
+                Ouvir<span className="sr-only"> o som de {som.rotulo.toLowerCase()}</span>
               </button>
               <Interruptor
                 ligado={preferencias[som.campo]}

@@ -235,8 +235,8 @@ function AbaTurmas({ dados, podeEditar, aoMudar }: { dados: DadosEscola; podeEdi
               <th>Turma</th>
               <th>Período</th>
               <th>Horário</th>
-              <th>Alunos</th>
-              {podeEditar && <th></th>}
+              <th className="num">Alunos</th>
+              {podeEditar && <th><span className="sr-only">Ações</span></th>}
             </tr>
           </thead>
           <tbody>
@@ -427,8 +427,9 @@ function AbaCalendario({
                   <span className="panel-meta">{item.tipo === "sem_aula" ? "Sem aula" : "Aula extra"}</span>
                 </span>
                 {podeEditar && (
-                  <button type="button" className="icon-btn" aria-label={`Remover ${item.descricao}`} onClick={() => remover(item.id_calendario)}>
+                  <button type="button" className="btn btn-sm btn-danger" aria-label={`Remover ${item.descricao}`} onClick={() => remover(item.id_calendario)}>
                     <Icon name="trash" />
+                    Remover
                   </button>
                 )}
               </li>

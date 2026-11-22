@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Api } from "@/lib/api";
 import { Topbar } from "@/components/Topbar";
+import { Paginacao } from "@/components/Paginacao";
 import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
@@ -83,52 +84,72 @@ export default function NotificacoesPage() {
           </Link>
         }
       />
-      <div className="filter-bar" style={{ marginBottom: 22 }}>
-        <div className="pill-group">
-          {[
-            { valor: "pendente" as const, rotulo: "Pendentes" },
-            { valor: "erro" as const, rotulo: "Com falha no envio" },
-            { valor: "enviada" as const, rotulo: "Enviadas" },
-            { valor: "" as const, rotulo: "Todas" },
-          ].map((opcao) => (
-            <button
-              key={opcao.valor}
-              type="button"
-              className={`filter-pill${status === opcao.valor ? " active" : ""}`}
-              onClick={() => {
-                setStatus(opcao.valor);
-                setPagina(1);
-              }}
-            >
-              {opcao.rotulo}
-            </button>
-          ))}
+      <div className="filter-bar">
+        <div className="filtro" role="group" aria-labelledby="filtro-situacao-envio">
+          <span id="filtro-situacao-envio" className="filtro-rotulo">
+            Situação
+          </span>
+          <div className="pill-group">
+            {[
+              { valor: "pendente" as const, rotulo: "Pendentes" },
+              { valor: "erro" as const, rotulo: "Com falha no envio" },
+              { valor: "enviada" as const, rotulo: "Enviadas" },
+              { valor: "" as const, rotulo: "Todas" },
+            ].map((opcao) => (
+              <button
+                key={opcao.valor}
+                type="button"
+                aria-pressed={status === opcao.valor}
+                className={`filter-pill${status === opcao.valor ? " active" : ""}`}
+                onClick={() => {
+                  setStatus(opcao.valor);
+                  setPagina(1);
+                }}
+              >
+                {opcao.rotulo}
+              </button>
+            ))}
+          </div>
         </div>
-        <select
-          className="filter-select"
-          aria-label="Origem"
-          value={origem}
-          onChange={(e) => {
-            setOrigem(e.target.value as Origem);
-            setPagina(1);
-          }}
-        >
-          <option value="">Automáticas e da coordenação</option>
-          <option value="manual">Enviadas pela coordenação</option>
-          <option value="automatico">Avisos automáticos</option>
-        </select>
+        <div className="filtro">
+          <label htmlFor="filtro-origem" className="filtro-rotulo">
+            Origem
+          </label>
+          <select
+            id="filtro-origem"
+            className="filter-select"
+            value={origem}
+            onChange={(e) => {
+              setOrigem(e.target.value as Origem);
+              setPagina(1);
+            }}
+          >
+            <option value="">Automáticas e da coordenação</option>
+            <option value="manual">Enviadas pela coordenação</option>
+            <option value="automatico">Avisos automáticos</option>
+          </select>
+        </div>
       </div>
-      {erro && <div className="error-block">{erro}</div>}
+      {erro && (
+        <div className="error-block" role="alert">
+          {erro}
+        </div>
+      )}
       {carregando && <Esqueleto variante="lista" texto="Carregando notificações…" />}
       {!carregando && (
-        <div className="panel">
+        <div className="panel panel-tabela">
           {notificacoes.length === 0 ? (
             <div className="empty-state">
               <Icon name="bell" />
-              <p>Nenhuma notificação neste filtro.</p>
+              <p>
+                {status === "pendente"
+                  ? "Nenhuma notificação pendente. Os avisos automáticos e as mensagens da coordenação esperando envio aparecem aqui."
+                  : "Nenhuma notificação com esses filtros."}
+              </p>
             </div>
           ) : (
             <table className="data-table tabela-cartoes">
+              <caption className="sr-only">Notificações aos responsáveis</caption>
               <thead>
                 <tr>
                   <th>Aluno</th>
@@ -136,7 +157,9 @@ export default function NotificacoesPage() {
                   <th>Mensagem</th>
                   <th>Quem e quando</th>
                   <th>Situação</th>
-                  <th></th>
+                  <th>
+                    <span className="sr-only">Ações</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -188,12 +211,14 @@ export default function NotificacoesPage() {
                             onClick={() => tentarDeNovo(notificacao)}
                             disabled={ocupada === notificacao.id_notificacao}
                           >
-                            {ocupada === notificacao.id_notificacao ? "…" : "Tentar de novo"}
+                            {ocupada === notificacao.id_notificacao ? "Tentando…" : "Tentar de novo"}
+                            <span className="sr-only"> — aviso para {notificacao.nome_responsavel}</span>
                           </button>
                         )}
                         {linkManual && (
                           <a className="btn btn-sm" href={linkManual} target="_blank" rel="noopener noreferrer">
                             Abrir no WhatsApp
+                            <span className="sr-only"> — {notificacao.nome_responsavel} (abre em outra aba)</span>
                           </a>
                         )}
                         {notificacao.status_notificacao !== "enviada" && (
@@ -203,7 +228,8 @@ export default function NotificacoesPage() {
                             onClick={() => marcarEnviada(notificacao)}
                             disabled={ocupada === notificacao.id_notificacao}
                           >
-                            {ocupada === notificacao.id_notificacao ? "…" : "Marcar enviada"}
+                            {ocupada === notificacao.id_notificacao ? "Salvando…" : "Marcar enviada"}
+                            <span className="sr-only"> — aviso para {notificacao.nome_responsavel}</span>
                           </button>
                         )}
                       </td>
@@ -213,24 +239,7 @@ export default function NotificacoesPage() {
               </tbody>
             </table>
           )}
-          {totalPaginas > 1 && (
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 18 }}>
-              <button type="button" className="btn btn-sm" disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)}>
-                Anterior
-              </button>
-              <span className="panel-meta" style={{ alignSelf: "center" }}>
-                Página {pagina} de {totalPaginas}
-              </span>
-              <button
-                type="button"
-                className="btn btn-sm"
-                disabled={pagina >= totalPaginas}
-                onClick={() => setPagina((p) => p + 1)}
-              >
-                Próxima
-              </button>
-            </div>
-          )}
+          <Paginacao pagina={pagina} totalPaginas={totalPaginas} onMudar={setPagina} />
         </div>
       )}
     </>

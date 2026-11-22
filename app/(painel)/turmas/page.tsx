@@ -5,11 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Api } from "@/lib/api";
 import { Topbar } from "@/components/Topbar";
+import { Paginacao } from "@/components/Paginacao";
 import { Esqueleto } from "@/components/Esqueleto";
 import { Modal } from "@/components/Modal";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
-import { classeBadgeStatus, formatarPercentual } from "@/lib/format";
+import { classeBadgeStatus, formatarPercentual, plural } from "@/lib/format";
 import { barraPontualidade } from "@/lib/graficos";
 import { GENEROS_ALUNO, PERIODOS_SALA, STATUS_ALUNO, type AlunoFiltro, type Dashboard, type Sala } from "@/lib/types";
 
@@ -88,7 +89,7 @@ export default function TurmasPage() {
     <>
       <Topbar
         titulo="Turmas e alunos"
-        subtitulo={`${totalRegistros} aluno(s) cadastrado(s).`}
+        subtitulo={`${plural(totalRegistros, "aluno cadastrado", "alunos cadastrados")}. Escolha uma turma para ver só os alunos dela.`}
         acoes={
           <>
             <Link href="/turmas/importar" className="btn">
@@ -132,7 +133,7 @@ export default function TurmasPage() {
           >
             <span className="ts-name">Todas</span>
             <div className="ts-info">
-              <div className="ts-count">{totalRegistros} aluno(s)</div>
+              <div className="ts-count">{plural(totalRegistros, "aluno", "alunos")}</div>
             </div>
           </button>
           {turmasResumo.map((turma) => {
@@ -152,7 +153,7 @@ export default function TurmasPage() {
                 <span className="ts-name">{turma.nome_sala}</span>
                 <div className="ts-info">
                   <div className="ts-count">
-                    {turma.total_alunos} aluno(s)
+                    {plural(turma.total_alunos, "aluno", "alunos")}
                     {sala?.horario && ` · ${sala.horario.inicio}–${sala.horario.fim}`}
                   </div>
                   <div className="ts-bar-track">
@@ -166,35 +167,48 @@ export default function TurmasPage() {
         </div>
 
         <div className="panel">
-          <div className="filter-bar" style={{ marginBottom: 18 }}>
-            <div className="search-box busca-estreita">
-              <Icon name="search" />
-              <input
-                placeholder="Buscar por nome ou ID"
-                value={busca}
+          <div className="filter-bar">
+            <div className="filtro">
+              <label htmlFor="turmas-busca-aluno" className="filtro-rotulo">
+                Buscar aluno
+              </label>
+              <div className="search-box busca-estreita">
+                <Icon name="search" />
+                <input
+                  id="turmas-busca-aluno"
+                  type="search"
+                  placeholder="Nome ou ID"
+                  value={busca}
+                  onChange={(e) => {
+                    setBusca(e.target.value);
+                    setPagina(1);
+                  }}
+                />
+              </div>
+            </div>
+            <div className="filtro">
+              <label htmlFor="turmas-situacao" className="filtro-rotulo">
+                Situação
+              </label>
+              <select
+                id="turmas-situacao"
+                className="filter-select"
+                value={status}
                 onChange={(e) => {
-                  setBusca(e.target.value);
+                  setStatus(e.target.value);
                   setPagina(1);
                 }}
-              />
+              >
+                <option value="">Todas as situações</option>
+                {STATUS_ALUNO.map((situacao) => (
+                  <option key={situacao} value={situacao}>
+                    {situacao}
+                  </option>
+                ))}
+              </select>
             </div>
-            <select
-              className="filter-select"
-              value={status}
-              onChange={(e) => {
-                setStatus(e.target.value);
-                setPagina(1);
-              }}
-            >
-              <option value="">Todas as situações</option>
-              {STATUS_ALUNO.map((situacao) => (
-                <option key={situacao} value={situacao}>
-                  {situacao}
-                </option>
-              ))}
-            </select>
           </div>
-          <p className="results-caption" style={{ marginTop: -8, marginBottom: 14 }}>
+          <p className="results-caption">
             Entradas atrasadas e saídas antecipadas nos últimos {janelaDias} dias, contando só os dias de aula. Limite da escola:{" "}
             {limite}%.
           </p>
@@ -215,16 +229,20 @@ export default function TurmasPage() {
                     <tr>
                       <th>Aluno</th>
                       <th>Turma</th>
-                      <th>Entradas atrasadas</th>
-                      <th>Saídas antecipadas</th>
-                      <th>Dias de aula</th>
+                      <th className="num">Entradas atrasadas</th>
+                      <th className="num">Saídas antecipadas</th>
+                      <th className="num">Dias de aula</th>
                       <th>Situação</th>
                     </tr>
                   </thead>
                   <tbody>
                     {lista.map((aluno) => (
                       <tr key={aluno.id_aluno} className="clickable" onClick={() => router.push(`/turmas/${aluno.id_aluno}`)}>
-                        <td className="celula-titulo">{aluno.nome_aluno}</td>
+                        <td className="celula-titulo">
+                          <Link href={`/turmas/${aluno.id_aluno}`} className="link-aluno" onClick={(evento) => evento.stopPropagation()}>
+                            {aluno.nome_aluno}
+                          </Link>
+                        </td>
                         <td data-label="Turma">{aluno.turma ?? "-"}</td>
                         <td className="num" data-label="Entradas atrasadas">
                           {aluno.atrasos}
@@ -248,24 +266,7 @@ export default function TurmasPage() {
                 </table>
               )}
 
-              {totalPaginas > 1 && (
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 18 }}>
-                  <button type="button" className="btn btn-sm" disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)}>
-                    Anterior
-                  </button>
-                  <span className="panel-meta" style={{ alignSelf: "center" }}>
-                    Página {pagina} de {totalPaginas}
-                  </span>
-                  <button
-                    type="button"
-                    className="btn btn-sm"
-                    disabled={pagina >= totalPaginas}
-                    onClick={() => setPagina((p) => p + 1)}
-                  >
-                    Próxima
-                  </button>
-                </div>
-              )}
+              <Paginacao pagina={pagina} totalPaginas={totalPaginas} onMudar={setPagina} />
             </>
           )}
         </div>

@@ -176,8 +176,12 @@ export function ModalResponsavel({
   return (
     <Modal titulo="Adicionar responsável" aberto={aberto} onFechar={onFechar}>
       <ol className="etapas" aria-label="Etapas">
-        <li className={etapa === "cpf" ? "atual" : "feita"}>CPF</li>
-        <li className={etapa === "cpf" ? "" : "atual"}>{etapa === "vincular" ? "Vincular" : "Dados"}</li>
+        <li className={etapa === "cpf" ? "atual" : "feita"} aria-current={etapa === "cpf" ? "step" : undefined}>
+          CPF
+        </li>
+        <li className={etapa === "cpf" ? "" : "atual"} aria-current={etapa === "cpf" ? undefined : "step"}>
+          {etapa === "vincular" ? "Vincular" : "Dados"}
+        </li>
       </ol>
 
       {etapa === "cpf" && (

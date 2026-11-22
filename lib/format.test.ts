@@ -8,8 +8,15 @@ import {
   hojeNaEscola,
   horarioLocalEscola,
   lerHorarioApi,
+  plural,
   rotuloPrioridade,
 } from "./format.ts";
+
+test("plural com o número, sem o \"(s)\"", () => {
+  assert.equal(plural(1, "aluno", "alunos"), "1 aluno");
+  assert.equal(plural(0, "aluno", "alunos"), "0 alunos");
+  assert.equal(plural(1250, "escola", "escolas"), "1.250 escolas");
+});
 
 test("prioridade do alerta escrita como na tela, com acento", () => {
   assert.equal(rotuloPrioridade("alta"), "Alta");

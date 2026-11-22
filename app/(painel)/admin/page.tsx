@@ -4,12 +4,13 @@ import { useCallback, useEffect, useState } from "react";
 import { Api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
+import { Paginacao } from "@/components/Paginacao";
 import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
 import { ModalAprovacao } from "@/components/ModalAprovacao";
 import { useToast } from "@/components/Toast";
-import { formatarDataHora } from "@/lib/format";
+import { formatarDataHora, plural } from "@/lib/format";
 import {
   ROTULOS_CARGO,
   ROTULOS_CATEGORIA_CHAMADO,
@@ -32,7 +33,7 @@ const ABAS: { id: Aba; rotulo: string; icone: string }[] = [
   { id: "geral", rotulo: "Visão geral", icone: "home" },
   { id: "contas", rotulo: "Contas", icone: "users" },
   { id: "escolas", rotulo: "Escolas", icone: "building" },
-  { id: "chamados", rotulo: "Chamados de suporte", icone: "lifeBuoy" },
+  { id: "chamados", rotulo: "Chamados de suporte", icone: "headset" },
 ];
 
 const ROTULOS_SITUACAO: Record<SituacaoConta, string> = {
@@ -151,20 +152,33 @@ function AbaGeral({ irPara }: { irPara: (aba: Aba) => void }) {
 
   return (
     <>
+      {/* Os números que levam a uma aba são botões (com a seta); os outros
+          são só informação, não botões desativados. */}
       <div className="cards-resumo cards-resumo--grade">
-        {cartoes.map((cartao) => (
-          <button
-            type="button"
-            key={cartao.rotulo}
-            className="card-resumo"
-            onClick={() => cartao.aba && irPara(cartao.aba)}
-            disabled={!cartao.aba}
-          >
-            <span className="card-resumo-rotulo">{cartao.rotulo}</span>
-            <span className="card-resumo-valor">{cartao.valor.toLocaleString("pt-BR")}</span>
-            {cartao.detalhe && <span className="panel-meta">{cartao.detalhe}</span>}
-          </button>
-        ))}
+        {cartoes.map((cartao) => {
+          const conteudo = (
+            <>
+              <span className="card-resumo-rotulo">{cartao.rotulo}</span>
+              <span className="card-resumo-valor">{cartao.valor.toLocaleString("pt-BR")}</span>
+              {cartao.detalhe && <span className="panel-meta">{cartao.detalhe}</span>}
+            </>
+          );
+          if (!cartao.aba) {
+            return (
+              <div key={cartao.rotulo} className="card-resumo">
+                {conteudo}
+              </div>
+            );
+          }
+          const destino = cartao.aba;
+          return (
+            <button type="button" key={cartao.rotulo} className="card-resumo" onClick={() => irPara(destino)}>
+              {conteudo}
+              <Icon name="chevronRight" />
+              <span className="sr-only"> — abrir {ABAS.find((item) => item.id === destino)?.rotulo}</span>
+            </button>
+          );
+        })}
       </div>
       <div className="panel">
         <div className="panel-head">
@@ -178,7 +192,7 @@ function AbaGeral({ irPara }: { irPara: (aba: Aba) => void }) {
             ? `Versão ${resumo.catalogo.versao}: ${resumo.catalogo.total.toLocaleString("pt-BR")} escolas, importado em ${formatarDataHora(resumo.catalogo.importado_em)}.`
             : "O catálogo ainda não foi importado neste banco."}{" "}
           A API importa sozinha ao iniciar quando a versão muda (atual: {resumo.catalogo_versao_atual}).{" "}
-          {resumo.escolas_fora_catalogo > 0 && `${resumo.escolas_fora_catalogo} escola(s) foram criadas fora do catálogo.`}
+          {resumo.escolas_fora_catalogo > 0 && `${plural(resumo.escolas_fora_catalogo, "escola foi criada", "escolas foram criadas")} fora do catálogo.`}
         </p>
       </div>
     </>
@@ -236,33 +250,46 @@ function AbaContas() {
 
   return (
     <div className="panel">
-      <div className="filter-bar" style={{ marginBottom: 18 }}>
-        <div className="search-box busca-estreita">
-          <Icon name="search" />
-          <input
-            placeholder="Nome, e-mail ou escola"
-            value={busca}
+      <div className="filter-bar">
+        <div className="filtro">
+          <label htmlFor="admin-busca-conta" className="filtro-rotulo">
+            Buscar conta
+          </label>
+          <div className="search-box busca-estreita">
+            <Icon name="search" />
+            <input
+              id="admin-busca-conta"
+              type="search"
+              placeholder="Nome, e-mail ou escola"
+              value={busca}
+              onChange={(e) => {
+                setBusca(e.target.value);
+                setPagina(1);
+              }}
+            />
+          </div>
+        </div>
+        <div className="filtro">
+          <label htmlFor="admin-situacao-conta" className="filtro-rotulo">
+            Situação
+          </label>
+          <select
+            id="admin-situacao-conta"
+            className="filter-select"
+            value={situacao}
             onChange={(e) => {
-              setBusca(e.target.value);
+              setSituacao(e.target.value as SituacaoConta | "");
               setPagina(1);
             }}
-          />
+          >
+            <option value="">Todas as situações</option>
+            {(Object.keys(ROTULOS_SITUACAO) as SituacaoConta[]).map((s) => (
+              <option key={s} value={s}>
+                {ROTULOS_SITUACAO[s]}
+              </option>
+            ))}
+          </select>
         </div>
-        <select
-          className="filter-select"
-          value={situacao}
-          onChange={(e) => {
-            setSituacao(e.target.value as SituacaoConta | "");
-            setPagina(1);
-          }}
-        >
-          <option value="">Todas as situações</option>
-          {(Object.keys(ROTULOS_SITUACAO) as SituacaoConta[]).map((s) => (
-            <option key={s} value={s}>
-              {ROTULOS_SITUACAO[s]}
-            </option>
-          ))}
-        </select>
       </div>
       <div className="tabela-rolavel">
         <table className="data-table tabela-cartoes">
@@ -273,7 +300,7 @@ function AbaContas() {
               <th>Papel</th>
               <th>Situação</th>
               <th>Último acesso</th>
-              <th></th>
+              <th><span className="sr-only">Ações</span></th>
             </tr>
           </thead>
           <tbody>
@@ -462,27 +489,41 @@ function AbaEscolas() {
 
   return (
     <div className="panel">
-      <div className="filter-bar" style={{ marginBottom: 18 }}>
-        <div className="search-box busca-estreita">
-          <Icon name="search" />
-          <input
-            placeholder="Nome, município ou código CIE"
-            value={busca}
-            onChange={(e) => {
-              setBusca(e.target.value);
-              setPagina(1);
-            }}
-          />
+      <div className="filter-bar">
+        <div className="filtro">
+          <label htmlFor="admin-busca-escola" className="filtro-rotulo">
+            Buscar escola
+          </label>
+          <div className="search-box busca-estreita">
+            <Icon name="search" />
+            <input
+              id="admin-busca-escola"
+              type="search"
+              placeholder="Nome, município ou código CIE"
+              value={busca}
+              onChange={(e) => {
+                setBusca(e.target.value);
+                setPagina(1);
+              }}
+            />
+          </div>
         </div>
-        <div className="pill-group">
-          <button type="button" className={`filter-pill${emUso ? " active" : ""}`} onClick={() => { setEmUso(true); setPagina(1); }}>
-            Usando o sistema
-          </button>
-          <button type="button" className={`filter-pill${!emUso ? " active" : ""}`} onClick={() => { setEmUso(false); setPagina(1); }}>
-            Catálogo inteiro
-          </button>
+        <div className="filtro" role="group" aria-labelledby="admin-mostrar-escolas">
+          <span id="admin-mostrar-escolas" className="filtro-rotulo">
+            Mostrar
+          </span>
+          <div className="pill-group">
+            <button type="button" aria-pressed={emUso} className={`filter-pill${emUso ? " active" : ""}`} onClick={() => { setEmUso(true); setPagina(1); }}>
+              Usando o sistema
+            </button>
+            <button type="button" aria-pressed={!emUso} className={`filter-pill${!emUso ? " active" : ""}`} onClick={() => { setEmUso(false); setPagina(1); }}>
+              Catálogo inteiro
+            </button>
+          </div>
         </div>
-        <span className="panel-meta">{total.toLocaleString("pt-BR")} escola(s)</span>
+        <span className="panel-meta filtro-total" aria-live="polite">
+          {plural(total, "escola", "escolas")}
+        </span>
       </div>
       <div className="tabela-rolavel">
         <table className="data-table tabela-cartoes">
@@ -490,9 +531,9 @@ function AbaEscolas() {
             <tr>
               <th>Escola</th>
               <th>Município</th>
-              <th>Contas</th>
-              <th>Turmas</th>
-              <th>Alunos</th>
+              <th className="num">Contas</th>
+              <th className="num">Turmas</th>
+              <th className="num">Alunos</th>
             </tr>
           </thead>
           <tbody>
@@ -505,7 +546,7 @@ function AbaEscolas() {
                 <td data-label="Município">{escola.municipio ?? "-"}</td>
                 <td data-label="Contas" className="num">
                   {escola.contas_ativas}
-                  {escola.contas_pendentes > 0 && <span className="badge badge--atencao">{escola.contas_pendentes} pendente(s)</span>}
+                  {escola.contas_pendentes > 0 && <span className="badge badge--atencao">{plural(escola.contas_pendentes, "pendente", "pendentes")}</span>}
                 </td>
                 <td data-label="Turmas" className="num">{escola.turmas}</td>
                 <td data-label="Alunos" className="num">{escola.alunos}</td>
@@ -561,21 +602,27 @@ function AbaChamados() {
 
   return (
     <div className="panel">
-      <div className="filter-bar" style={{ marginBottom: 18 }}>
-        <div className="pill-group">
-          {(["aberto", "em_andamento", "respondido", "fechado", ""] as (StatusChamado | "")[]).map((s) => (
-            <button
-              key={s || "todos"}
-              type="button"
-              className={`filter-pill${status === s ? " active" : ""}`}
-              onClick={() => {
-                setStatus(s);
-                setPagina(1);
-              }}
-            >
-              {s ? ROTULOS_STATUS_CHAMADO[s] : "Todos"}
-            </button>
-          ))}
+      <div className="filter-bar">
+        <div className="filtro" role="group" aria-labelledby="admin-situacao-chamado">
+          <span id="admin-situacao-chamado" className="filtro-rotulo">
+            Situação
+          </span>
+          <div className="pill-group">
+            {(["aberto", "em_andamento", "respondido", "fechado", ""] as (StatusChamado | "")[]).map((s) => (
+              <button
+                key={s || "todos"}
+                type="button"
+                aria-pressed={status === s}
+                className={`filter-pill${status === s ? " active" : ""}`}
+                onClick={() => {
+                  setStatus(s);
+                  setPagina(1);
+                }}
+              >
+                {s ? ROTULOS_STATUS_CHAMADO[s] : "Todos"}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
       {chamados.length === 0 ? (
@@ -603,20 +650,26 @@ function AbaChamados() {
               )}
               {chamado.status !== "fechado" && (
                 <div className="chamado-responder">
+                  <label htmlFor={`resposta-chamado-${chamado.id_chamado}`}>
+                    Resposta para a coordenação<span className="sr-only"> — chamado {chamado.assunto}</span>
+                  </label>
                   <textarea
-                    aria-label={`Resposta ao chamado ${chamado.assunto}`}
-                    placeholder="Resposta para a coordenação (aparece em Suporte > Meus chamados)"
+                    id={`resposta-chamado-${chamado.id_chamado}`}
+                    aria-describedby={`resposta-chamado-dica-${chamado.id_chamado}`}
                     value={respostas[chamado.id_chamado] ?? ""}
                     onChange={(e) => setRespostas({ ...respostas, [chamado.id_chamado]: e.target.value })}
                   />
+                  <p className="dica-campo" id={`resposta-chamado-dica-${chamado.id_chamado}`}>
+                    Aparece para quem abriu o chamado em Suporte › Meus chamados.
+                  </p>
                   <div className="acoes-linha">
                     {chamado.status === "aberto" && (
                       <button type="button" className="btn btn-sm" onClick={() => atualizar(chamado, "em_andamento")} disabled={salvando !== null}>
-                        Em andamento
+                        Marcar em andamento
                       </button>
                     )}
                     <button type="button" className="btn btn-sm" onClick={() => atualizar(chamado, "fechado")} disabled={salvando !== null}>
-                      Fechar
+                      Fechar chamado
                     </button>
                     <button type="button" className="btn btn-sm btn-primary" onClick={() => atualizar(chamado, "respondido")} disabled={salvando !== null}>
                       <Icon name="send" /> Responder
@@ -629,23 +682,6 @@ function AbaChamados() {
         </ul>
       )}
       <Paginacao pagina={pagina} totalPaginas={totalPaginas} onMudar={setPagina} />
-    </div>
-  );
-}
-
-function Paginacao({ pagina, totalPaginas, onMudar }: { pagina: number; totalPaginas: number; onMudar: (pagina: number) => void }) {
-  if (totalPaginas <= 1) return null;
-  return (
-    <div className="paginacao">
-      <button type="button" className="btn btn-sm" disabled={pagina <= 1} onClick={() => onMudar(pagina - 1)}>
-        Anterior
-      </button>
-      <span className="panel-meta">
-        Página {pagina} de {totalPaginas}
-      </span>
-      <button type="button" className="btn btn-sm" disabled={pagina >= totalPaginas} onClick={() => onMudar(pagina + 1)}>
-        Próxima
-      </button>
     </div>
   );
 }

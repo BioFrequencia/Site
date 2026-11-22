@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -63,6 +63,18 @@ export default function RegistrosPage() {
     carregar();
   }, [carregar]);
 
+  // Atalho do Painel: /registros?registrar=atraso (ou saida) já abre o
+  // formulário, se hoje tem aula. O endereço volta a ser /registros.
+  const atalhoVisto = useRef(false);
+  useEffect(() => {
+    if (atalhoVisto.current || !dia) return;
+    atalhoVisto.current = true;
+    const pedido = new URLSearchParams(window.location.search).get("registrar");
+    if (pedido !== "atraso" && pedido !== "saida") return;
+    window.history.replaceState(null, "", window.location.pathname);
+    if (dia.dia.letivo) setModal(pedido);
+  }, [dia]);
+
   async function remover(tipo: TipoRegistro, id: number) {
     if (!confirm("Apagar este registro? Use só para registro feito por engano. Avisos que já foram para a família não voltam.")) return;
     const resposta = await Api.removerRegistro(tipo, id);
@@ -96,23 +108,41 @@ export default function RegistrosPage() {
         }
       />
 
-      <div className="filter-bar" style={{ marginBottom: 18 }}>
-        <input type="date" className="filter-select" value={data} max={hojeNaEscola()} onChange={(e) => setData(e.target.value || hojeNaEscola())} />
-        <select
-          className="filter-select"
-          value={idSala ?? ""}
-          onChange={(e) => setIdSala(e.target.value ? Number(e.target.value) : null)}
-        >
-          <option value="">Todas as turmas</option>
-          {salas.map((sala) => (
-            <option key={sala.id_sala} value={sala.id_sala}>
-              {sala.nome_sala} ({sala.horario ? `${sala.horario.inicio}–${sala.horario.fim}` : sala.periodo_sala})
-            </option>
-          ))}
-        </select>
+      <div className="filter-bar">
+        <div className="filtro">
+          <label htmlFor="registros-dia" className="filtro-rotulo">
+            Dia
+          </label>
+          <input
+            id="registros-dia"
+            type="date"
+            className="filter-select"
+            value={data}
+            max={hojeNaEscola()}
+            onChange={(e) => setData(e.target.value || hojeNaEscola())}
+          />
+        </div>
+        <div className="filtro">
+          <label htmlFor="registros-turma" className="filtro-rotulo">
+            Turma
+          </label>
+          <select
+            id="registros-turma"
+            className="filter-select"
+            value={idSala ?? ""}
+            onChange={(e) => setIdSala(e.target.value ? Number(e.target.value) : null)}
+          >
+            <option value="">Todas as turmas</option>
+            {salas.map((sala) => (
+              <option key={sala.id_sala} value={sala.id_sala}>
+                {sala.nome_sala} ({sala.horario ? `${sala.horario.inicio}–${sala.horario.fim}` : sala.periodo_sala})
+              </option>
+            ))}
+          </select>
+        </div>
         {!hoje && (
-          <button type="button" className="btn btn-sm" onClick={() => setData(hojeNaEscola())}>
-            Hoje
+          <button type="button" className="btn" onClick={() => setData(hojeNaEscola())}>
+            Voltar para hoje
           </button>
         )}
       </div>
@@ -175,13 +205,13 @@ export default function RegistrosPage() {
                     <th>Tipo</th>
                     <th>Motivo</th>
                     <th>Registro</th>
-                    {gestao && <th></th>}
+                    {gestao && <th><span className="sr-only">Ações</span></th>}
                   </tr>
                 </thead>
                 <tbody>
                   {dia.registros.map((registro) => (
                     <tr key={`${registro.tipo}-${registro.id}`}>
-                      <td data-label="Horário" className="num">{formatarHora(registro.momento)}</td>
+                      <td data-label="Horário" className="tabular">{formatarHora(registro.momento)}</td>
                       <td className="celula-titulo">
                         <Link href={`/turmas/${registro.id_aluno}`} className="student-cell">
                           <div className="avatar">{iniciais(registro.nome_aluno)}</div>
@@ -209,12 +239,12 @@ export default function RegistrosPage() {
                         <td className="celula-acoes">
                           <button
                             type="button"
-                            className="icon-btn"
-                            title="Apagar (registro feito por engano)"
-                            aria-label="Apagar registro"
+                            className="btn btn-sm btn-danger"
+                            title="Apagar um registro feito por engano"
                             onClick={() => remover(registro.tipo, registro.id)}
                           >
                             <Icon name="trash" />
+                            Apagar
                           </button>
                         </td>
                       )}

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Api } from "@/lib/api";
 import { Topbar } from "@/components/Topbar";
-import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
 import { baixarCsv, formatarData, formatarDataHora, formatarPercentual, hojeNaEscola, nomeMesLongo, rotuloOrigemAtraso, rotuloTipoAlerta } from "@/lib/format";
 
@@ -174,104 +173,106 @@ export default function RelatoriosPage() {
     { id: "registros", titulo: "Entradas atrasadas e saídas antecipadas", desc: "Cada registro dos últimos 90 dias: aluno, horário, motivo, quem buscou e de onde veio.", executar: null, xml: "registros" },
     { id: "alunos", titulo: "Situação de cada aluno", desc: "Dias de aula, entradas atrasadas, saídas antecipadas e taxas de cada aluno na janela de alerta da escola.", executar: null, xml: "alunos" },
     { id: "alertas", titulo: "Alertas", desc: "Alunos acima ou perto do limite, com a taxa e o motivo.", executar: relatorioAlertas, xml: "alertas" },
-    { id: "evolucao", titulo: "Entradas e saídas por mês", desc: "Os meses do gráfico do dashboard, com os dias de aula e a pontualidade.", executar: relatorioEvolucao, xml: null },
+    { id: "evolucao", titulo: "Entradas e saídas por mês", desc: "Os meses do gráfico do Painel, com os dias de aula e a pontualidade.", executar: relatorioEvolucao, xml: null },
     { id: "turmas", titulo: "Pontualidade por turma", desc: "Entradas atrasadas, saídas antecipadas e pontualidade de cada turma no mês.", executar: relatorioTurmas, xml: null },
     { id: "acompanhamento", titulo: "Histórico de acompanhamentos", desc: "Todos os contatos registrados com responsáveis.", executar: relatorioAcompanhamento, xml: "acompanhamentos" },
   ];
 
+  // Cada botão diz o que baixa ("Baixar CSV") e, para o leitor de tela,
+  // de qual relatório (texto escondido). Nenhum deles é o botão principal
+  // da tela: são todos do mesmo peso.
   return (
     <>
-      <Topbar titulo="Relatórios" subtitulo="Exporte dados da coordenação em CSV ou XML." />
+      <Topbar
+        titulo="Relatórios"
+        subtitulo="Baixe os dados da escola em CSV, que abre como planilha no Excel, ou em XML."
+      />
 
-      <div className="panel report-list">
+      <ul className="panel report-list">
         {relatorios.map((relatorio) => (
-          <div className="report-item" key={relatorio.id}>
-            <div className="report-icon">
-              <Icon name="fileText" />
-            </div>
+          <li className="report-item" key={relatorio.id}>
             <div className="report-body">
-              <div className="report-title">{relatorio.titulo}</div>
-              <div className="report-desc">{relatorio.desc}</div>
+              <h2 className="report-title">{relatorio.titulo}</h2>
+              <p className="report-desc">{relatorio.desc}</p>
             </div>
             <div className="report-acoes">
               {relatorio.executar && (
                 <button
                   type="button"
-                  className="btn btn-sm"
+                  className="btn report-csv"
                   onClick={() => comFeedback(relatorio.id, relatorio.executar!)}
                   disabled={gerando === relatorio.id}
                 >
-                  {gerando === relatorio.id ? "Gerando…" : "CSV"}
+                  {gerando === relatorio.id ? "Gerando CSV…" : "Baixar CSV"}
+                  <span className="sr-only"> — {relatorio.titulo}</span>
                 </button>
               )}
               {relatorio.xml && (
                 <button
                   type="button"
-                  className="btn btn-primary btn-sm"
+                  className="btn report-xml"
                   onClick={() => baixarXml(relatorio.xml!)}
                   disabled={gerandoXml === relatorio.xml}
                 >
-                  {gerandoXml === relatorio.xml ? "Gerando…" : "XML"}
+                  {gerandoXml === relatorio.xml ? "Gerando XML…" : "Baixar XML"}
+                  <span className="sr-only"> — {relatorio.titulo}</span>
                 </button>
               )}
             </div>
-          </div>
+          </li>
         ))}
 
-        <div className="report-item">
-          <div className="report-icon">
-            <Icon name="inbox" />
-          </div>
+        <li className="report-item">
           <div className="report-body">
-            <div className="report-title">Ocorrências do celular do aluno (fluxo anterior)</div>
-            <div className="report-desc">
+            <h2 className="report-title">Ocorrências do celular do aluno (fluxo anterior)</h2>
+            <p className="report-desc">
               Histórico dos envios feitos pelo app antigo do aluno, com motivo, observação e a decisão da coordenação.
-            </div>
+            </p>
           </div>
           <div className="report-acoes">
             <button
               type="button"
-              className="btn btn-primary btn-sm"
+              className="btn report-xml"
               onClick={() => baixarXml("ocorrencias")}
               disabled={gerandoXml === "ocorrencias"}
             >
-              {gerandoXml === "ocorrencias" ? "Gerando…" : "XML"}
+              {gerandoXml === "ocorrencias" ? "Gerando XML…" : "Baixar XML"}
+              <span className="sr-only"> — Ocorrências do celular do aluno</span>
             </button>
           </div>
-        </div>
+        </li>
 
-        <div className="report-item">
-          <div className="report-icon">
-            <Icon name="fileText" />
-          </div>
-          <div className="report-body">
-            <div className="report-title">Histórico individual por aluno</div>
-            <div className="report-desc">Entradas atrasadas e saídas antecipadas dos últimos 3 meses de um aluno.</div>
-            <input
-              style={{
-                marginTop: 10,
-                border: "1px solid var(--mist-200)",
-                borderRadius: "var(--radius-sm)",
-                padding: "8px 12px",
-                fontSize: 13,
-                width: "100%",
-                maxWidth: 260,
-              }}
-              placeholder="Nome do aluno"
-              value={buscaIndividual}
-              onChange={(e) => setBuscaIndividual(e.target.value)}
-            />
-          </div>
-          <button
-            type="button"
-            className="btn btn-primary btn-sm"
-            onClick={() => comFeedback("individual", relatorioIndividual)}
-            disabled={gerando === "individual"}
+        <li className="report-item">
+          {/* Formulário: digitar o nome e apertar Enter já baixa. */}
+          <form
+            className="report-form"
+            onSubmit={(evento) => {
+              evento.preventDefault();
+              comFeedback("individual", relatorioIndividual);
+            }}
           >
-            {gerando === "individual" ? "Gerando…" : "Baixar CSV"}
-          </button>
-        </div>
-      </div>
+            <div className="report-body">
+              <h2 className="report-title">Histórico individual por aluno</h2>
+              <p className="report-desc">Entradas atrasadas e saídas antecipadas dos últimos 3 meses de um aluno.</p>
+              <div className="modal-field report-campo">
+                <label htmlFor="relatorio-aluno">Nome do aluno</label>
+                <input
+                  id="relatorio-aluno"
+                  autoComplete="off"
+                  value={buscaIndividual}
+                  onChange={(e) => setBuscaIndividual(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="report-acoes">
+              <button type="submit" className="btn report-csv" disabled={gerando === "individual"}>
+                {gerando === "individual" ? "Gerando CSV…" : "Baixar CSV"}
+                <span className="sr-only"> — Histórico individual por aluno</span>
+              </button>
+            </div>
+          </form>
+        </li>
+      </ul>
     </>
   );
 }
