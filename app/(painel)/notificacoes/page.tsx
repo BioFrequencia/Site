@@ -19,8 +19,9 @@ type Origem = "" | "manual" | "automatico";
  * Notificações: o histórico do que saiu para os responsáveis - os avisos
  * automáticos e as mensagens da coordenação (quem enviou, quando, por qual
  * canal e a situação). Pendente: sem envio automático, a coordenação manda
- * pelo link e marca como enviada. Erro: dá para tentar de novo ou, se a
- * família foi avisada por fora, marcar como enviada.
+ * pelo link e marca como avisada. Erro: mostra por que o provedor recusou;
+ * dá para tentar de novo ou, se a família foi avisada por fora, marcar como
+ * avisada - e a lista mostra quem confirmou, sem fingir que o sistema enviou.
  */
 export default function NotificacoesPage() {
   const { mostrarToast } = useToast();
@@ -61,7 +62,7 @@ export default function NotificacoesPage() {
       mostrarToast(resposta.mensagem, true);
       return;
     }
-    mostrarToast("Notificação marcada como enviada.");
+    mostrarToast(resposta.mensagem);
     carregar();
   }
 
@@ -69,7 +70,9 @@ export default function NotificacoesPage() {
     setOcupada(notificacao.id_notificacao);
     const resposta = await Api.reenviarNotificacao(notificacao.id_notificacao);
     setOcupada(null);
-    mostrarToast(resposta.mensagem, !resposta.sucesso || resposta.dados?.status === "erro");
+    const falhou = !resposta.sucesso || resposta.dados?.status === "erro";
+    const motivo = falhou && resposta.dados?.erro ? ` Motivo: ${resposta.dados.erro}` : "";
+    mostrarToast(resposta.mensagem + motivo, falhou);
     carregar();
   }
 
@@ -198,9 +201,24 @@ export default function NotificacoesPage() {
                         <div className="panel-meta">{quando ? formatarDataHora(quando) : "-"}</div>
                       </td>
                       <td data-label="Situação">
-                        <span className={selo.classe}>{selo.texto}</span>
-                        {notificacao.status_notificacao === "enviada" && notificacao.data_envio_notificacao && (
-                          <div className="panel-meta">{formatarDataHora(notificacao.data_envio_notificacao)}</div>
+                        {notificacao.forma_envio === "manual" ? (
+                          <>
+                            <span className="badge badge--enviada">Avisada pela escola</span>
+                            <div className="panel-meta">
+                              {notificacao.confirmado_por ? `Confirmada por ${notificacao.confirmado_por}` : "Confirmada pela escola"}
+                              {notificacao.confirmado_em ? ` · ${formatarDataHora(notificacao.confirmado_em)}` : ""}
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <span className={selo.classe}>{selo.texto}</span>
+                            {notificacao.status_notificacao === "enviada" && notificacao.data_envio_notificacao && (
+                              <div className="panel-meta">{formatarDataHora(notificacao.data_envio_notificacao)}</div>
+                            )}
+                          </>
+                        )}
+                        {notificacao.status_notificacao === "erro" && notificacao.erro_envio && (
+                          <div className="erro-envio">{notificacao.erro_envio}</div>
                         )}
                       </td>
                       <td className="celula-acoes">
@@ -225,10 +243,11 @@ export default function NotificacoesPage() {
                           <button
                             type="button"
                             className="btn btn-sm"
+                            title="Use depois de mandar pelo link, ou quando a família já foi avisada por outro meio (telefone, pessoalmente)."
                             onClick={() => marcarEnviada(notificacao)}
                             disabled={ocupada === notificacao.id_notificacao}
                           >
-                            {ocupada === notificacao.id_notificacao ? "Salvando…" : "Marcar enviada"}
+                            {ocupada === notificacao.id_notificacao ? "Salvando…" : "Marcar como avisada"}
                             <span className="sr-only"> — aviso para {notificacao.nome_responsavel}</span>
                           </button>
                         )}

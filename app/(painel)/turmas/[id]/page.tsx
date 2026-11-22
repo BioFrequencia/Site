@@ -4,13 +4,13 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Api } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
 import { Esqueleto } from "@/components/Esqueleto";
 import { Modal } from "@/components/Modal";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
 import { ModalRegistro } from "@/components/ModalRegistro";
+import { ModalCorrecaoRegistro, type AlvoCorrecao } from "@/components/ModalCorrecaoRegistro";
 import { ModalEditarResponsavel, ModalResponsavel } from "@/components/ModalResponsavel";
 import {
   classeBadgeStatus,
@@ -35,9 +35,7 @@ import {
 export default function AlunoDetalhePage() {
   const params = useParams<{ id: string }>();
   const idAluno = Number(params.id);
-  const { coordenacao } = useAuth();
   const { mostrarToast } = useToast();
-  const gestao = coordenacao?.papel === "gestor";
 
   const [historico, setHistorico] = useState<HistoricoAluno | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -51,14 +49,15 @@ export default function AlunoDetalhePage() {
   const [editando, setEditando] = useState<Responsavel | null>(null);
   const [modalAcompanhamento, setModalAcompanhamento] = useState(false);
   const [apagandoBiometria, setApagandoBiometria] = useState<"facial" | "consentimento" | null>(null);
+  const [alvo, setAlvo] = useState<AlvoCorrecao | null>(null);
 
   async function carregarTudo() {
     setCarregando(true);
     // Sequencial, não Promise.all - ver o comentário em (painel)/layout.tsx
     // sobre limite de conexões simultâneas do banco. Histórico dos últimos
-    // 90 dias.
+    // 90 dias, com os cancelados (marcados): o histórico não perde nada.
     const inicio = new Date(Date.now() - 89 * 86400000).toISOString().slice(0, 10);
-    const respHistorico = await Api.historicoAluno(idAluno, inicio);
+    const respHistorico = await Api.historicoAluno(idAluno, inicio, undefined, true);
     const respResponsaveis = await Api.listarResponsaveis(idAluno);
     const respAcompanhamento = await Api.listarAcompanhamento(idAluno, 1);
     if (respHistorico.sucesso && respHistorico.dados) {
@@ -119,16 +118,10 @@ export default function AlunoDetalhePage() {
     );
   }
 
-  async function removerRegistro(tipo: TipoRegistro, id: number) {
-    const nome = tipo === "atraso" ? "esta entrada atrasada" : "esta saída antecipada";
-    if (!confirm(`Apagar ${nome}? Use só para registro feito por engano. Avisos que já foram para a família não voltam.`)) return;
-    const resposta = await Api.removerRegistro(tipo, id);
-    if (!resposta.sucesso) {
-      mostrarToast(resposta.mensagem, true);
-      return;
-    }
-    mostrarToast(tipo === "atraso" ? "Entrada atrasada apagada." : "Saída antecipada apagada.");
-    carregarTudo();
+  /** "Ana Lima · entrada atrasada às 07:31 de 19/11/2026" (no modal e para o leitor de tela). */
+  function descreverEvento(tipo: TipoRegistro, data: string): string {
+    const nome = tipo === "atraso" ? "entrada atrasada" : "saída antecipada";
+    return `${historico?.aluno.nome_aluno ?? "Aluno"} · ${nome} às ${formatarHora(data)} de ${formatarData(data)}`;
   }
 
   if (!Number.isFinite(idAluno)) {
@@ -141,6 +134,7 @@ export default function AlunoDetalhePage() {
         ...historico.saidas.map((s) => ({ ...s, tipo: "saida" as const })),
       ].sort((a, b) => (a.data < b.data ? 1 : -1))
     : [];
+  const temAcoes = eventos.some((e) => e.pode_cancelar || (e.cancelado && historico?.pode_restaurar));
   const indicador = historico?.indicador ?? null;
   const horario =
     historico?.aluno.horario_inicio && historico.aluno.horario_fim
@@ -208,8 +202,15 @@ export default function AlunoDetalhePage() {
           <div className="panel panel-tabela secao">
             <div className="panel-head">
               <h2>Entradas e saídas</h2>
-              <span className="panel-meta">
-                {formatarData(historico.periodo.inicio)} – {formatarData(historico.periodo.fim)}
+              <span className="panel-links">
+                <span className="panel-meta">
+                  {formatarData(historico.periodo.inicio)} – {formatarData(historico.periodo.fim)}
+                </span>
+                {historico.pode_restaurar && (
+                  <Link href={`/registros/correcoes?aluno=${idAluno}`} className="panel-meta">
+                    Correções deste aluno
+                  </Link>
+                )}
               </span>
             </div>
             {eventos.length === 0 ? (
@@ -225,12 +226,12 @@ export default function AlunoDetalhePage() {
                     <th>Tipo</th>
                     <th>Motivo</th>
                     <th>Registro</th>
-                    {gestao && <th><span className="sr-only">Ações</span></th>}
+                    {temAcoes && <th><span className="sr-only">Ações</span></th>}
                   </tr>
                 </thead>
                 <tbody>
                   {eventos.map((evento) => (
-                    <tr key={`${evento.tipo}-${evento.id}`}>
+                    <tr key={`${evento.tipo}-${evento.id}`} className={evento.cancelado ? "linha-cancelada" : undefined}>
                       <td className="celula-titulo">
                         {formatarData(evento.data)} <span className="panel-meta">{formatarHora(evento.data)}</span>
                       </td>
@@ -239,6 +240,7 @@ export default function AlunoDetalhePage() {
                           {evento.tipo === "atraso" ? "Entrada atrasada" : "Saída antecipada"}
                         </span>
                         {evento.justificado && <span className="badge badge--regular">Justificado</span>}
+                        {evento.cancelado && <span className="badge badge--cancelado">Cancelado</span>}
                       </td>
                       <td data-label="Motivo">
                         {evento.motivo ?? "-"}
@@ -247,22 +249,36 @@ export default function AlunoDetalhePage() {
                       <td data-label="Registro" className="panel-meta">
                         {evento.tipo === "atraso" ? rotuloOrigemAtraso(evento.origem) : "Lançada pela coordenação"}
                         {evento.registrado_por && <div>por {evento.registrado_por}</div>}
+                        {evento.cancelado && (
+                          <div className="info-cancelamento">
+                            Cancelado{evento.cancelado_por ? ` por ${evento.cancelado_por}` : ""}
+                            {evento.cancelado_em ? ` em ${formatarDataHora(evento.cancelado_em)}` : ""}
+                            {evento.motivo_cancelamento ? `: ${evento.motivo_cancelamento}` : ""}
+                          </div>
+                        )}
                       </td>
-                      {gestao && (
+                      {temAcoes && (
                         <td className="celula-acoes">
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-danger"
-                            title="Apagar um registro feito por engano"
-                            onClick={() => removerRegistro(evento.tipo, evento.id)}
-                          >
-                            <Icon name="trash" />
-                            Apagar
-                            <span className="sr-only">
-                              {" "}
-                              {evento.tipo === "atraso" ? "a entrada atrasada" : "a saída antecipada"} de {formatarDataHora(evento.data)}
-                            </span>
-                          </button>
+                          {evento.pode_cancelar && (
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-danger"
+                              onClick={() => setAlvo({ acao: "cancelar", tipo: evento.tipo, id: evento.id, descricao: descreverEvento(evento.tipo, evento.data) })}
+                            >
+                              <Icon name="x" />
+                              Cancelar<span className="sr-only"> {descreverEvento(evento.tipo, evento.data)}</span>
+                            </button>
+                          )}
+                          {evento.cancelado && historico.pode_restaurar && (
+                            <button
+                              type="button"
+                              className="btn btn-sm"
+                              onClick={() => setAlvo({ acao: "restaurar", tipo: evento.tipo, id: evento.id, descricao: descreverEvento(evento.tipo, evento.data) })}
+                            >
+                              <Icon name="refresh" />
+                              Restaurar<span className="sr-only"> {descreverEvento(evento.tipo, evento.data)}</span>
+                            </button>
+                          )}
                         </td>
                       )}
                     </tr>
@@ -420,6 +436,16 @@ export default function AlunoDetalhePage() {
           </div>
         </div>
       )}
+
+      <ModalCorrecaoRegistro
+        alvo={alvo}
+        onFechar={() => setAlvo(null)}
+        onConcluido={(mensagem) => {
+          setAlvo(null);
+          mostrarToast(mensagem);
+          carregarTudo();
+        }}
+      />
 
       <ModalRegistro
         tipo={modalRegistro}

@@ -162,6 +162,7 @@ export default function EnviarMensagemPage() {
                       {r.canal === "whatsapp" ? `WhatsApp ${formatarTelefone(r.contato.replace(/^55/, ""))}` : `E-mail ${r.contato}`}
                       {r.repetido && " · já tinha sido enviada"}
                     </div>
+                    {r.status === "erro" && r.erro && <div className="erro-envio">{r.erro}</div>}
                   </div>
                   <div className="lista-resultados-acoes">
                     <span className={selo.classe}>{selo.texto}</span>

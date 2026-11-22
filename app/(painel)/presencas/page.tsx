@@ -7,6 +7,7 @@ import { Topbar } from "@/components/Topbar";
 import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
+import { ModalCorrecaoRegistro, type AlvoCorrecao } from "@/components/ModalCorrecaoRegistro";
 import { formatarData, formatarHora, hojeNaEscola, iniciais, plural } from "@/lib/format";
 import { ROTULOS_METODO_PRESENCA, type PresencasDoDia, type Sala } from "@/lib/types";
 
@@ -26,6 +27,7 @@ export default function PresencasPage() {
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [registrando, setRegistrando] = useState<number | null>(null);
+  const [alvo, setAlvo] = useState<AlvoCorrecao | null>(null);
 
   useEffect(() => {
     Api.listarSalas().then((resposta) => {
@@ -65,6 +67,7 @@ export default function PresencasPage() {
   }
 
   const ehHoje = data === hoje;
+  const podeCancelarAlguma = !!dia?.presentes.some((p) => p.pode_cancelar);
 
   return (
     <>
@@ -137,6 +140,7 @@ export default function PresencasPage() {
                     <th>Aluno</th>
                     <th>Turma</th>
                     <th>Registro</th>
+                    {podeCancelarAlguma && <th><span className="sr-only">Ações</span></th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -156,7 +160,29 @@ export default function PresencasPage() {
                         <span className={`badge ${presenca.metodo === "manual" ? "badge--neutral" : "badge--regular"}`}>
                           {ROTULOS_METODO_PRESENCA[presenca.metodo]}
                         </span>
+                        {presenca.registrado_por && <div className="panel-meta">por {presenca.registrado_por}</div>}
                       </td>
+                      {podeCancelarAlguma && (
+                        <td className="celula-acoes">
+                          {presenca.pode_cancelar && (
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-danger"
+                              onClick={() =>
+                                setAlvo({
+                                  acao: "cancelar",
+                                  tipo: "presenca",
+                                  id: presenca.id_presenca,
+                                  descricao: `${presenca.nome_aluno} (${presenca.nome_sala}) · presença às ${formatarHora(presenca.registrada_em)} de ${formatarData(presenca.registrada_em)}`,
+                                })
+                              }
+                            >
+                              <Icon name="x" />
+                              Cancelar<span className="sr-only"> a presença de {presenca.nome_aluno}</span>
+                            </button>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -219,6 +245,16 @@ export default function PresencasPage() {
           </div>
         </div>
       )}
+
+      <ModalCorrecaoRegistro
+        alvo={alvo}
+        onFechar={() => setAlvo(null)}
+        onConcluido={(mensagem) => {
+          setAlvo(null);
+          mostrarToast(mensagem);
+          carregar();
+        }}
+      />
     </>
   );
 }

@@ -19,6 +19,7 @@ import {
   type AcaoEquipe,
   type ChamadoAdmin,
   type ContaAdmin,
+  type DiagnosticoEnvio,
   type EscolaAdmin,
   type EscolaCatalogo,
   type PapelConta,
@@ -147,7 +148,8 @@ function AbaGeral({ irPara }: { irPara: (aba: Aba) => void }) {
     { rotulo: "Alunos", valor: resumo.alunos, detalhe: `${resumo.turmas} turmas` },
     { rotulo: "Entradas atrasadas no mês", valor: resumo.atrasos_mes, detalhe: `${resumo.saidas_mes} saídas antecipadas` },
     { rotulo: "Presenças pelo app no mês", valor: resumo.presencas_mes },
-    { rotulo: "Avisos na fila", valor: resumo.avisos_pendentes, detalhe: "sem envio automático configurado" },
+    // Pendente: o sistema não enviou sozinho; vale mesmo depois de um provedor ser configurado.
+    { rotulo: "Avisos na fila", valor: resumo.avisos_pendentes, detalhe: "para a escola enviar ou marcar como avisada" },
   ];
 
   return (
@@ -195,7 +197,149 @@ function AbaGeral({ irPara }: { irPara: (aba: Aba) => void }) {
           {resumo.escolas_fora_catalogo > 0 && `${plural(resumo.escolas_fora_catalogo, "escola foi criada", "escolas foram criadas")} fora do catálogo.`}
         </p>
       </div>
+      <PainelEnvioMensagens />
     </>
+  );
+}
+
+const NOMES_CANAL = { email: "E-mail", whatsapp: "WhatsApp" } as const;
+const NIVEIS_AVISO = {
+  erro: { icone: "warningCircle", rotulo: "Problema" },
+  aviso: { icone: "alert", rotulo: "Atenção" },
+  info: { icone: "info", rotulo: "Como funciona" },
+} as const;
+
+/**
+ * Por que as mensagens aos responsáveis saem ou não (admin/diagnosticoEnvio.php):
+ * o que está configurado na API - só se está, nunca o valor -, o que
+ * costuma impedir a entrega e o que aconteceu nos últimos 30 dias em todas
+ * as escolas, com o último motivo de falha de cada canal. Nada é enviado
+ * daqui; a consulta do domínio do remetente é só leitura.
+ */
+function PainelEnvioMensagens() {
+  const [diagnostico, setDiagnostico] = useState<DiagnosticoEnvio | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [consultando, setConsultando] = useState(false);
+
+  const carregar = useCallback(async (verificarDominio: boolean) => {
+    const resposta = await Api.adminDiagnosticoEnvio(verificarDominio);
+    if (resposta.sucesso && resposta.dados) {
+      setDiagnostico(resposta.dados);
+      setErro(null);
+    } else {
+      setErro(resposta.mensagem);
+    }
+  }, []);
+
+  useEffect(() => {
+    carregar(false);
+  }, [carregar]);
+
+  async function consultarDominio() {
+    setConsultando(true);
+    await carregar(true);
+    setConsultando(false);
+  }
+
+  return (
+    <section className="panel painel-envio" aria-labelledby="titulo-envio">
+      <div className="panel-head">
+        <h2 id="titulo-envio">Envio de mensagens aos responsáveis</h2>
+        <span className="panel-meta">Últimos 30 dias, todas as escolas</span>
+        <p className="panel-desc">
+          O que está configurado na API (sem mostrar nenhuma chave) e por que a última mensagem falhou. Nenhuma mensagem é enviada daqui.
+        </p>
+      </div>
+      {erro && (
+        <div className="error-block" role="alert">
+          {erro}
+        </div>
+      )}
+      {!diagnostico && !erro && <Esqueleto variante="lista" texto="Carregando o diagnóstico do envio…" />}
+      {diagnostico && (
+        <>
+          <div className="envio-canais">
+            {(["email", "whatsapp"] as const).map((canal) => {
+              const numeros = diagnostico.ultimos_30_dias[canal];
+              const automatico = diagnostico[canal].configurado;
+              let descricao: string;
+              if (canal === "email") {
+                const { provedor, dominio_remetente } = diagnostico.email;
+                descricao = automatico
+                  ? `Provedor: ${provedor ?? "não identificado"}${dominio_remetente ? ` · remetente @${dominio_remetente}` : ""}`
+                  : "Sem provedor: os e-mails ficam em Notificações, para a escola avisar por outro meio.";
+              } else {
+                descricao = automatico
+                  ? diagnostico.whatsapp.modelo
+                    ? "Provedor configurado, com modelo de mensagem aprovado."
+                    : "Provedor configurado, sem modelo de mensagem aprovado."
+                  : "As mensagens ficam em Notificações com o link pronto para o WhatsApp da escola.";
+              }
+              return (
+                <div key={canal} className="envio-canal">
+                  <div className="envio-canal-topo">
+                    <h3>{NOMES_CANAL[canal]}</h3>
+                    <span className={`badge ${automatico ? "badge--enviada" : "badge--pendente"}`}>
+                      {automatico ? "Envio automático" : "Sem envio automático"}
+                    </span>
+                  </div>
+                  <p className="panel-meta">{descricao}</p>
+                  <dl className="envio-numeros">
+                    <div>
+                      <dt>Enviadas pelo sistema</dt>
+                      <dd className="tabular">{numeros.enviadas.toLocaleString("pt-BR")}</dd>
+                    </div>
+                    <div>
+                      <dt>Avisadas pela escola</dt>
+                      <dd className="tabular">{numeros.avisadas_por_fora.toLocaleString("pt-BR")}</dd>
+                    </div>
+                    <div>
+                      <dt>Para mandar</dt>
+                      <dd className="tabular">{numeros.pendentes.toLocaleString("pt-BR")}</dd>
+                    </div>
+                    <div>
+                      <dt>Com erro</dt>
+                      <dd className="tabular">{numeros.erros.toLocaleString("pt-BR")}</dd>
+                    </div>
+                  </dl>
+                  {numeros.ultimo_erro && (
+                    <div className="erro-envio">
+                      <b>Último erro{numeros.ultimo_erro_em ? ` (${formatarDataHora(numeros.ultimo_erro_em)})` : ""}:</b> {numeros.ultimo_erro}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {diagnostico.avisos.length > 0 && (
+            <ul className="envio-avisos">
+              {diagnostico.avisos.map((aviso) => (
+                <li key={`${aviso.canal}-${aviso.texto}`} className={`envio-aviso envio-aviso--${aviso.nivel}`}>
+                  <Icon name={NIVEIS_AVISO[aviso.nivel].icone} />
+                  <span>
+                    <b>
+                      {NOMES_CANAL[aviso.canal]} · {NIVEIS_AVISO[aviso.nivel].rotulo}:
+                    </b>{" "}
+                    {aviso.texto}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {diagnostico.email.provedor === "api.resend.com" && (
+            <div className="envio-dominio">
+              <button type="button" className="btn btn-sm" onClick={consultarDominio} disabled={consultando} aria-busy={consultando}>
+                <Icon name="search" />
+                {consultando ? "Consultando…" : "Consultar o domínio do remetente"}
+              </button>
+              <p className="results-caption" role="status">
+                {diagnostico.dominio?.texto ?? "Confere no Resend se o domínio do remetente está verificado (só leitura)."}
+              </p>
+            </div>
+          )}
+        </>
+      )}
+    </section>
   );
 }
 

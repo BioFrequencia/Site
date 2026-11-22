@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useId, type ReactNode } from "react";
 import { Icon } from "./Icon";
 
 export function Modal({
@@ -16,6 +16,7 @@ export function Modal({
   children: ReactNode;
   footer?: ReactNode;
 }) {
+  const idTitulo = useId();
   useEffect(() => {
     if (!aberto) return;
     function aoTeclar(evento: KeyboardEvent) {
@@ -29,9 +30,10 @@ export function Modal({
 
   return (
     <div className="modal-overlay open" onClick={onFechar}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      {/* Leitores de tela anunciam como janela de diálogo, com o título. */}
+      <div className="modal" role="dialog" aria-modal="true" aria-labelledby={idTitulo} onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <h3>{titulo}</h3>
+          <h3 id={idTitulo}>{titulo}</h3>
           <button type="button" className="modal-close" onClick={onFechar} aria-label="Fechar">
             <Icon name="x" />
           </button>

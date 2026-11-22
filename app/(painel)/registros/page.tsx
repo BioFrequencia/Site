@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Api } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
 import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
 import { ModalRegistro } from "@/components/ModalRegistro";
+import { ModalCorrecaoRegistro, type AlvoCorrecao } from "@/components/ModalCorrecaoRegistro";
 import { formatarData, formatarHora, hojeNaEscola, iniciais, rotuloOrigemAtraso } from "@/lib/format";
 import type { AlunoFiltro, RegistrosDoDia, Sala, TipoRegistro } from "@/lib/types";
 
@@ -18,11 +18,13 @@ import type { AlunoFiltro, RegistrosDoDia, Sala, TipoRegistro } from "@/lib/type
  * preenchido com "agora") e mostra o que foi registrado no dia. As
  * presenças do app depois da tolerância aparecem aqui sozinhas, como
  * entrada atrasada "pela presença do app".
+ *
+ * Registro feito por engano é CANCELADO, com motivo (migração 012): não
+ * some, sai das contas e fica no histórico de correções. Cancela a gestão,
+ * ou quem registrou nos primeiros minutos (a API diz em pode_cancelar).
  */
 export default function RegistrosPage() {
-  const { coordenacao } = useAuth();
   const { mostrarToast } = useToast();
-  const gestao = coordenacao?.papel === "gestor";
 
   const [data, setData] = useState(hojeNaEscola());
   const [idSala, setIdSala] = useState<number | null>(null);
@@ -32,6 +34,8 @@ export default function RegistrosPage() {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [modal, setModal] = useState<TipoRegistro | null>(null);
+  const [mostrarCancelados, setMostrarCancelados] = useState(false);
+  const [alvo, setAlvo] = useState<AlvoCorrecao | null>(null);
 
   useEffect(() => {
     let ativo = true;
@@ -49,7 +53,7 @@ export default function RegistrosPage() {
 
   const carregar = useCallback(async () => {
     setCarregando(true);
-    const resposta = await Api.listarRegistros(data, idSala);
+    const resposta = await Api.listarRegistros(data, idSala, mostrarCancelados);
     if (resposta.sucesso && resposta.dados) {
       setDia(resposta.dados);
       setErro(null);
@@ -57,7 +61,7 @@ export default function RegistrosPage() {
       setErro(resposta.mensagem);
     }
     setCarregando(false);
-  }, [data, idSala]);
+  }, [data, idSala, mostrarCancelados]);
 
   useEffect(() => {
     carregar();
@@ -75,18 +79,14 @@ export default function RegistrosPage() {
     if (dia.dia.letivo) setModal(pedido);
   }, [dia]);
 
-  async function remover(tipo: TipoRegistro, id: number) {
-    if (!confirm("Apagar este registro? Use só para registro feito por engano. Avisos que já foram para a família não voltam.")) return;
-    const resposta = await Api.removerRegistro(tipo, id);
-    if (!resposta.sucesso) {
-      mostrarToast(resposta.mensagem, true);
-      return;
-    }
-    mostrarToast("Registro apagado.");
-    carregar();
+  /** "Ana Lima (6º A) · entrada atrasada às 07:31 de 19/11/2026" */
+  function descrever(registro: RegistrosDoDia["registros"][number]): string {
+    const tipo = registro.tipo === "atraso" ? "entrada atrasada" : "saída antecipada";
+    return `${registro.nome_aluno} (${registro.nome_sala}) · ${tipo} às ${formatarHora(registro.momento)} de ${formatarData(registro.momento)}`;
   }
 
   const hoje = data === hojeNaEscola();
+  const temAcoes = !!dia?.registros.some((r) => r.pode_cancelar || (r.cancelado && dia.pode_restaurar));
 
   return (
     <>
@@ -140,6 +140,10 @@ export default function RegistrosPage() {
             ))}
           </select>
         </div>
+        <label className="filtro-marcar">
+          <input type="checkbox" checked={mostrarCancelados} onChange={(e) => setMostrarCancelados(e.target.checked)} />
+          Mostrar cancelados
+        </label>
         {!hoje && (
           <button type="button" className="btn" onClick={() => setData(hojeNaEscola())}>
             Voltar para hoje
@@ -187,9 +191,17 @@ export default function RegistrosPage() {
           <div className="panel">
             <div className="panel-head">
               <h2>{hoje ? "Hoje" : formatarData(dia.data)}</h2>
-              <Link href="/presencas" className="panel-meta">
-                Ver presenças do app
-              </Link>
+              <span className="panel-links">
+                {/* pode_restaurar: gestão, numa API com a migração 012 (o histórico existe). */}
+                {dia.pode_restaurar && (
+                  <Link href="/registros/correcoes" className="panel-meta">
+                    Histórico de correções
+                  </Link>
+                )}
+                <Link href="/presencas" className="panel-meta">
+                  Ver presenças do app
+                </Link>
+              </span>
             </div>
             {dia.registros.length === 0 ? (
               <div className="empty-state">
@@ -205,12 +217,12 @@ export default function RegistrosPage() {
                     <th>Tipo</th>
                     <th>Motivo</th>
                     <th>Registro</th>
-                    {gestao && <th><span className="sr-only">Ações</span></th>}
+                    {temAcoes && <th><span className="sr-only">Ações</span></th>}
                   </tr>
                 </thead>
                 <tbody>
                   {dia.registros.map((registro) => (
-                    <tr key={`${registro.tipo}-${registro.id}`}>
+                    <tr key={`${registro.tipo}-${registro.id}`} className={registro.cancelado ? "linha-cancelada" : undefined}>
                       <td data-label="Horário" className="tabular">{formatarHora(registro.momento)}</td>
                       <td className="celula-titulo">
                         <Link href={`/turmas/${registro.id_aluno}`} className="student-cell">
@@ -226,6 +238,7 @@ export default function RegistrosPage() {
                           {registro.tipo === "atraso" ? "Entrada atrasada" : "Saída antecipada"}
                         </span>
                         {registro.justificado && <span className="badge badge--regular">Justificado</span>}
+                        {registro.cancelado && <span className="badge badge--cancelado">Cancelado</span>}
                       </td>
                       <td data-label="Motivo">
                         {registro.motivo ?? "-"}
@@ -234,18 +247,35 @@ export default function RegistrosPage() {
                       <td data-label="Registro" className="panel-meta">
                         {registro.tipo === "atraso" ? rotuloOrigemAtraso(registro.origem) : "Lançada pela coordenação"}
                         {registro.registrado_por && <div>por {registro.registrado_por}</div>}
+                        {registro.cancelado && (
+                          <div className="info-cancelamento">
+                            Cancelado{registro.cancelado_por ? ` por ${registro.cancelado_por}` : ""}
+                            {registro.motivo_cancelamento ? `: ${registro.motivo_cancelamento}` : ""}
+                          </div>
+                        )}
                       </td>
-                      {gestao && (
+                      {temAcoes && (
                         <td className="celula-acoes">
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-danger"
-                            title="Apagar um registro feito por engano"
-                            onClick={() => remover(registro.tipo, registro.id)}
-                          >
-                            <Icon name="trash" />
-                            Apagar
-                          </button>
+                          {registro.pode_cancelar && (
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-danger"
+                              onClick={() => setAlvo({ acao: "cancelar", tipo: registro.tipo, id: registro.id, descricao: descrever(registro) })}
+                            >
+                              <Icon name="x" />
+                              Cancelar<span className="sr-only"> {descrever(registro)}</span>
+                            </button>
+                          )}
+                          {registro.cancelado && dia.pode_restaurar && (
+                            <button
+                              type="button"
+                              className="btn btn-sm"
+                              onClick={() => setAlvo({ acao: "restaurar", tipo: registro.tipo, id: registro.id, descricao: descrever(registro) })}
+                            >
+                              <Icon name="refresh" />
+                              Restaurar<span className="sr-only"> {descrever(registro)}</span>
+                            </button>
+                          )}
                         </td>
                       )}
                     </tr>
@@ -256,6 +286,16 @@ export default function RegistrosPage() {
           </div>
         </div>
       )}
+
+      <ModalCorrecaoRegistro
+        alvo={alvo}
+        onFechar={() => setAlvo(null)}
+        onConcluido={(mensagem) => {
+          setAlvo(null);
+          mostrarToast(mensagem);
+          carregar();
+        }}
+      />
 
       <ModalRegistro
         tipo={modal}

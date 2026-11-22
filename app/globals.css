@@ -5332,3 +5332,211 @@ button.card-resumo .card-resumo-rotulo {
 .main:focus {
   outline: none;
 }
+
+/* ---------- Correções, contato da escola e diagnóstico do envio ----------
+   Registro cancelado (migração 012): continua no histórico, mais apagado
+   e com o selo "Cancelado" - a cor nunca é o único sinal. */
+.linha-cancelada td {
+  background: var(--cor-superficie-2);
+  color: var(--cor-texto-suave);
+}
+.badge--cancelado {
+  background: var(--cor-superficie);
+  color: var(--cor-texto-2);
+  border-color: var(--cor-borda-forte);
+  border-style: dashed;
+}
+.info-cancelamento {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--cor-texto-suave);
+}
+.filtro-marcar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  font-size: 15px;
+  color: var(--cor-texto);
+  cursor: pointer;
+}
+.filtro-marcar input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--cor-destaque);
+}
+.panel-links {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+}
+.correcao-explicacao {
+  margin-bottom: 16px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--cor-texto-2);
+}
+/* Botões lado a lado numa célula: quando quebram de linha, o de baixo
+   continua alinhado à esquerda (margem só à direita). */
+.celula-acoes .btn {
+  margin: 3px 8px 3px 0;
+}
+.celula-acoes .btn:last-child {
+  margin-right: 0;
+}
+/* Botão com cara de link (ação dentro de um texto). */
+.btn-link {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--cor-destaque-texto);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.btn-link:hover {
+  text-decoration-thickness: 2px;
+}
+/* Por que o provedor recusou a mensagem (sem o contato nem o texto). */
+.erro-envio {
+  max-width: 300px;
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--cor-perigo);
+  overflow-wrap: anywhere;
+}
+.contato-rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-top: 16px;
+}
+.contato-rodape .btn {
+  margin-left: auto;
+}
+
+/* Administração > Visão geral: envio de mensagens aos responsáveis. */
+.painel-envio {
+  margin-top: 16px;
+}
+.envio-canais {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.envio-canal {
+  padding: 16px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-controle);
+}
+.envio-canal-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  margin-bottom: 4px;
+}
+.envio-canal-topo h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--cor-texto);
+}
+.envio-numeros {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+  margin: 14px 0 0;
+}
+.envio-numeros dt {
+  font-size: 13px;
+  color: var(--cor-texto-suave);
+}
+.envio-numeros dd {
+  margin: 2px 0 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--cor-texto);
+  font-variant-numeric: tabular-nums;
+}
+.envio-canal .erro-envio {
+  max-width: none;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--cor-borda);
+}
+.envio-avisos {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.envio-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-controle);
+  background: var(--cor-superficie-2);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--cor-texto);
+}
+.envio-aviso .icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+}
+.envio-aviso--erro .icon {
+  color: var(--cor-perigo);
+}
+.envio-aviso--aviso .icon {
+  color: var(--cor-aviso);
+}
+.envio-aviso--info .icon {
+  color: var(--cor-info);
+}
+.envio-dominio {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 16px;
+}
+.envio-dominio .results-caption {
+  flex: 1 1 240px;
+  margin: 0;
+}
+@media (max-width: 900px) {
+  /* Em cartão, o cartão inteiro fica apagado (não cada célula). */
+  .tabela-cartoes tr.linha-cancelada {
+    background: var(--cor-superficie-2);
+  }
+  .tabela-cartoes tr.linha-cancelada td {
+    background: none;
+  }
+}
+@media (max-width: 720px) {
+  .envio-canais {
+    grid-template-columns: 1fr;
+  }
+  .erro-envio {
+    max-width: none;
+  }
+}
+@media (pointer: coarse) {
+  .filtro-marcar {
+    min-height: 44px;
+  }
+}
