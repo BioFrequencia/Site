@@ -190,7 +190,10 @@ export default function SuportePage() {
           <div className="faq">
             {PERGUNTAS.map((item) => (
               <details key={item.pergunta} className="faq-item">
-                <summary>{item.pergunta}</summary>
+                <summary>
+                  {item.pergunta}
+                  <Icon name="chevronDown" />
+                </summary>
                 <div className="faq-resposta">{item.resposta}</div>
               </details>
             ))}
@@ -241,7 +244,11 @@ export default function SuportePage() {
               />
               <p className="dica-campo">{mensagem.length}/4000</p>
             </div>
-            {erro && <p className="field-error show">{erro}</p>}
+            {erro && (
+              <p className="field-error show" role="alert">
+                {erro}
+              </p>
+            )}
             <button type="submit" className="btn btn-primary" disabled={enviando} aria-busy={enviando}>
               <Icon name="send" />
               {enviando ? "Enviando…" : "Enviar chamado"}
@@ -258,8 +265,8 @@ export default function SuportePage() {
         {!chamados && !erroLista && <Esqueleto variante="lista" texto="Carregando os chamados…" />}
         {chamados && chamados.length === 0 && (
           <div className="empty-state">
-            <Icon name="lifeBuoy" />
-            <p>Nenhum chamado aberto ainda.</p>
+            <Icon name="headset" />
+            <p>Nenhum chamado aberto ainda. Quando você enviar um, a resposta da equipe aparece aqui.</p>
           </div>
         )}
         {chamados && chamados.length > 0 && (

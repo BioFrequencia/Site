@@ -30,24 +30,24 @@ export const GRUPOS: { titulo: string; itens: Item[] }[] = [
   {
     titulo: "Visão geral",
     itens: [
-      { href: "/dashboard", label: "Dashboard", icone: "home", principal: true },
+      { href: "/dashboard", label: "Painel", icone: "home", principal: true },
       { href: "/alertas", label: "Alertas", icone: "alert", badge: "alertas", principal: true },
     ],
   },
   {
     titulo: "Registros",
     itens: [
-      { href: "/registros", label: "Entradas e saídas", icone: "clock", principal: true, curto: "Registros" },
+      { href: "/registros", label: "Entradas e saídas", icone: "doorOpen", principal: true, curto: "Registros" },
       { href: "/presencas", label: "Presenças", icone: "userCheck" },
     ],
   },
   {
     titulo: "Alunos e famílias",
     itens: [
-      { href: "/turmas", label: "Turmas e alunos", icone: "users", principal: true, curto: "Turmas" },
-      { href: "/responsaveis", label: "Responsáveis", icone: "shield" },
+      { href: "/turmas", label: "Turmas e alunos", icone: "student", principal: true, curto: "Turmas" },
+      { href: "/responsaveis", label: "Responsáveis", icone: "addressBook" },
       { href: "/notificacoes", label: "Notificações", icone: "bell", badge: "notificacoes" },
-      { href: "/acompanhamento", label: "Acompanhamento", icone: "activity" },
+      { href: "/acompanhamento", label: "Acompanhamento", icone: "clipboardText" },
       { href: "/relatorios", label: "Relatórios", icone: "fileText" },
     ],
   },
@@ -62,9 +62,9 @@ export const GRUPOS: { titulo: string; itens: Item[] }[] = [
     titulo: "Ajuda",
     itens: [
       { href: "/como-funciona", label: "Como funciona", icone: "book" },
-      { href: "/suporte", label: "Suporte", icone: "lifeBuoy" },
-      { href: "/downloads", label: "Baixar app", icone: "download" },
-      { href: "/conta", label: "Minha conta", icone: "user" },
+      { href: "/suporte", label: "Suporte", icone: "headset" },
+      { href: "/downloads", label: "Baixar aplicativos", icone: "download" },
+      { href: "/conta", label: "Minha conta", icone: "userCircle" },
     ],
   },
 ];
@@ -180,8 +180,9 @@ export function Sidebar({ contadores }: { contadores: Contadores }) {
               </div>
             </div>
           </Link>
-          <button type="button" className="icon-btn" onClick={logout} title="Sair" aria-label="Sair">
+          <button type="button" className="btn btn-sm btn-sair" onClick={logout}>
             <Icon name="logout" />
+            <span className="btn-sair-texto">Sair</span>
           </button>
         </div>
       </aside>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Api } from "@/lib/api";
 import { Topbar } from "@/components/Topbar";
+import { Paginacao } from "@/components/Paginacao";
 import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
@@ -18,8 +19,9 @@ type Origem = "" | "manual" | "automatico";
  * Notificações: o histórico do que saiu para os responsáveis - os avisos
  * automáticos e as mensagens da coordenação (quem enviou, quando, por qual
  * canal e a situação). Pendente: sem envio automático, a coordenação manda
- * pelo link e marca como enviada. Erro: dá para tentar de novo ou, se a
- * família foi avisada por fora, marcar como enviada.
+ * pelo link e marca como avisada. Erro: mostra por que o provedor recusou;
+ * dá para tentar de novo ou, se a família foi avisada por fora, marcar como
+ * avisada - e a lista mostra quem confirmou, sem fingir que o sistema enviou.
  */
 export default function NotificacoesPage() {
   const { mostrarToast } = useToast();
@@ -60,7 +62,7 @@ export default function NotificacoesPage() {
       mostrarToast(resposta.mensagem, true);
       return;
     }
-    mostrarToast("Notificação marcada como enviada.");
+    mostrarToast(resposta.mensagem);
     carregar();
   }
 
@@ -68,7 +70,9 @@ export default function NotificacoesPage() {
     setOcupada(notificacao.id_notificacao);
     const resposta = await Api.reenviarNotificacao(notificacao.id_notificacao);
     setOcupada(null);
-    mostrarToast(resposta.mensagem, !resposta.sucesso || resposta.dados?.status === "erro");
+    const falhou = !resposta.sucesso || resposta.dados?.status === "erro";
+    const motivo = falhou && resposta.dados?.erro ? ` Motivo: ${resposta.dados.erro}` : "";
+    mostrarToast(resposta.mensagem + motivo, falhou);
     carregar();
   }
 
@@ -83,52 +87,72 @@ export default function NotificacoesPage() {
           </Link>
         }
       />
-      <div className="filter-bar" style={{ marginBottom: 22 }}>
-        <div className="pill-group">
-          {[
-            { valor: "pendente" as const, rotulo: "Pendentes" },
-            { valor: "erro" as const, rotulo: "Com falha no envio" },
-            { valor: "enviada" as const, rotulo: "Enviadas" },
-            { valor: "" as const, rotulo: "Todas" },
-          ].map((opcao) => (
-            <button
-              key={opcao.valor}
-              type="button"
-              className={`filter-pill${status === opcao.valor ? " active" : ""}`}
-              onClick={() => {
-                setStatus(opcao.valor);
-                setPagina(1);
-              }}
-            >
-              {opcao.rotulo}
-            </button>
-          ))}
+      <div className="filter-bar">
+        <div className="filtro" role="group" aria-labelledby="filtro-situacao-envio">
+          <span id="filtro-situacao-envio" className="filtro-rotulo">
+            Situação
+          </span>
+          <div className="pill-group">
+            {[
+              { valor: "pendente" as const, rotulo: "Pendentes" },
+              { valor: "erro" as const, rotulo: "Com falha no envio" },
+              { valor: "enviada" as const, rotulo: "Enviadas" },
+              { valor: "" as const, rotulo: "Todas" },
+            ].map((opcao) => (
+              <button
+                key={opcao.valor}
+                type="button"
+                aria-pressed={status === opcao.valor}
+                className={`filter-pill${status === opcao.valor ? " active" : ""}`}
+                onClick={() => {
+                  setStatus(opcao.valor);
+                  setPagina(1);
+                }}
+              >
+                {opcao.rotulo}
+              </button>
+            ))}
+          </div>
         </div>
-        <select
-          className="filter-select"
-          aria-label="Origem"
-          value={origem}
-          onChange={(e) => {
-            setOrigem(e.target.value as Origem);
-            setPagina(1);
-          }}
-        >
-          <option value="">Automáticas e da coordenação</option>
-          <option value="manual">Enviadas pela coordenação</option>
-          <option value="automatico">Avisos automáticos</option>
-        </select>
+        <div className="filtro">
+          <label htmlFor="filtro-origem" className="filtro-rotulo">
+            Origem
+          </label>
+          <select
+            id="filtro-origem"
+            className="filter-select"
+            value={origem}
+            onChange={(e) => {
+              setOrigem(e.target.value as Origem);
+              setPagina(1);
+            }}
+          >
+            <option value="">Automáticas e da coordenação</option>
+            <option value="manual">Enviadas pela coordenação</option>
+            <option value="automatico">Avisos automáticos</option>
+          </select>
+        </div>
       </div>
-      {erro && <div className="error-block">{erro}</div>}
+      {erro && (
+        <div className="error-block" role="alert">
+          {erro}
+        </div>
+      )}
       {carregando && <Esqueleto variante="lista" texto="Carregando notificações…" />}
       {!carregando && (
-        <div className="panel">
+        <div className="panel panel-tabela">
           {notificacoes.length === 0 ? (
             <div className="empty-state">
               <Icon name="bell" />
-              <p>Nenhuma notificação neste filtro.</p>
+              <p>
+                {status === "pendente"
+                  ? "Nenhuma notificação pendente. Os avisos automáticos e as mensagens da coordenação esperando envio aparecem aqui."
+                  : "Nenhuma notificação com esses filtros."}
+              </p>
             </div>
           ) : (
             <table className="data-table tabela-cartoes">
+              <caption className="sr-only">Notificações aos responsáveis</caption>
               <thead>
                 <tr>
                   <th>Aluno</th>
@@ -136,7 +160,9 @@ export default function NotificacoesPage() {
                   <th>Mensagem</th>
                   <th>Quem e quando</th>
                   <th>Situação</th>
-                  <th></th>
+                  <th>
+                    <span className="sr-only">Ações</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -175,9 +201,24 @@ export default function NotificacoesPage() {
                         <div className="panel-meta">{quando ? formatarDataHora(quando) : "-"}</div>
                       </td>
                       <td data-label="Situação">
-                        <span className={selo.classe}>{selo.texto}</span>
-                        {notificacao.status_notificacao === "enviada" && notificacao.data_envio_notificacao && (
-                          <div className="panel-meta">{formatarDataHora(notificacao.data_envio_notificacao)}</div>
+                        {notificacao.forma_envio === "manual" ? (
+                          <>
+                            <span className="badge badge--enviada">Avisada pela escola</span>
+                            <div className="panel-meta">
+                              {notificacao.confirmado_por ? `Confirmada por ${notificacao.confirmado_por}` : "Confirmada pela escola"}
+                              {notificacao.confirmado_em ? ` · ${formatarDataHora(notificacao.confirmado_em)}` : ""}
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <span className={selo.classe}>{selo.texto}</span>
+                            {notificacao.status_notificacao === "enviada" && notificacao.data_envio_notificacao && (
+                              <div className="panel-meta">{formatarDataHora(notificacao.data_envio_notificacao)}</div>
+                            )}
+                          </>
+                        )}
+                        {notificacao.status_notificacao === "erro" && notificacao.erro_envio && (
+                          <div className="erro-envio">{notificacao.erro_envio}</div>
                         )}
                       </td>
                       <td className="celula-acoes">
@@ -188,22 +229,26 @@ export default function NotificacoesPage() {
                             onClick={() => tentarDeNovo(notificacao)}
                             disabled={ocupada === notificacao.id_notificacao}
                           >
-                            {ocupada === notificacao.id_notificacao ? "…" : "Tentar de novo"}
+                            {ocupada === notificacao.id_notificacao ? "Tentando…" : "Tentar de novo"}
+                            <span className="sr-only"> — aviso para {notificacao.nome_responsavel}</span>
                           </button>
                         )}
                         {linkManual && (
                           <a className="btn btn-sm" href={linkManual} target="_blank" rel="noopener noreferrer">
                             Abrir no WhatsApp
+                            <span className="sr-only"> — {notificacao.nome_responsavel} (abre em outra aba)</span>
                           </a>
                         )}
                         {notificacao.status_notificacao !== "enviada" && (
                           <button
                             type="button"
                             className="btn btn-sm"
+                            title="Use depois de mandar pelo link, ou quando a família já foi avisada por outro meio (telefone, pessoalmente)."
                             onClick={() => marcarEnviada(notificacao)}
                             disabled={ocupada === notificacao.id_notificacao}
                           >
-                            {ocupada === notificacao.id_notificacao ? "…" : "Marcar enviada"}
+                            {ocupada === notificacao.id_notificacao ? "Salvando…" : "Marcar como avisada"}
+                            <span className="sr-only"> — aviso para {notificacao.nome_responsavel}</span>
                           </button>
                         )}
                       </td>
@@ -213,24 +258,7 @@ export default function NotificacoesPage() {
               </tbody>
             </table>
           )}
-          {totalPaginas > 1 && (
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 18 }}>
-              <button type="button" className="btn btn-sm" disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)}>
-                Anterior
-              </button>
-              <span className="panel-meta" style={{ alignSelf: "center" }}>
-                Página {pagina} de {totalPaginas}
-              </span>
-              <button
-                type="button"
-                className="btn btn-sm"
-                disabled={pagina >= totalPaginas}
-                onClick={() => setPagina((p) => p + 1)}
-              >
-                Próxima
-              </button>
-            </div>
-          )}
+          <Paginacao pagina={pagina} totalPaginas={totalPaginas} onMudar={setPagina} />
         </div>
       )}
     </>

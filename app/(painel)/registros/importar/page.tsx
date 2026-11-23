@@ -179,7 +179,7 @@ function TabelaOcorrencias({ linhas }: { linhas: OcorrenciaImportada[] }) {
     <table className="data-table tabela-cartoes">
       <thead>
         <tr>
-          <th>Linha</th>
+          <th className="num">Linha</th>
           <th>Aluno</th>
           <th>Data e horário</th>
           <th>Tipo</th>

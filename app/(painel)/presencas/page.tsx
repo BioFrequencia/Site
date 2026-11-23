@@ -7,7 +7,8 @@ import { Topbar } from "@/components/Topbar";
 import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
-import { formatarData, formatarHora, hojeNaEscola, iniciais } from "@/lib/format";
+import { ModalCorrecaoRegistro, type AlvoCorrecao } from "@/components/ModalCorrecaoRegistro";
+import { formatarData, formatarHora, hojeNaEscola, iniciais, plural } from "@/lib/format";
 import { ROTULOS_METODO_PRESENCA, type PresencasDoDia, type Sala } from "@/lib/types";
 
 /**
@@ -26,6 +27,7 @@ export default function PresencasPage() {
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [registrando, setRegistrando] = useState<number | null>(null);
+  const [alvo, setAlvo] = useState<AlvoCorrecao | null>(null);
 
   useEffect(() => {
     Api.listarSalas().then((resposta) => {
@@ -65,6 +67,7 @@ export default function PresencasPage() {
   }
 
   const ehHoje = data === hoje;
+  const podeCancelarAlguma = !!dia?.presentes.some((p) => p.pode_cancelar);
 
   return (
     <>
@@ -72,42 +75,51 @@ export default function PresencasPage() {
         titulo="Presenças"
         subtitulo={
           dia
-            ? `${dia.presentes.length} de ${dia.total_alunos} aluno(s) presentes em ${formatarData(data)}.`
+            ? `${dia.presentes.length} de ${plural(dia.total_alunos, "aluno presente", "alunos presentes")} em ${formatarData(data)}.`
             : "Registradas pelo app de biometria da coordenação."
         }
-        acoes={
-          <div className="filter-bar">
-            <input
-              type="date"
-              className="filter-select"
-              value={data}
-              max={hoje}
-              onChange={(e) => e.target.value && setData(e.target.value)}
-              aria-label="Dia"
-            />
-            <select
-              className="filter-select"
-              value={idSala ?? ""}
-              onChange={(e) => setIdSala(e.target.value ? Number(e.target.value) : null)}
-              aria-label="Turma"
-            >
-              <option value="">Todas as turmas</option>
-              {salas.map((sala) => (
-                <option key={sala.id_sala} value={sala.id_sala}>
-                  {sala.nome_sala}
-                </option>
-              ))}
-            </select>
-          </div>
-        }
       />
+
+      <div className="filter-bar">
+        <div className="filtro">
+          <label htmlFor="presencas-dia" className="filtro-rotulo">
+            Dia
+          </label>
+          <input
+            id="presencas-dia"
+            type="date"
+            className="filter-select"
+            value={data}
+            max={hoje}
+            onChange={(e) => e.target.value && setData(e.target.value)}
+          />
+        </div>
+        <div className="filtro">
+          <label htmlFor="presencas-turma" className="filtro-rotulo">
+            Turma
+          </label>
+          <select
+            id="presencas-turma"
+            className="filter-select"
+            value={idSala ?? ""}
+            onChange={(e) => setIdSala(e.target.value ? Number(e.target.value) : null)}
+          >
+            <option value="">Todas as turmas</option>
+            {salas.map((sala) => (
+              <option key={sala.id_sala} value={sala.id_sala}>
+                {sala.nome_sala}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       {erro && <div className="error-block">{erro}</div>}
       {carregando && !dia && <Esqueleto variante="lista" texto="Carregando presenças…" />}
 
       {dia && (
         <div className="grid-2">
-          <div className="panel">
+          <div className="panel panel-tabela">
             <div className="panel-head">
               <h2>Presentes ({dia.presentes.length})</h2>
             </div>
@@ -128,15 +140,16 @@ export default function PresencasPage() {
                     <th>Aluno</th>
                     <th>Turma</th>
                     <th>Registro</th>
+                    {podeCancelarAlguma && <th><span className="sr-only">Ações</span></th>}
                   </tr>
                 </thead>
                 <tbody>
                   {dia.presentes.map((presenca) => (
                     <tr key={presenca.id_presenca}>
-                      <td data-label="Hora" className="num">{formatarHora(presenca.registrada_em)}</td>
+                      <td data-label="Hora" className="tabular">{formatarHora(presenca.registrada_em)}</td>
                       <td className="celula-titulo">
                         <div className="student-cell">
-                          <div className="avatar">{iniciais(presenca.nome_aluno)}</div>
+                          <div className="avatar" aria-hidden="true">{iniciais(presenca.nome_aluno)}</div>
                           <Link href={`/turmas/${presenca.id_aluno}`} className="student-name">
                             {presenca.nome_aluno}
                           </Link>
@@ -147,7 +160,29 @@ export default function PresencasPage() {
                         <span className={`badge ${presenca.metodo === "manual" ? "badge--neutral" : "badge--regular"}`}>
                           {ROTULOS_METODO_PRESENCA[presenca.metodo]}
                         </span>
+                        {presenca.registrado_por && <div className="panel-meta">por {presenca.registrado_por}</div>}
                       </td>
+                      {podeCancelarAlguma && (
+                        <td className="celula-acoes">
+                          {presenca.pode_cancelar && (
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-danger"
+                              onClick={() =>
+                                setAlvo({
+                                  acao: "cancelar",
+                                  tipo: "presenca",
+                                  id: presenca.id_presenca,
+                                  descricao: `${presenca.nome_aluno} (${presenca.nome_sala}) · presença às ${formatarHora(presenca.registrada_em)} de ${formatarData(presenca.registrada_em)}`,
+                                })
+                              }
+                            >
+                              <Icon name="x" />
+                              Cancelar<span className="sr-only"> a presença de {presenca.nome_aluno}</span>
+                            </button>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -155,7 +190,7 @@ export default function PresencasPage() {
             )}
           </div>
 
-          <div className="panel">
+          <div className="panel panel-tabela">
             <div className="panel-head">
               <h2>
                 {ehHoje ? "Ainda não registrados" : "Sem presença"} ({dia.ausentes.length})
@@ -168,12 +203,21 @@ export default function PresencasPage() {
               </div>
             ) : (
               <table className="data-table tabela-cartoes">
+                <thead>
+                  <tr>
+                    <th>Aluno</th>
+                    <th>Turma</th>
+                    <th>
+                      <span className="sr-only">Ação</span>
+                    </th>
+                  </tr>
+                </thead>
                 <tbody>
                   {dia.ausentes.map((aluno) => (
                     <tr key={aluno.id_aluno}>
                       <td className="celula-titulo">
                         <div className="student-cell">
-                          <div className="avatar">{iniciais(aluno.nome_aluno)}</div>
+                          <div className="avatar" aria-hidden="true">{iniciais(aluno.nome_aluno)}</div>
                           <Link href={`/turmas/${aluno.id_aluno}`} className="student-name">
                             {aluno.nome_aluno}
                           </Link>
@@ -189,6 +233,7 @@ export default function PresencasPage() {
                             disabled={registrando !== null}
                           >
                             {registrando === aluno.id_aluno ? "Registrando…" : "Registrar presença"}
+                            <span className="sr-only"> de {aluno.nome_aluno}</span>
                           </button>
                         )}
                       </td>
@@ -200,6 +245,16 @@ export default function PresencasPage() {
           </div>
         </div>
       )}
+
+      <ModalCorrecaoRegistro
+        alvo={alvo}
+        onFechar={() => setAlvo(null)}
+        onConcluido={(mensagem) => {
+          setAlvo(null);
+          mostrarToast(mensagem);
+          carregar();
+        }}
+      />
     </>
   );
 }

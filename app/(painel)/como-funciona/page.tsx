@@ -17,16 +17,16 @@ interface Pagina {
 const PAGINAS: Pagina[] = [
   {
     href: "/dashboard",
-    nome: "Dashboard",
+    nome: "Painel",
     icone: "home",
     para: "Ver a escola de relance.",
     detalhe:
-      "Pontualidade do mês (o anel), entradas atrasadas e saídas antecipadas dos últimos meses (o gráfico), a pontualidade de cada turma e os alunos que mais precisam de atenção.",
+      "Pontualidade, entradas atrasadas, alertas ativos e famílias avisadas no mês; os alunos que mais precisam de atenção; a pontualidade de cada turma e o gráfico das entradas atrasadas e saídas antecipadas dos últimos meses.",
   },
   {
     href: "/registros",
     nome: "Entradas e saídas",
-    icone: "clock",
+    icone: "doorOpen",
     para: "Registrar na portaria.",
     detalhe:
       "Escolha o aluno pelo nome e registre a entrada atrasada ou a saída antecipada - o horário já vem preenchido. Mostra tudo o que foi registrado no dia, inclusive o que veio sozinho pela presença do app.",
@@ -49,7 +49,7 @@ const PAGINAS: Pagina[] = [
   {
     href: "/turmas",
     nome: "Turmas e alunos",
-    icone: "users",
+    icone: "student",
     para: "Cadastrar e acompanhar cada aluno.",
     detalhe:
       "Turmas (com o período e o horário) e alunos, com as ocorrências dos últimos dias e a situação de cada um. A ficha do aluno junta o histórico, a biometria, os responsáveis e o acompanhamento.",
@@ -57,7 +57,7 @@ const PAGINAS: Pagina[] = [
   {
     href: "/responsaveis",
     nome: "Responsáveis",
-    icone: "shield",
+    icone: "addressBook",
     para: "Quem a escola avisa.",
     detalhe:
       "Todos os responsáveis, com o canal de aviso preferido (WhatsApp, e-mail ou os dois), e a lista dos alunos que ainda não têm ninguém cadastrado - esses a escola não consegue avisar.",
@@ -73,7 +73,7 @@ const PAGINAS: Pagina[] = [
   {
     href: "/acompanhamento",
     nome: "Acompanhamento",
-    icone: "activity",
+    icone: "clipboardText",
     para: "O que a escola fez.",
     detalhe: "Ligações, mensagens, reuniões e comunicados com os responsáveis, em ordem, para ninguém da equipe repetir o contato ou esquecer um caso.",
   },
@@ -95,20 +95,20 @@ const PAGINAS: Pagina[] = [
   {
     href: "/suporte",
     nome: "Suporte",
-    icone: "lifeBuoy",
+    icone: "headset",
     para: "Tirar dúvidas.",
     detalhe: "Perguntas frequentes e os chamados para a equipe do sistema, com a resposta aparecendo ali mesmo.",
   },
   {
     href: "/conta",
     nome: "Minha conta",
-    icone: "user",
+    icone: "userCircle",
     para: "Os seus dados.",
     detalhe: "Nome, e-mail, senha, tema claro ou escuro, sons e os aparelhos conectados (dá para desconectar um aparelho perdido).",
   },
   {
     href: "/downloads",
-    nome: "Baixar app",
+    nome: "Baixar aplicativos",
     icone: "download",
     para: "Instalar o app do tablet.",
     detalhe: "O APK do app de biometria da coordenação, que reconhece os alunos na chegada.",
@@ -135,7 +135,7 @@ export default function ComoFuncionaPage() {
     <>
       <Topbar titulo="Como funciona" subtitulo="O que o BioFrequência faz, de onde vêm os números e para que serve cada página." />
 
-      <div className="guia entrada-em-cascata">
+      <div className="guia">
         <section className="panel guia-destaque">
           <h2>O que o sistema faz</h2>
           <p>
@@ -212,7 +212,7 @@ export default function ComoFuncionaPage() {
               </div>
               <div>
                 <dt>Pontualidade</dt>
-                <dd>Dias de aula sem entrada atrasada, somando todos os alunos (é o anel do dashboard). Sem dia de aula, aparece &quot;—&quot;, nunca 100%.</dd>
+                <dd>Dias de aula sem entrada atrasada, somando todos os alunos (é o primeiro número do Painel). Sem dia de aula, aparece &quot;—&quot;, nunca 100%.</dd>
               </div>
               <div>
                 <dt>Prioridade</dt>
@@ -250,20 +250,20 @@ export default function ComoFuncionaPage() {
 
         <section className="panel">
           <h2>Para que serve cada página</h2>
-          <div className="guia-paginas">
+          <ul className="guia-paginas">
             {paginas.map((pagina) => (
-              <Link href={pagina.href} className="guia-pagina" key={pagina.href}>
-                <span className="guia-pagina-icone">
-                  <Icon name={pagina.icone} />
-                </span>
-                <span>
-                  <b>{pagina.nome}</b>
-                  <span className="guia-pagina-para">{pagina.para}</span>
-                  <span className="guia-pagina-detalhe">{pagina.detalhe}</span>
-                </span>
-              </Link>
+              <li className="guia-pagina" key={pagina.href}>
+                <Icon name={pagina.icone} />
+                <div>
+                  <h3>
+                    <Link href={pagina.href}>{pagina.nome}</Link>
+                  </h3>
+                  <p className="guia-pagina-para">{pagina.para}</p>
+                  <p className="guia-pagina-detalhe">{pagina.detalhe}</p>
+                </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
       </div>
     </>

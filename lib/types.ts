@@ -276,9 +276,25 @@ export interface Dashboard {
 }
 
 export type TipoRegistro = "atraso" | "saida";
+/** O que pode ser cancelado (registro/remover.php, migração 012). */
+export type TipoCancelavel = TipoRegistro | "presenca";
+
+/**
+ * Cancelamento (exclusão lógica, migração 012): o registro errado fica, com
+ * quem cancelou, quando e o motivo, e sai das contas. pode_cancelar diz se
+ * esta conta pode cancelá-lo (a gestão, ou quem registrou nos primeiros
+ * minutos).
+ */
+export interface SituacaoCancelamento {
+  cancelado?: boolean;
+  cancelado_em?: string | null;
+  cancelado_por?: string | null;
+  motivo_cancelamento?: string | null;
+  pode_cancelar?: boolean;
+}
 export type OrigemAtraso = "manual" | "presenca" | "ocorrencia";
 
-export interface RegistroEvento {
+export interface RegistroEvento extends SituacaoCancelamento {
   id: number;
   data: string;
   motivo: string | null;
@@ -327,10 +343,12 @@ export interface HistoricoAluno {
   atrasos: RegistroEvento[];
   saidas: RegistroEvento[];
   indicador: IndicadorAluno | null;
+  /** Só a gestão restaura um registro cancelado. */
+  pode_restaurar?: boolean;
 }
 
 /** registro/listar.php: entradas atrasadas e saídas antecipadas de um dia. */
-export interface RegistroDoDia {
+export interface RegistroDoDia extends SituacaoCancelamento {
   tipo: TipoRegistro;
   id: number;
   id_aluno: number;
@@ -354,6 +372,39 @@ export interface RegistrosDoDia {
   saidas: number;
   presentes: number;
   total_alunos: number;
+  pode_restaurar?: boolean;
+}
+
+/** registro/historicoCorrecoes.php: cada cancelamento e restauração (só a gestão vê). */
+export interface ResumoRegistroAuditado {
+  momento: string | null;
+  motivo: string | null;
+  detalhe: string | null;
+  cancelado: boolean;
+  motivo_cancelamento: string | null;
+}
+
+export interface CorrecaoRegistro {
+  id_auditoria: number;
+  tipo: TipoCancelavel;
+  id_registro: number;
+  id_aluno: number;
+  nome_aluno: string;
+  nome_sala: string | null;
+  acao: "cancelar" | "restaurar";
+  motivo: string | null;
+  feito_em: string;
+  feito_por: string;
+  registrado_por: string | null;
+  antes: ResumoRegistroAuditado;
+  depois: ResumoRegistroAuditado;
+}
+
+export interface HistoricoCorrecoes {
+  correcoes: CorrecaoRegistro[];
+  pagina: number;
+  total_registros: number;
+  total_paginas: number;
 }
 
 /** O que os avisos aos responsáveis fizeram depois de um registro. */
@@ -392,6 +443,9 @@ export interface PresencasDoDia {
     id_presenca: number;
     registrada_em: string;
     metodo: MetodoPresenca;
+    registrado_por?: string | null;
+    /** A gestão, ou quem registrou nos primeiros minutos, pode cancelar (migração 012). */
+    pode_cancelar?: boolean;
   }[];
   ausentes: { id_aluno: number; nome_aluno: string; id_sala: number; nome_sala: string }[];
 }
@@ -493,6 +547,12 @@ export interface Notificacao {
   id_coordenacao?: number | null;
   /** Quem da coordenação enviou; vazio = aviso automático. */
   enviado_por?: string | null;
+  /** Por que o provedor recusou (migração 012), sem o contato nem o texto. */
+  erro_envio?: string | null;
+  /** Enviada: "sistema" (o provedor aceitou) ou "manual" (a coordenação avisou por fora e confirmou). */
+  forma_envio?: "sistema" | "manual" | null;
+  confirmado_por?: string | null;
+  confirmado_em?: string | null;
 }
 
 // ---------------------------------------------------------------- mensagens da coordenação
@@ -566,6 +626,8 @@ export interface ResultadoEnvioMensagem {
   repetido: boolean;
   /** WhatsApp sem envio automático: o link pronto para mandar. */
   link: string | null;
+  /** Por que o envio falhou (quando falhou). */
+  erro?: string | null;
 }
 
 export interface EnvioDeMensagem {
@@ -679,6 +741,28 @@ export interface DadosEscola {
   hoje: { data: string } & SituacaoDia;
   papel: PapelConta;
   pode_editar: boolean;
+  /** Contato da escola com os responsáveis (migração 012): vai nas mensagens. */
+  contato?: ContatoEscola;
+}
+
+export interface ContatoEscola {
+  email: string | null;
+  /** Só os dígitos, com DDD. */
+  telefone: string | null;
+  atualizado_em: string | null;
+  atualizado_por: string | null;
+}
+
+/** admin/diagnosticoEnvio.php: o que está configurado e o último erro de cada canal (sem segredos). */
+export interface DiagnosticoEnvio {
+  email: { configurado: boolean; provedor: string | null; dominio_remetente: string | null };
+  whatsapp: { configurado: boolean; modelo: boolean };
+  avisos: { canal: "email" | "whatsapp"; nivel: "erro" | "aviso" | "info"; texto: string }[];
+  ultimos_30_dias: Record<
+    "email" | "whatsapp",
+    { enviadas: number; avisadas_por_fora: number; pendentes: number; erros: number; ultimo_erro: string | null; ultimo_erro_em: string | null }
+  >;
+  dominio?: { situacao: string; texto: string };
 }
 
 export type SituacaoConta = "pendente" | "ativo" | "recusado" | "desativado";

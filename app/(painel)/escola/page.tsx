@@ -107,7 +107,7 @@ export default function EscolaPage() {
 
       {dados && (
         <div role="tabpanel" className="entrada-em-cascata" key={aba}>
-          {aba === "escola" && <AbaDados dados={dados} />}
+          {aba === "escola" && <AbaDados dados={dados} podeEditar={podeEditar} aoMudar={carregar} />}
           {aba === "turmas" && <AbaTurmas dados={dados} podeEditar={podeEditar} aoMudar={carregar} />}
           {aba === "calendario" && <AbaCalendario dados={dados} podeEditar={podeEditar} aoMudar={carregar} trocarAno={setAno} />}
           {aba === "avisos" && <AbaAvisos dados={dados} podeEditar={podeEditar} aoMudar={carregar} />}
@@ -118,7 +118,7 @@ export default function EscolaPage() {
   );
 }
 
-function AbaDados({ dados }: { dados: DadosEscola }) {
+function AbaDados({ dados, podeEditar, aoMudar }: { dados: DadosEscola; podeEditar: boolean; aoMudar: () => void }) {
   const e = dados.escola;
   const linhas: [string, string | number | null][] = [
     ["Nome oficial", e.nome_oficial],
@@ -131,6 +131,7 @@ function AbaDados({ dados }: { dados: DadosEscola }) {
     ["CEP", e.cep ? `${e.cep.slice(0, 5)}-${e.cep.slice(5)}` : null],
   ];
   return (
+    <>
     <div className="grid-2">
       <div className="panel">
         <div className="panel-head">
@@ -169,6 +170,141 @@ function AbaDados({ dados }: { dados: DadosEscola }) {
           {dados.configuracao.limite_alerta_percentual}% dos dias de aula nos últimos {dados.configuracao.janela_alerta_dias} dias.
         </p>
       </div>
+    </div>
+    {/* key: depois de salvar, o formulário recomeça com o que a API gravou (e-mail em minúsculas).
+        Sem "contato" na resposta, a API ainda não tem a migração 012: o painel não aparece. */}
+    {dados.contato !== undefined && (
+      <PainelContato key={dados.contato.atualizado_em ?? "sem-contato"} contato={dados.contato} podeEditar={podeEditar} aoMudar={aoMudar} />
+    )}
+    </>
+  );
+}
+
+/** "11999991111" -> "(11) 99999-1111" (só para mostrar). */
+function telefoneLegivel(digitos: string | null | undefined): string {
+  const d = (digitos ?? "").replace(/\D/g, "");
+  if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return digitos ?? "";
+}
+
+/**
+ * Contato da escola com os responsáveis (migração 012): cada escola tem o
+ * seu. Vai no fim das mensagens e, no e-mail, como endereço de resposta.
+ * Toda a equipe vê; só a gestão altera.
+ */
+function PainelContato({
+  contato,
+  podeEditar,
+  aoMudar,
+}: {
+  contato: DadosEscola["contato"];
+  podeEditar: boolean;
+  aoMudar: () => void;
+}) {
+  const { mostrarToast } = useToast();
+  const [email, setEmail] = useState(contato?.email ?? "");
+  const [telefone, setTelefone] = useState(telefoneLegivel(contato?.telefone));
+  const [erro, setErro] = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
+  const mudou = email.trim() !== (contato?.email ?? "") || telefone.replace(/\D/g, "") !== (contato?.telefone ?? "");
+
+  async function salvar(evento: FormEvent) {
+    evento.preventDefault();
+    setSalvando(true);
+    const resposta = await Api.salvarContatoEscola(email.trim(), telefone.trim());
+    setSalvando(false);
+    if (!resposta.sucesso) {
+      setErro(resposta.mensagem);
+      return;
+    }
+    setErro(null);
+    mostrarToast(resposta.mensagem);
+    aoMudar();
+  }
+
+  const vazio = !contato?.email && !contato?.telefone;
+  // A API diz qual campo está errado na própria mensagem; só ele fica marcado.
+  const emailInvalido = erro !== null && !/telefone/i.test(erro);
+  const telefoneInvalido = erro !== null && !/e-mail/i.test(erro);
+  return (
+    <div className="panel painel-contato">
+      <div className="panel-head">
+        <h2>Contato com os responsáveis</h2>
+        {!podeEditar && <span className="panel-meta">Só a gestão altera</span>}
+        <p className="panel-desc">
+          Vai no fim das mensagens aos responsáveis e, no e-mail, como endereço de resposta: a família responde para a escola. É só desta
+          escola - as outras escolas têm o próprio contato.
+        </p>
+      </div>
+      {podeEditar ? (
+        <form onSubmit={salvar} noValidate>
+          <div className="modal-field-row">
+            <div className="modal-field">
+              <label htmlFor="contato-email">E-mail da escola</label>
+              <input
+                id="contato-email"
+                type="email"
+                autoComplete="email"
+                placeholder="secretaria@escola.sp.gov.br"
+                value={email}
+                aria-invalid={emailInvalido}
+                aria-describedby={emailInvalido ? "contato-erro" : undefined}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setErro(null);
+                }}
+              />
+            </div>
+            <div className="modal-field">
+              <label htmlFor="contato-telefone">Telefone com DDD</label>
+              <input
+                id="contato-telefone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder="(11) 3333-4444"
+                value={telefone}
+                aria-invalid={telefoneInvalido}
+                aria-describedby={telefoneInvalido ? "contato-erro" : undefined}
+                onChange={(e) => {
+                  setTelefone(e.target.value);
+                  setErro(null);
+                }}
+              />
+            </div>
+          </div>
+          {erro && (
+            <p className="field-error show" id="contato-erro" role="alert">
+              {erro}
+            </p>
+          )}
+          <div className="contato-rodape">
+            {contato?.atualizado_em && (
+              <span className="panel-meta">
+                Atualizado em {formatarData(contato.atualizado_em)}
+                {contato.atualizado_por ? ` por ${contato.atualizado_por}` : ""}
+              </span>
+            )}
+            <button type="submit" className="btn btn-primary" disabled={salvando || !mudou} aria-busy={salvando}>
+              {salvando ? "Salvando…" : "Salvar contato"}
+            </button>
+          </div>
+        </form>
+      ) : vazio ? (
+        <p className="results-caption">A gestão ainda não cadastrou o contato da escola: as mensagens saem sem ele.</p>
+      ) : (
+        <dl className="lista-dados">
+          <div>
+            <dt>E-mail</dt>
+            <dd>{contato?.email ?? "Não cadastrado"}</dd>
+          </div>
+          <div>
+            <dt>Telefone</dt>
+            <dd>{contato?.telefone ? telefoneLegivel(contato.telefone) : "Não cadastrado"}</dd>
+          </div>
+        </dl>
+      )}
     </div>
   );
 }
@@ -235,8 +371,8 @@ function AbaTurmas({ dados, podeEditar, aoMudar }: { dados: DadosEscola; podeEdi
               <th>Turma</th>
               <th>Período</th>
               <th>Horário</th>
-              <th>Alunos</th>
-              {podeEditar && <th></th>}
+              <th className="num">Alunos</th>
+              {podeEditar && <th><span className="sr-only">Ações</span></th>}
             </tr>
           </thead>
           <tbody>
@@ -427,8 +563,9 @@ function AbaCalendario({
                   <span className="panel-meta">{item.tipo === "sem_aula" ? "Sem aula" : "Aula extra"}</span>
                 </span>
                 {podeEditar && (
-                  <button type="button" className="icon-btn" aria-label={`Remover ${item.descricao}`} onClick={() => remover(item.id_calendario)}>
+                  <button type="button" className="btn btn-sm btn-danger" aria-label={`Remover ${item.descricao}`} onClick={() => remover(item.id_calendario)}>
                     <Icon name="trash" />
+                    Remover
                   </button>
                 )}
               </li>

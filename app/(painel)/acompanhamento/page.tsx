@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Api } from "@/lib/api";
 import { Topbar } from "@/components/Topbar";
+import { Paginacao } from "@/components/Paginacao";
 import { Esqueleto } from "@/components/Esqueleto";
 import { Modal } from "@/components/Modal";
 import { Icon } from "@/components/Icon";
@@ -57,8 +58,11 @@ export default function AcompanhamentoPage() {
         <div className="panel">
           {registros.length === 0 ? (
             <div className="empty-state">
-              <Icon name="activity" />
-              <p>Nenhum registro de acompanhamento ainda.</p>
+              <Icon name="clipboardText" />
+              <p>
+                Nenhum contato registrado ainda. Use &quot;Registrar contato&quot; para anotar uma ligação, mensagem ou reunião
+                com a família.
+              </p>
             </div>
           ) : (
             <div className="timeline">
@@ -67,7 +71,7 @@ export default function AcompanhamentoPage() {
                   <div className="timeline-date">{formatarDataHora(registro.data_registro)}</div>
                   <div className="timeline-card">
                     <div className="timeline-head">
-                      <Link href={`/turmas/${registro.id_aluno}`} style={{ fontWeight: 700 }}>
+                      <Link href={`/turmas/${registro.id_aluno}`} className="link-aluno">
                         {registro.nome_aluno}
                       </Link>
                       <span className="tag">{registro.nome_sala ?? "Sem turma"}</span>
@@ -81,24 +85,7 @@ export default function AcompanhamentoPage() {
             </div>
           )}
 
-          {totalPaginas > 1 && (
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 18 }}>
-              <button type="button" className="btn btn-sm" disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)}>
-                Anterior
-              </button>
-              <span className="panel-meta" style={{ alignSelf: "center" }}>
-                Página {pagina} de {totalPaginas}
-              </span>
-              <button
-                type="button"
-                className="btn btn-sm"
-                disabled={pagina >= totalPaginas}
-                onClick={() => setPagina((p) => p + 1)}
-              >
-                Próxima
-              </button>
-            </div>
-          )}
+          <Paginacao pagina={pagina} totalPaginas={totalPaginas} onMudar={setPagina} />
         </div>
       )}
 
@@ -186,12 +173,12 @@ function ModalNovoRegistro({
         <div className="modal-field">
           <label htmlFor="buscaAlunoAcompanhamento">Aluno</label>
           {alunoSelecionado ? (
-            <div className="modal-summary" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div className="escolhido">
               <span>
                 <b>{alunoSelecionado.nome_aluno}</b> — {alunoSelecionado.turma ?? "Sem turma"}
               </span>
-              <button type="button" className="btn-text" onClick={() => setAlunoSelecionado(null)}>
-                Trocar
+              <button type="button" className="btn btn-sm" onClick={() => setAlunoSelecionado(null)}>
+                Trocar aluno
               </button>
             </div>
           ) : (
@@ -203,7 +190,7 @@ function ModalNovoRegistro({
                 placeholder="Buscar por nome ou ID"
               />
               {opcoes.length > 0 && (
-                <div style={{ border: "1px solid var(--mist-200)", borderRadius: "var(--radius-sm)", marginTop: 6 }}>
+                <div className="lista-escolha">
                   {opcoes.map((aluno) => (
                     <button
                       type="button"
@@ -212,18 +199,9 @@ function ModalNovoRegistro({
                         setAlunoSelecionado(aluno);
                         setOpcoes([]);
                       }}
-                      style={{
-                        display: "block",
-                        width: "100%",
-                        textAlign: "left",
-                        padding: "8px 12px",
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        fontSize: 13,
-                      }}
                     >
-                      {aluno.nome_aluno} — {aluno.turma ?? "Sem turma"}
+                      <span>{aluno.nome_aluno}</span>
+                      <span className="panel-meta">{aluno.turma ?? "Sem turma"}</span>
                     </button>
                   ))}
                 </div>
@@ -246,7 +224,11 @@ function ModalNovoRegistro({
           <label htmlFor="observacaoGlobal">Observação</label>
           <textarea id="observacaoGlobal" value={observacao} onChange={(e) => setObservacao(e.target.value)} />
         </div>
-        {erro && <p className="field-error show">{erro}</p>}
+        {erro && (
+          <p className="field-error show" role="alert">
+            {erro}
+          </p>
+        )}
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onFechar}>
             Cancelar

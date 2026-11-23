@@ -32,7 +32,10 @@ import type {
   SituacaoConta,
   StatusChamado,
   TipoCalendario,
-  TipoRegistro,
+  TipoCancelavel,
+  HistoricoCorrecoes,
+  ContatoEscola,
+  DiagnosticoEnvio,
   CanalAcompanhamento,
   CategoriaChamado,
   ChamadoSuporte,
@@ -414,12 +417,26 @@ export const Api = {
       retirado_por: retiradoPor,
       ...(dataLocal ? { dta_saida: dataLocal } : {}),
     }),
-  listarRegistros: (data: string, idSala: number | null) =>
-    post<RegistrosDoDia>("registro/listar.php", { data, id_sala: idSala }),
-  /** Só a gestão: apaga um registro feito por engano. */
-  removerRegistro: (tipo: TipoRegistro, id: number) => post<null>("registro/remover.php", { tipo, id }),
-  historicoAluno: (idAluno: number, dataInicio?: string, dataFim?: string) =>
-    post<HistoricoAluno>("user/historicoAluno.php", { id_aluno: idAluno, data_inicio: dataInicio, data_fim: dataFim }),
+  /** incluirCancelados: também os cancelados (marcados), para o histórico. */
+  listarRegistros: (data: string, idSala: number | null, incluirCancelados = false) =>
+    post<RegistrosDoDia>("registro/listar.php", { data, id_sala: idSala, incluir_cancelados: incluirCancelados }),
+  /**
+   * Cancela (não apaga) um registro feito por engano: a gestão, ou quem
+   * registrou nos primeiros minutos. Numa presença, cai junto a entrada
+   * atrasada que ela gerou.
+   */
+  cancelarRegistro: (tipo: TipoCancelavel, id: number, motivo: string | null) =>
+    post<{ cancelados: { tipo: TipoCancelavel; id: number }[] }>("registro/remover.php", { tipo, id, motivo }),
+  /** Só a gestão: desfaz um cancelamento. */
+  restaurarRegistro: (tipo: TipoCancelavel, id: number, motivo: string | null) =>
+    post<{ tipo: TipoCancelavel; id: number }>("registro/restaurar.php", { tipo, id, motivo }),
+  /** Só a gestão: cada cancelamento e restauração da escola (ou de um aluno). */
+  historicoCorrecoes: (pagina: number, idAluno: number | null = null) =>
+    post<HistoricoCorrecoes>("registro/historicoCorrecoes.php", { pagina, id_aluno: idAluno }),
+  historicoAluno: (idAluno: number, dataInicio?: string, dataFim?: string, incluirCancelados = false) =>
+    post<HistoricoAluno>("user/historicoAluno.php", {
+      id_aluno: idAluno, data_inicio: dataInicio, data_fim: dataFim, incluir_cancelados: incluirCancelados,
+    }),
 
   // Dashboard / alertas
   dashboard: (opcoes?: OpcoesChamada) => post<Dashboard>("user/dashboard.php", {}, opcoes),
@@ -495,7 +512,7 @@ export const Api = {
     post<null>("notificacao/marcarEnviada.php", { id_notificacao: idNotificacao }),
   /** "Tentar de novo" numa mensagem que deu erro no envio. */
   reenviarNotificacao: (idNotificacao: number) =>
-    post<{ id_notificacao: number; status: StatusNotificacao }>("notificacao/reenviar.php", { id_notificacao: idNotificacao }),
+    post<{ id_notificacao: number; status: StatusNotificacao; erro?: string | null }>("notificacao/reenviar.php", { id_notificacao: idNotificacao }),
 
   // Enviar mensagem aos responsáveis (tela /notificacoes/enviar).
   modelosDeMensagem: () => post<ModelosMensagem>("notificacao/modelos.php", {}),
@@ -623,6 +640,9 @@ export const Api = {
   configuracaoEscola: (ano?: number) => post<DadosEscola>("escola/configuracao.php", ano ? { ano } : {}),
   salvarConfiguracaoEscola: (mudancas: Partial<ConfiguracaoEscola>) =>
     post<ConfiguracaoEscola>("escola/salvarConfiguracao.php", { ...mudancas }),
+  /** Só a gestão: o contato da PRÓPRIA escola nas mensagens aos responsáveis (vazio apaga). */
+  salvarContatoEscola: (email: string, telefone: string) =>
+    post<ContatoEscola>("escola/salvarContato.php", { email_contato: email, telefone_contato: telefone }),
   /** horário null volta ao padrão do período. */
   salvarTurma: (idSala: number, mudancas: { nome_sala?: string; periodo_sala?: string; horario_inicio?: string | null; horario_fim?: string | null }) =>
     post<Sala>("escola/salvarTurma.php", { id_sala: idSala, ...mudancas }),
@@ -637,6 +657,9 @@ export const Api = {
 
   // Equipe do sistema (tela /admin; a API responde 404 para as outras contas)
   adminResumo: (opcoes?: OpcoesChamada) => post<ResumoSistema>("admin/resumo.php", {}, opcoes),
+  /** verificarDominio: consulta (só leitura) o domínio do remetente no Resend. */
+  adminDiagnosticoEnvio: (verificarDominio = false) =>
+    post<DiagnosticoEnvio>("admin/diagnosticoEnvio.php", { verificar_dominio: verificarDominio }),
   adminEscolas: (busca: string, emUso: boolean, pagina: number) =>
     post<ListaPaginada & { escolas: EscolaAdmin[] }>("admin/escolas.php", { busca, em_uso: emUso, pagina }),
   adminContas: (busca: string, situacao: SituacaoConta | null, pagina: number) =>

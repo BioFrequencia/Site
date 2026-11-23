@@ -66,6 +66,11 @@ export function hojeNaEscola(agora: Date = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: FUSO_ESCOLA, year: "numeric", month: "2-digit", day: "2-digit" }).format(agora);
 }
 
+/** "1 aluno", "3 alunos": o número com a palavra no singular ou no plural. */
+export function plural(n: number, singular: string, pluralizado: string): string {
+  return `${n.toLocaleString("pt-BR")} ${n === 1 ? singular : pluralizado}`;
+}
+
 /** Data por extenso no calendário da escola, ex.: "quarta-feira, 18 de novembro". */
 export function dataPorExtenso(agora: Date = new Date()): string {
   return new Intl.DateTimeFormat("pt-BR", { timeZone: FUSO_ESCOLA, weekday: "long", day: "numeric", month: "long" }).format(agora);

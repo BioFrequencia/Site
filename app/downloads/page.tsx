@@ -22,24 +22,22 @@ export default function DownloadsPage() {
     <>
       <NavPublica />
 
-      <div className="downloads-shell">
-        <div className="downloads-header">
+      <main className="downloads-shell">
+        <header className="downloads-header">
           <h1>Baixe o software e o app</h1>
           <p>
             Além do painel web, o BioFrequência tem um software desktop (Windows) para a coordenação e um
             app de celular para o check-in biométrico do aluno.
           </p>
-        </div>
+        </header>
 
         <div className="download-cards">
-          <div className="download-card">
-            <div className="report-icon">
+          <section className="download-card" aria-labelledby="download-desktop">
+            <h2 id="download-desktop">
               <Icon name="desktop" />
-            </div>
-            <h3>
               Software desktop (Windows)
               {!DESKTOP_URL && <span className="selo-em-breve">Em breve</span>}
-            </h3>
+            </h2>
             <p>
               Para o computador da coordenação: as mesmas telas deste painel — dashboard, alertas,
               entradas e saídas, presenças, turmas e alunos, responsáveis, avisos às famílias, escola e
@@ -66,13 +64,13 @@ export default function DownloadsPage() {
                 <p className="download-nota">Enquanto isso, tudo isso já funciona aqui no painel web.</p>
               </>
             )}
-          </div>
+          </section>
 
-          <div className="download-card">
-            <div className="report-icon">
+          <section className="download-card" aria-labelledby="download-android">
+            <h2 id="download-android">
               <Icon name="smartphone" />
-            </div>
-            <h3>App de biometria (Android)</h3>
+              App de biometria (Android)
+            </h2>
             <p>
               Para os tablets e celulares da coordenação: cadastra a biometria facial dos alunos e
               registra a presença sozinho ao reconhecê-los na entrada. O arquivo abaixo é gerado
@@ -88,35 +86,34 @@ export default function DownloadsPage() {
               Para instalar, o celular precisa permitir aplicativos de fora da Play Store:
               Ajustes &rsaquo; Segurança &rsaquo; Instalar apps desconhecidos.
             </p>
-          </div>
+          </section>
         </div>
 
-        <div className="downloads-note">
-          <b>Como usar o app de biometria:</b>
-          <br />
-          1. Baixe o APK acima no tablet ou celular da coordenação e instale (o Android vai pedir
-          permissão para instalar um app de fora da Play Store).
-          <br />
-          2. Entre com a mesma conta da coordenação usada neste site. O app só mostra os alunos da
-          sua escola, cadastrados em{" "}
-          <Link href="/turmas" style={{ color: "var(--indigo-texto)", fontWeight: 700 }}>
-            Turmas e alunos
-          </Link>
-          .
-          <br />
-          3. Em &quot;Cadastrar biometria&quot;, escolha o aluno, confira nome e data de nascimento,
-          registre o consentimento do responsável e tire as três fotos do rosto. As fotos não saem
-          do aparelho: o sistema guarda só um código numérico do rosto, cifrado.
-          <br />
-          4. Em &quot;Identificar aluno&quot;, cada aluno olha para a câmera na chegada. Reconhecido, a
-          presença é registrada na hora e aparece em{" "}
-          <Link href="/presencas" style={{ color: "var(--indigo-texto)", fontWeight: 700 }}>
-            Presenças
-          </Link>
-          , sem lançamento manual. Se não for reconhecido, a presença pode ser registrada à mão,
-          no app ou aqui no site.
-        </div>
-      </div>
+        <section className="downloads-note" aria-labelledby="como-usar-app">
+          <h2 id="como-usar-app">Como usar o app de biometria</h2>
+          <ol>
+            <li>
+              Baixe o APK acima no tablet ou celular da coordenação e instale (o Android vai pedir
+              permissão para instalar um app de fora da Play Store).
+            </li>
+            <li>
+              Entre com a mesma conta da coordenação usada neste site. O app só mostra os alunos da sua
+              escola, cadastrados em <Link href="/turmas">Turmas e alunos</Link>.
+            </li>
+            <li>
+              Em &quot;Cadastrar biometria&quot;, escolha o aluno, confira nome e data de nascimento,
+              registre o consentimento do responsável e tire as três fotos do rosto. As fotos não saem
+              do aparelho: o sistema guarda só um código numérico do rosto, cifrado.
+            </li>
+            <li>
+              Em &quot;Identificar aluno&quot;, cada aluno olha para a câmera na chegada. Reconhecido, a
+              presença é registrada na hora e aparece em <Link href="/presencas">Presenças</Link>, sem
+              lançamento manual. Se não for reconhecido, a presença pode ser registrada à mão, no app ou
+              aqui no site.
+            </li>
+          </ol>
+        </section>
+      </main>
     </>
   );
 }

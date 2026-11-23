@@ -7,7 +7,7 @@ import { Topbar } from "@/components/Topbar";
 import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
-import { classeBadgePrioridade, formatarData, formatarPercentual, iniciais, rotuloPrioridade, rotuloTipoAlerta } from "@/lib/format";
+import { classeBadgePrioridade, formatarData, formatarPercentual, rotuloPrioridade, rotuloTipoAlerta } from "@/lib/format";
 import type { Alerta, Sala } from "@/lib/types";
 
 export default function AlertasPage() {
@@ -49,6 +49,12 @@ export default function AlertasPage() {
   }, [idSala, tipo, prioridade]);
 
   async function encerrar(alerta: Alerta) {
+    if (
+      !confirm(
+        `Encerrar os alertas de ${alerta.nome_aluno}? Eles saem desta lista e só voltam se houver uma nova entrada atrasada ou saída antecipada.`,
+      )
+    )
+      return;
     setEncerrando(alerta.id_aluno);
     const resposta = await Api.encerrarAlerta(alerta.id_aluno);
     setEncerrando(null);
@@ -68,62 +74,83 @@ export default function AlertasPage() {
       />
 
       <div className="filter-bar">
-        <select className="filter-select" value={idSala} onChange={(e) => setIdSala(e.target.value)}>
-          <option key="" value="">Todas as turmas</option>
-          {salas.map((sala) => (
-            <option key={sala.id_sala} value={sala.id_sala}>
-              {sala.nome_sala}
+        <div className="filtro">
+          <label htmlFor="filtro-turma" className="filtro-rotulo">
+            Turma
+          </label>
+          <select id="filtro-turma" className="filter-select" value={idSala} onChange={(e) => setIdSala(e.target.value)}>
+            <option key="" value="">
+              Todas as turmas
             </option>
-          ))}
-        </select>
-
-        <div className="filter-divider" />
-
-        <div className="pill-group">
-          {[
-            { valor: "", rotulo: "Todos os tipos" },
-            { valor: "atrasos", rotulo: "Entradas atrasadas" },
-            { valor: "saidas", rotulo: "Saídas antecipadas" },
-          ].map((opcao) => (
-            <button
-              key={opcao.valor}
-              type="button"
-              className={`filter-pill${tipo === opcao.valor ? " active" : ""}`}
-              onClick={() => setTipo(opcao.valor)}
-            >
-              {opcao.rotulo}
-            </button>
-          ))}
+            {salas.map((sala) => (
+              <option key={sala.id_sala} value={sala.id_sala}>
+                {sala.nome_sala}
+              </option>
+            ))}
+          </select>
         </div>
 
-        <div className="filter-divider" />
+        <div className="filtro" role="group" aria-labelledby="filtro-tipo">
+          <span id="filtro-tipo" className="filtro-rotulo">
+            Tipo
+          </span>
+          <div className="pill-group">
+            {[
+              { valor: "", rotulo: "Todos" },
+              { valor: "atrasos", rotulo: "Entradas atrasadas" },
+              { valor: "saidas", rotulo: "Saídas antecipadas" },
+            ].map((opcao) => (
+              <button
+                key={opcao.valor}
+                type="button"
+                aria-pressed={tipo === opcao.valor}
+                className={`filter-pill${tipo === opcao.valor ? " active" : ""}`}
+                onClick={() => setTipo(opcao.valor)}
+              >
+                {opcao.rotulo}
+              </button>
+            ))}
+          </div>
+        </div>
 
-        <div className="pill-group">
-          {[
-            { valor: "", rotulo: "Todas prioridades" },
-            { valor: "alta", rotulo: "Alta" },
-            { valor: "media", rotulo: "Média" },
-            { valor: "baixa", rotulo: "Baixa" },
-          ].map((opcao) => (
-            <button
-              key={opcao.valor}
-              type="button"
-              className={`filter-pill${prioridade === opcao.valor ? " active" : ""}`}
-              onClick={() => setPrioridade(opcao.valor)}
-            >
-              {opcao.rotulo}
-            </button>
-          ))}
+        <div className="filtro" role="group" aria-labelledby="filtro-prioridade">
+          <span id="filtro-prioridade" className="filtro-rotulo">
+            Prioridade
+          </span>
+          <div className="pill-group">
+            {[
+              { valor: "", rotulo: "Todas" },
+              { valor: "alta", rotulo: "Alta" },
+              { valor: "media", rotulo: "Média" },
+              { valor: "baixa", rotulo: "Baixa" },
+            ].map((opcao) => (
+              <button
+                key={opcao.valor}
+                type="button"
+                aria-pressed={prioridade === opcao.valor}
+                className={`filter-pill${prioridade === opcao.valor ? " active" : ""}`}
+                onClick={() => setPrioridade(opcao.valor)}
+              >
+                {opcao.rotulo}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {erro && <div className="error-block">{erro}</div>}
+      {erro && (
+        <div className="error-block" role="alert">
+          {erro}
+        </div>
+      )}
       {carregando && <Esqueleto variante="lista" texto="Carregando alertas…" />}
 
       {!carregando && (
         <>
-          <p className="results-caption">
-            {alertas.length} alerta(s) encontrado(s).
+          <p className="results-caption" aria-live="polite">
+            <strong>
+              {alertas.length} {alertas.length === 1 ? "alerta encontrado" : "alertas encontrados"}.
+            </strong>
             {limite !== null && janelaDias !== null && (
               <>
                 {" "}
@@ -134,51 +161,79 @@ export default function AlertasPage() {
           </p>
 
           {alertas.length === 0 ? (
-            <div className="empty-state">
-              <Icon name="check" />
-              <p>Nenhum alerta ativo com esses filtros.</p>
+            <div className="panel">
+              <div className="empty-state">
+                <Icon name="checkCircle" />
+                <p>Nenhum alerta ativo com esses filtros. Quando um aluno chegar perto do limite, ele aparece aqui.</p>
+              </div>
             </div>
           ) : (
-            alertas.map((alerta) => (
-              <div className="alert-item" data-priority={alerta.prioridade} key={alerta.id_alerta}>
-                <div className="avatar">{iniciais(alerta.nome_aluno)}</div>
-                <div className="alert-main">
-                  <div className="alert-name-row">
-                    <Link href={`/turmas/${alerta.id_aluno}`} style={{ fontWeight: 700 }}>
-                      {alerta.nome_aluno}
-                    </Link>
-                    <span className="tag">{alerta.turma ?? "Sem turma"}</span>
-                    <span className="tag">{rotuloTipoAlerta(alerta.tipo)}</span>
-                  </div>
-                  <div className="alert-reason">{alerta.motivo}</div>
-                  <div className="alert-meta">
-                    Último registro: {formatarData(alerta.dta_referencia)}
-                    {alerta.nivel_rotulo && alerta.nivel ? ` · Situação: ${alerta.nivel_rotulo}` : ""}
-                  </div>
-                  <div className="alert-taxa" aria-hidden="true">
-                    <div className={`alert-taxa-barra alert-taxa-barra--${alerta.tipo}`} style={{ width: `${Math.min(100, alerta.taxa ?? 0)}%` }} />
-                    {limite !== null && <div className="alert-taxa-limite" style={{ left: `${Math.min(100, limite)}%` }} />}
-                  </div>
-                </div>
-                <div className="alert-side">
-                  <span className="alert-taxa-valor">{formatarPercentual(alerta.taxa)}</span>
-                  <span className={classeBadgePrioridade(alerta.prioridade)}>{rotuloPrioridade(alerta.prioridade)}</span>
-                  <div className="alert-actions">
-                    <Link href={`/turmas/${alerta.id_aluno}`} className="btn btn-sm">
-                      Ver aluno
-                    </Link>
-                    <button
-                      type="button"
-                      className="btn btn-sm"
-                      onClick={() => encerrar(alerta)}
-                      disabled={encerrando === alerta.id_aluno}
-                    >
-                      {encerrando === alerta.id_aluno ? "Encerrando…" : "Encerrar"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))
+            <div className="panel panel-tabela">
+              <table className="tabela tabela-cartoes">
+                <caption className="sr-only">Alertas ativos</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Aluno</th>
+                    <th scope="col">Tipo</th>
+                    <th scope="col">Ocorrências</th>
+                    <th scope="col">Taxa</th>
+                    <th scope="col">Prioridade</th>
+                    <th scope="col">Último registro</th>
+                    <th scope="col">
+                      <span className="sr-only">Ações</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {alertas.map((alerta) => (
+                    <tr key={alerta.id_alerta}>
+                      <td className="celula-titulo">
+                        <Link href={`/turmas/${alerta.id_aluno}`} className="link-aluno">
+                          {alerta.nome_aluno}
+                        </Link>
+                        <div className="student-turma">{alerta.turma ?? "Sem turma"}</div>
+                      </td>
+                      <td data-label="Tipo">{rotuloTipoAlerta(alerta.tipo)}</td>
+                      <td data-label="Ocorrências">
+                        {alerta.ocorrencias} em {alerta.dias_letivos} {alerta.dias_letivos === 1 ? "dia de aula" : "dias de aula"}
+                      </td>
+                      <td data-label="Taxa">
+                        <div className="medidor medidor-curto">
+                          <div className="medidor-trilha" aria-hidden="true">
+                            <div className={`medidor-tipo--${alerta.tipo}`} style={{ width: `${Math.min(100, alerta.taxa ?? 0)}%` }} />
+                            {limite !== null && <span className="medidor-limite" style={{ left: `${Math.min(100, limite)}%` }} />}
+                          </div>
+                          <span className="medidor-valor">{formatarPercentual(alerta.taxa)}</span>
+                        </div>
+                      </td>
+                      <td data-label="Prioridade">
+                        <span className={classeBadgePrioridade(alerta.prioridade)}>{rotuloPrioridade(alerta.prioridade)}</span>
+                      </td>
+                      <td data-label="Último registro">
+                        {formatarData(alerta.dta_referencia)}
+                        {alerta.nivel_rotulo && alerta.nivel ? <div className="student-turma">Situação: {alerta.nivel_rotulo}</div> : null}
+                      </td>
+                      <td className="acoes celula-acoes">
+                        <div className="acoes-grupo">
+                          <Link href={`/turmas/${alerta.id_aluno}`} className="btn btn-sm" aria-label={`Ver o aluno ${alerta.nome_aluno}`}>
+                            Ver aluno
+                          </Link>
+                          <button
+                            type="button"
+                            className="btn btn-sm"
+                            onClick={() => encerrar(alerta)}
+                            disabled={encerrando === alerta.id_aluno}
+                            aria-label={`Encerrar os alertas de ${alerta.nome_aluno}`}
+                          >
+                            {encerrando === alerta.id_aluno ? "Encerrando…" : "Encerrar"}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </>
       )}

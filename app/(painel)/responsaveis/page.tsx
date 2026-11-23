@@ -98,9 +98,20 @@ export default function ResponsaveisPage() {
             </button>
           </div>
           {aba === "responsaveis" && (
-            <div className="search-box busca-estreita">
-              <Icon name="search" />
-              <input placeholder="Nome, CPF, telefone ou aluno" value={busca} onChange={(e) => setBusca(e.target.value)} />
+            <div className="filtro">
+              <label htmlFor="responsaveis-busca" className="filtro-rotulo">
+                Buscar responsável
+              </label>
+              <div className="search-box busca-estreita">
+                <Icon name="search" />
+                <input
+                  id="responsaveis-busca"
+                  type="search"
+                  placeholder="Nome, CPF, telefone ou aluno"
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                />
+              </div>
             </div>
           )}
         </div>
@@ -123,7 +134,7 @@ export default function ResponsaveisPage() {
                     <th>Contato</th>
                     <th>Avisos por</th>
                     <th>Alunos</th>
-                    <th></th>
+                    <th><span className="sr-only">Ações</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -155,7 +166,7 @@ export default function ResponsaveisPage() {
                       </td>
                       <td className="celula-acoes" style={{ textAlign: "right" }}>
                         <button type="button" className="btn btn-sm" onClick={() => setEditando(r)}>
-                          Editar
+                          Editar<span className="sr-only"> {r.nome_responsavel}</span>
                         </button>
                       </td>
                     </tr>
@@ -178,7 +189,7 @@ export default function ResponsaveisPage() {
                 <tr>
                   <th>Aluno</th>
                   <th>Turma</th>
-                  <th></th>
+                  <th><span className="sr-only">Ações</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -196,7 +207,8 @@ export default function ResponsaveisPage() {
                         className="btn btn-sm btn-primary"
                         onClick={() => setAdicionarPara({ id_aluno: a.id_aluno, nome_aluno: a.nome_aluno, turma: a.nome_sala })}
                       >
-                        <Icon name="plus" /> Responsável
+                        <Icon name="plus" /> Adicionar responsável
+                        <span className="sr-only"> de {a.nome_aluno}</span>
                       </button>
                     </td>
                   </tr>

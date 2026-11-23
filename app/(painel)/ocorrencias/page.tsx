@@ -76,50 +76,58 @@ export default function OcorrenciasPage() {
         subtitulo="Envios dos alunos aguardando sua decisão."
       />
 
-      <div className="panel">
-        <div className="filtros-linha">
-          {filtros.map((f) => (
-            <button
-              key={f.valor}
-              type="button"
-              className={`btn btn-sm${filtro === f.valor ? " btn-primary" : ""}`}
-              onClick={() => setFiltro(f.valor)}
-            >
-              {f.rotulo}
-            </button>
-          ))}
+      <div className="filter-bar">
+        <div className="filtro" role="group" aria-labelledby="filtro-situacao">
+          <span id="filtro-situacao" className="filtro-rotulo">
+            Situação
+          </span>
+          <div className="pill-group">
+            {filtros.map((f) => (
+              <button
+                key={f.valor}
+                type="button"
+                aria-pressed={filtro === f.valor}
+                className={`filter-pill${filtro === f.valor ? " active" : ""}`}
+                onClick={() => setFiltro(f.valor)}
+              >
+                {f.rotulo}
+              </button>
+            ))}
+          </div>
         </div>
+      </div>
 
+      <div className="panel panel-tabela" aria-busy={carregando}>
         {carregando ? (
-          <div className="estado-vazio">
-            <div className="spinner" aria-label="Carregando" />
+          <div className="empty-state" role="status">
+            <div className="spinner" aria-hidden="true" />
             <p>Carregando ocorrências…</p>
           </div>
         ) : ocorrencias.length === 0 ? (
-          <div className="estado-vazio">
+          <div className="empty-state">
             <Icon name="inbox" />
             <p>
-              {filtro === "pendente"
-                ? "Nenhum envio aguardando decisão."
-                : "Nenhuma ocorrência nesta situação."}
-            </p>
-            <span>
+              <strong>
+                {filtro === "pendente"
+                  ? "Nenhum envio aguardando decisão."
+                  : "Nenhuma ocorrência nesta situação."}
+              </strong>{" "}
               Os alunos enviam por aqui depois de confirmar a biometria no aplicativo.
-            </span>
+            </p>
           </div>
         ) : (
-          <div className="lista-ocorrencias">
+          <ul className="lista-ocorrencias">
             {ocorrencias.map((o) => (
-              <article className="ocorrencia-card" key={o.id_ocorrencia}>
-                <header className="ocorrencia-topo">
+              <li className="ocorrencia-item" key={o.id_ocorrencia}>
+                <div className="ocorrencia-topo">
                   <div>
-                    <strong>{o.nome_aluno}</strong>
+                    <h2>{o.nome_aluno}</h2>
                     <span className="ocorrencia-turma">{o.turma ?? "sem turma"}</span>
                   </div>
                   <span className={`badge badge--${o.tipo === "falta" ? "em-risco" : "atencao"}`}>
                     {o.tipo === "falta" ? "Falta" : "Atraso"}
                   </span>
-                </header>
+                </div>
 
                 <dl className="ocorrencia-dados">
                   <div>
@@ -143,34 +151,35 @@ export default function OcorrenciasPage() {
                 </dl>
 
                 {o.status === "pendente" ? (
-                  <footer className="ocorrencia-acoes">
+                  <div className="ocorrencia-acoes">
                     <button
                       type="button"
-                      className="btn btn-sm"
+                      className="btn"
                       onClick={() => decidir(o, "rejeitar")}
                       disabled={decidindo === o.id_ocorrencia}
                     >
-                      Rejeitar
+                      Rejeitar<span className="sr-only"> o envio de {o.nome_aluno}</span>
                     </button>
                     <button
                       type="button"
-                      className="btn btn-primary btn-sm"
+                      className="btn btn-primary"
                       onClick={() => decidir(o, "aprovar")}
                       disabled={decidindo === o.id_ocorrencia}
                     >
                       {decidindo === o.id_ocorrencia ? "Registrando…" : "Aprovar e lançar"}
+                      <span className="sr-only"> o envio de {o.nome_aluno}</span>
                     </button>
-                  </footer>
+                  </div>
                 ) : (
-                  <footer className="ocorrencia-decidida">
+                  <p className="ocorrencia-decidida">
                     {o.status === "aprovado" ? "Aprovada" : "Rejeitada"}
                     {o.revisado_por ? ` por ${o.revisado_por}` : ""}
                     {o.revisado_em ? ` em ${formatarDataHora(o.revisado_em)}` : ""}.
-                  </footer>
+                  </p>
                 )}
-              </article>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </div>
     </>
