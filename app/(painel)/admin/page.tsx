@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
@@ -20,6 +20,7 @@ import {
   type ChamadoAdmin,
   type ContaAdmin,
   type DiagnosticoEnvio,
+  type ResultadoTesteEnvio,
   type EscolaAdmin,
   type EscolaCatalogo,
   type PapelConta,
@@ -247,7 +248,8 @@ function PainelEnvioMensagens() {
         <h2 id="titulo-envio">Envio de mensagens aos responsáveis</h2>
         <span className="panel-meta">Últimos 30 dias, todas as escolas</span>
         <p className="panel-desc">
-          O que está configurado na API (sem mostrar nenhuma chave) e por que a última mensagem falhou. Nenhuma mensagem é enviada daqui.
+          O que está configurado na API (sem mostrar nenhuma chave) e por que a última mensagem falhou. Só a mensagem de teste, no fim
+          do painel, envia algo: uma mensagem para o destino que você digitar.
         </p>
       </div>
       {erro && (
@@ -337,9 +339,102 @@ function PainelEnvioMensagens() {
               </p>
             </div>
           )}
+          <TesteDeEnvio aoTestar={() => carregar(false)} />
         </>
       )}
     </section>
+  );
+}
+
+const DICAS_DESTINO = {
+  email: { tipo: "email", modo: "email", exemplo: "voce@escola.sp.gov.br", rotulo: "Seu e-mail" },
+  whatsapp: { tipo: "tel", modo: "tel", exemplo: "(11) 99999-0000", rotulo: "Seu celular com DDD" },
+} as const;
+
+/**
+ * Mensagem de teste (admin/testarEnvio.php): depois de contratar e
+ * configurar o provedor, UMA mensagem para o próprio e-mail ou celular de
+ * quem testa, pelo mesmo caminho dos avisos aos responsáveis. Mostra se o
+ * provedor aceitou ou o motivo da recusa; sem provedor, nada é enviado.
+ */
+function TesteDeEnvio({ aoTestar }: { aoTestar: () => void }) {
+  const [canal, setCanal] = useState<"email" | "whatsapp">("email");
+  const [destino, setDestino] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [resultado, setResultado] = useState<{ tipo: ResultadoTesteEnvio["resultado"] | "erro"; texto: string } | null>(null);
+  const dica = DICAS_DESTINO[canal];
+
+  async function enviar(evento: FormEvent) {
+    evento.preventDefault();
+    setEnviando(true);
+    setResultado(null);
+    const resposta = await Api.adminTestarEnvio(canal, destino.trim());
+    setEnviando(false);
+    if (resposta.sucesso && resposta.dados) {
+      setResultado({ tipo: resposta.dados.resultado, texto: resposta.mensagem });
+      // O último erro do canal (no diagnóstico acima) pode ter mudado.
+      if (resposta.dados.resultado === "falhou") aoTestar();
+    } else {
+      setResultado({ tipo: "erro", texto: resposta.mensagem });
+    }
+  }
+
+  return (
+    <form className="envio-teste" onSubmit={enviar} aria-labelledby="titulo-envio-teste">
+      <div className="envio-teste-texto">
+        <h3 id="titulo-envio-teste">Mensagem de teste</h3>
+        <p className="panel-meta">
+          Confere o provedor contratado com uma mensagem para você, pelo mesmo caminho dos avisos aos responsáveis. Não entra em Notificações.
+        </p>
+      </div>
+      <div className="envio-teste-campos">
+        <div className="filtro">
+          <span className="filtro-rotulo" id="rotulo-canal-teste">
+            Canal
+          </span>
+          <div className="pill-group" role="group" aria-labelledby="rotulo-canal-teste">
+            {(["email", "whatsapp"] as const).map((opcao) => (
+              <button
+                key={opcao}
+                type="button"
+                className={`filter-pill${canal === opcao ? " active" : ""}`}
+                aria-pressed={canal === opcao}
+                onClick={() => {
+                  setCanal(opcao);
+                  setDestino("");
+                  setResultado(null);
+                }}
+              >
+                {NOMES_CANAL[opcao]}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="filtro envio-teste-destino">
+          <label className="filtro-rotulo" htmlFor="destino-teste">
+            {dica.rotulo}
+          </label>
+          <input
+            id="destino-teste"
+            type={dica.tipo}
+            inputMode={dica.modo}
+            autoComplete={canal === "email" ? "email" : "tel"}
+            placeholder={dica.exemplo}
+            value={destino}
+            onChange={(evento) => setDestino(evento.target.value)}
+            required
+            maxLength={150}
+          />
+        </div>
+        <button type="submit" className="btn btn-sm" disabled={enviando || destino.trim() === ""} aria-busy={enviando}>
+          <Icon name="send" />
+          {enviando ? "Enviando…" : "Enviar teste"}
+        </button>
+      </div>
+      <p className={`envio-teste-resultado${resultado ? ` envio-teste-resultado--${resultado.tipo}` : ""}`} role="status">
+        {resultado?.texto ?? ""}
+      </p>
+    </form>
   );
 }
 

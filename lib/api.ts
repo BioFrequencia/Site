@@ -36,6 +36,7 @@ import type {
   HistoricoCorrecoes,
   ContatoEscola,
   DiagnosticoEnvio,
+  ResultadoTesteEnvio,
   CanalAcompanhamento,
   CategoriaChamado,
   ChamadoSuporte,
@@ -660,6 +661,9 @@ export const Api = {
   /** verificarDominio: consulta (só leitura) o domínio do remetente no Resend. */
   adminDiagnosticoEnvio: (verificarDominio = false) =>
     post<DiagnosticoEnvio>("admin/diagnosticoEnvio.php", { verificar_dominio: verificarDominio }),
+  /** Uma mensagem de teste para o próprio e-mail ou celular, pelo provedor configurado. */
+  adminTestarEnvio: (canal: "email" | "whatsapp", destino: string) =>
+    post<ResultadoTesteEnvio>("admin/testarEnvio.php", { canal, destino }),
   adminEscolas: (busca: string, emUso: boolean, pagina: number) =>
     post<ListaPaginada & { escolas: EscolaAdmin[] }>("admin/escolas.php", { busca, em_uso: emUso, pagina }),
   adminContas: (busca: string, situacao: SituacaoConta | null, pagina: number) =>

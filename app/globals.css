@@ -5518,6 +5518,64 @@ button.card-resumo .card-resumo-rotulo {
   flex: 1 1 240px;
   margin: 0;
 }
+/* Mensagem de teste do envio (Administração > Visão geral). */
+.envio-teste {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--cor-borda);
+}
+.envio-teste-texto h3 {
+  font-size: 16px;
+  font-weight: 600;
+}
+.envio-teste-texto .panel-meta {
+  margin: 2px 0 0;
+}
+.envio-teste-campos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 16px;
+  margin-top: 12px;
+}
+.envio-teste-destino {
+  flex: 1 1 240px;
+}
+.envio-teste-destino input {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio-controle);
+  background: var(--cor-superficie);
+  font-size: 15px;
+}
+.envio-teste .btn {
+  min-height: 40px;
+}
+.envio-teste-resultado:empty {
+  display: none;
+}
+.envio-teste-resultado {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--raio-controle);
+  border: 1px solid var(--cor-borda);
+  background: var(--cor-superficie-2);
+  font-size: 14px;
+}
+.envio-teste-resultado--enviado {
+  border-color: var(--cor-sucesso-borda);
+  background: var(--cor-sucesso-fundo);
+}
+.envio-teste-resultado--sem_provedor {
+  border-color: var(--cor-aviso-borda);
+  background: var(--cor-aviso-fundo);
+}
+.envio-teste-resultado--falhou,
+.envio-teste-resultado--erro {
+  border-color: var(--cor-perigo-borda);
+  background: var(--cor-perigo-fundo);
+}
 @media (max-width: 900px) {
   /* Em cartão, o cartão inteiro fica apagado (não cada célula). */
   .tabela-cartoes tr.linha-cancelada {

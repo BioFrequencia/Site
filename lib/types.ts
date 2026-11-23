@@ -765,6 +765,14 @@ export interface DiagnosticoEnvio {
   dominio?: { situacao: string; texto: string };
 }
 
+/** admin/testarEnvio.php: o que o provedor fez com a mensagem de teste. */
+export interface ResultadoTesteEnvio {
+  canal: "email" | "whatsapp";
+  resultado: "enviado" | "sem_provedor" | "falhou";
+  /** Só quando falhou: o motivo que o provedor deu (sem o destino). */
+  motivo: string | null;
+}
+
 export type SituacaoConta = "pendente" | "ativo" | "recusado" | "desativado";
 export type AcaoEquipe = "aprovar" | "recusar" | "desativar" | "reativar" | "tornar_gestor" | "tornar_coordenador";
 

@@ -7,6 +7,7 @@ import { Topbar } from "@/components/Topbar";
 import { Esqueleto } from "@/components/Esqueleto";
 import { Carregando } from "@/components/Carregando";
 import { Icon } from "@/components/Icon";
+import { useConfirmarSaida } from "@/components/ConfirmarSaida";
 import { useToast } from "@/components/Toast";
 import { usePreferencias } from "@/components/Preferencias";
 import { Interruptor } from "@/components/Interruptor";
@@ -482,7 +483,7 @@ function AbaPreferencias() {
 
 
 function AbaDispositivos() {
-  const { logout } = useAuth();
+  const { pedirSaida, dialogoSaida } = useConfirmarSaida();
   const { mostrarToast } = useToast();
   const [aparelhos, setAparelhos] = useState<SessaoConectada[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -565,7 +566,7 @@ function AbaDispositivos() {
               </div>
             </div>
             {aparelho.atual ? (
-              <button type="button" className="btn btn-sm" onClick={logout}>
+              <button type="button" className="btn btn-sm" onClick={pedirSaida}>
                 Sair
               </button>
             ) : (
@@ -581,6 +582,7 @@ function AbaDispositivos() {
           </li>
         ))}
       </ul>
+      {dialogoSaida}
     </div>
   );
 }

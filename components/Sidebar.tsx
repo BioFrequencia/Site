@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon } from "./Icon";
+import { useConfirmarSaida } from "./ConfirmarSaida";
 import { Logo } from "./Logo";
 import { iniciais } from "@/lib/format";
 import { useAuth } from "@/lib/auth";
@@ -77,7 +78,8 @@ export const GRUPOS: { titulo: string; itens: Item[] }[] = [
  */
 export function Sidebar({ contadores }: { contadores: Contadores }) {
   const pathname = usePathname();
-  const { coordenacao, logout } = useAuth();
+  const { coordenacao } = useAuth();
+  const { pedirSaida, dialogoSaida } = useConfirmarSaida();
   const [menuAberto, setMenuAberto] = useState(false);
   const botaoMais = useRef<HTMLButtonElement>(null);
   const botaoFechar = useRef<HTMLButtonElement>(null);
@@ -180,7 +182,7 @@ export function Sidebar({ contadores }: { contadores: Contadores }) {
               </div>
             </div>
           </Link>
-          <button type="button" className="btn btn-sm btn-sair" onClick={logout}>
+          <button type="button" className="btn btn-sm btn-sair" onClick={pedirSaida}>
             <Icon name="logout" />
             <span className="btn-sair-texto">Sair</span>
           </button>
@@ -231,7 +233,15 @@ export function Sidebar({ contadores }: { contadores: Contadores }) {
                   {coordenacao?.papel === "gestor" && " · gestão"}
                 </span>
               </div>
-              <button type="button" className="btn" onClick={logout}>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  // Fecha o menu antes: a confirmação abre por cima da página.
+                  setMenuAberto(false);
+                  pedirSaida();
+                }}
+              >
                 <Icon name="logout" />
                 Sair
               </button>
@@ -239,6 +249,7 @@ export function Sidebar({ contadores }: { contadores: Contadores }) {
           </div>
         </div>
       )}
+      {dialogoSaida}
     </>
   );
 }
