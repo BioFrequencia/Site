@@ -3582,6 +3582,28 @@ button.card-resumo .card-resumo-rotulo {
   padding: 12px 20px;
   border-top: 1px solid var(--cor-borda);
 }
+/* Ficha do aluno: o rodapé "Ver todos" das entradas e saídas e a linha de
+   resumo quando a lista está recolhida. */
+.historico-rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--cor-borda);
+  font-size: 14px;
+  color: var(--cor-texto-suave);
+}
+.historico-resumo {
+  margin: 0 20px 20px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--cor-texto-2);
+}
+.btn-recolher[aria-expanded="false"] svg {
+  transform: rotate(-90deg);
+}
 .paginacao-posicao {
   padding: 0 4px;
   font-size: 14px;
