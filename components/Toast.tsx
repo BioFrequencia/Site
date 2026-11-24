@@ -3,14 +3,21 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { tocarSom } from "@/lib/sons";
 
+/** Um botão no aviso, ex.: "Desfazer" logo depois de registrar. */
+export interface AcaoDoToast {
+  rotulo: string;
+  aoClicar: () => void;
+}
+
 interface ToastState {
   id: number;
   texto: string;
   erro: boolean;
+  acao?: AcaoDoToast;
 }
 
 interface ToastContextValue {
-  mostrarToast: (texto: string, erro?: boolean) => void;
+  mostrarToast: (texto: string, erro?: boolean, acao?: AcaoDoToast) => void;
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -18,6 +25,8 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 /** Quantos avisos cabem na tela ao mesmo tempo antes de empilhar demais. */
 const MAXIMO_VISIVEL = 3;
 const DURACAO_MS = 4500;
+/** Aviso com botão fica mais: dá tempo de ler e decidir desfazer. */
+const DURACAO_COM_ACAO_MS = 10000;
 
 /**
  * Avisos de sucesso/erro.
@@ -46,15 +55,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const mostrarToast = useCallback(
-    (texto: string, erro = false) => {
+    (texto: string, erro = false, acao?: AcaoDoToast) => {
       // Todo aviso é o resultado de uma ação: confirmação (daylight) ou
       // erro (shrug), conforme as preferências de som da conta.
       void tocarSom(erro ? "erro" : "confirmacao");
       const id = ++proximoId.current;
-      setToasts((atuais) => [...atuais, { id, texto, erro }].slice(-MAXIMO_VISIVEL));
+      setToasts((atuais) => [...atuais, { id, texto, erro, acao }].slice(-MAXIMO_VISIVEL));
       timeouts.current.set(
         id,
-        setTimeout(() => fechar(id), erro ? DURACAO_MS * 1.6 : DURACAO_MS)
+        setTimeout(() => fechar(id), acao ? DURACAO_COM_ACAO_MS : erro ? DURACAO_MS * 1.6 : DURACAO_MS)
       );
     },
     [fechar]
@@ -79,6 +88,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((toast) => (
           <div key={toast.id} className={`toast${toast.erro ? " error" : ""}`}>
             <span>{toast.texto}</span>
+            {toast.acao && (
+              <button
+                type="button"
+                className="toast-acao"
+                onClick={() => {
+                  fechar(toast.id);
+                  toast.acao?.aoClicar();
+                }}
+              >
+                {toast.acao.rotulo}
+              </button>
+            )}
             <button
               type="button"
               className="toast-fechar"

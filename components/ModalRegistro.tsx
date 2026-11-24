@@ -1,12 +1,52 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Api } from "@/lib/api";
 import { Modal } from "./Modal";
 import { useToast } from "./Toast";
 import { mensagemDoRegistro } from "@/lib/avisos";
 import { horarioLocalEscola } from "@/lib/format";
 import type { TipoRegistro } from "@/lib/types";
+
+/** O registro que acabou de ser feito (para o "Desfazer" do aviso). */
+export interface RegistroFeito {
+  tipo: TipoRegistro;
+  id: number;
+}
+
+/**
+ * O aviso depois de registrar, com "Desfazer": marcou sem querer, um
+ * clique cancela (o registro fica no histórico como cancelado, com o
+ * motivo). Quem registrou pode desfazer até o fim do dia; depois, só a
+ * gestão, pela lista de Entradas e saídas.
+ */
+export function useAvisoDoRegistro(recarregar: () => void) {
+  const { mostrarToast } = useToast();
+  return useCallback(
+    (mensagem: string, registro: RegistroFeito | null) => {
+      if (!registro) {
+        mostrarToast(mensagem);
+        return;
+      }
+      mostrarToast(mensagem, false, {
+        rotulo: "Desfazer",
+        aoClicar: async () => {
+          const resposta = await Api.cancelarRegistro(registro.tipo, registro.id, "Registrado por engano (desfeito logo depois).");
+          mostrarToast(
+            resposta.sucesso
+              ? registro.tipo === "atraso"
+                ? "Entrada atrasada desfeita."
+                : "Saída antecipada desfeita."
+              : resposta.mensagem,
+            !resposta.sucesso
+          );
+          recarregar();
+        },
+      });
+    },
+    [mostrarToast, recarregar]
+  );
+}
 
 interface AlunoDoRegistro {
   id_aluno: number;
@@ -35,7 +75,7 @@ export function ModalRegistro({
   aluno?: AlunoDoRegistro;
   alunos?: AlunoDoRegistro[];
   onFechar: () => void;
-  onConfirmado: (mensagem: string) => void;
+  onConfirmado: (mensagem: string, registro: RegistroFeito | null) => void;
 }) {
   const { mostrarToast } = useToast();
   const [idAluno, setIdAluno] = useState<number | null>(aluno?.id_aluno ?? null);
@@ -94,7 +134,9 @@ export function ModalRegistro({
       mostrarToast(resposta.mensagem, true);
       return;
     }
-    onConfirmado(mensagemDoRegistro(tipo ?? "atraso", resposta.dados?.avisos));
+    const dados = resposta.dados as { id_atraso?: number; id_saida?: number; avisos?: Parameters<typeof mensagemDoRegistro>[1] } | null;
+    const id = ehAtraso ? dados?.id_atraso : dados?.id_saida;
+    onConfirmado(mensagemDoRegistro(tipo ?? "atraso", dados?.avisos), id ? { tipo: ehAtraso ? "atraso" : "saida", id } : null);
   }
 
   return (

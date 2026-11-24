@@ -63,6 +63,11 @@ import type {
   Responsavel,
   Sala,
   StatusNotificacao,
+  DadosAnoLetivo,
+  DestinoAnoLetivo,
+  ListaExAlunos,
+  ResultadoAnoLetivo,
+  SituacaoAluno,
 } from "./types";
 
 const CHAVE_BASE_URL = "biofreq_api_base_url";
@@ -422,7 +427,7 @@ export const Api = {
     post<RegistrosDoDia>("registro/listar.php", { data, id_sala: idSala, incluir_cancelados: incluirCancelados }),
   /**
    * Cancela (não apaga) um registro feito por engano: a gestão, ou quem
-   * registrou nos primeiros minutos. Numa presença, cai junto a entrada
+   * registrou, no mesmo dia. Numa presença, cai junto a entrada
    * atrasada que ela gerou.
    */
   cancelarRegistro: (tipo: TipoCancelavel, id: number, motivo: string | null) =>
@@ -638,6 +643,16 @@ export const Api = {
 
   // Escola (migração 008): toda a equipe vê; só a gestão altera.
   configuracaoEscola: (ano?: number) => post<DadosEscola>("escola/configuracao.php", ano ? { ano } : {}),
+  /** Só a gestão: as turmas com os alunos ativos, para encerrar o ano letivo. */
+  anoLetivo: () => post<DadosAnoLetivo>("escola/anoLetivo.php", {}),
+  /** Só a gestão: cada turma passa para outra, conclui ou fica; exceções por aluno. */
+  encerrarAnoLetivo: (turmas: { id_sala: number; destino: DestinoAnoLetivo }[], excecoes: { id_aluno: number; destino: DestinoAnoLetivo }[]) =>
+    post<ResultadoAnoLetivo>("escola/encerrarAnoLetivo.php", { turmas, excecoes }),
+  /** Só a gestão: tira um aluno da escola (transferência) ou traz de volta. */
+  mudarSituacaoAluno: (idAluno: number, situacao: SituacaoAluno) =>
+    post<{ situacao: SituacaoAluno; biometrias_apagadas: number }>("user/situacaoAluno.php", { id_aluno: idAluno, situacao }),
+  /** Quem já saiu da escola, do mais recente ao mais antigo. */
+  exAlunos: (pagina: number, busca = "") => post<ListaExAlunos>("user/exAlunos.php", { pagina, busca }),
   salvarConfiguracaoEscola: (mudancas: Partial<ConfiguracaoEscola>) =>
     post<ConfiguracaoEscola>("escola/salvarConfiguracao.php", { ...mudancas }),
   /** Só a gestão: o contato da PRÓPRIA escola nas mensagens aos responsáveis (vazio apaga). */

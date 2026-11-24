@@ -1719,6 +1719,20 @@ a.link-forte:hover {
   padding: 0 6px;
   border-radius: 50%;
 }
+.toast-acao {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.toast-acao:hover { background: rgba(255, 255, 255, 0.14); }
+.toast-acao:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .toast-fechar:hover { opacity: 1; }
 .toast-fechar:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 @keyframes toastIn {
@@ -3600,6 +3614,76 @@ button.card-resumo .card-resumo-rotulo {
   font-size: 15px;
   line-height: 1.5;
   color: var(--cor-texto-2);
+}
+/* Ficha de quem saiu da escola (concluiu ou foi transferido). */
+.aviso-saiu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin: 0 0 18px;
+  padding: 14px 18px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-painel);
+  background: var(--cor-superficie);
+  font-size: 14px;
+}
+.aviso-saiu > span {
+  flex: 1;
+  min-width: 220px;
+}
+
+/* Escola > Ano letivo (components/AnoLetivo.tsx). */
+.lista-ano-letivo,
+.ano-letivo-alunos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.lista-ano-letivo > li {
+  border-top: 1px solid var(--cor-borda);
+  padding: 10px 0;
+}
+.ano-letivo-turma,
+.ano-letivo-alunos li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.ano-letivo-turma .btn-recolher {
+  gap: 8px;
+}
+.ano-letivo-alunos {
+  margin: 8px 0 4px 28px;
+  display: grid;
+  gap: 6px;
+}
+.ano-letivo-alunos li {
+  font-size: 14px;
+}
+@media (max-width: 600px) {
+  .ano-letivo-alunos { margin-left: 0; }
+  .ano-letivo-turma select,
+  .ano-letivo-alunos select { width: 100%; }
+}
+
+/* Rodapé das listas longas (components/MostrarMais.tsx). */
+.mostrar-mais {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--cor-borda);
+  font-size: 14px;
+  color: var(--cor-texto-suave);
+}
+.mostrar-mais-acoes {
+  display: flex;
+  gap: 8px;
 }
 .btn-recolher[aria-expanded="false"] svg {
   transform: rotate(-90deg);

@@ -9,6 +9,7 @@ import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
 import { classeBadgePrioridade, formatarData, formatarPercentual, rotuloPrioridade, rotuloTipoAlerta } from "@/lib/format";
 import type { Alerta, Sala } from "@/lib/types";
+import { MostrarMais, useListaParcial } from "@/components/MostrarMais";
 
 export default function AlertasPage() {
   const { mostrarToast } = useToast();
@@ -17,6 +18,7 @@ export default function AlertasPage() {
   const [tipo, setTipo] = useState<string>("");
   const [prioridade, setPrioridade] = useState<string>("");
   const [alertas, setAlertas] = useState<Alerta[]>([]);
+  const listaAlertas = useListaParcial(alertas, `${idSala}|${tipo}|${prioridade}`);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [encerrando, setEncerrando] = useState<number | null>(null);
@@ -185,7 +187,7 @@ export default function AlertasPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {alertas.map((alerta) => (
+                  {listaAlertas.visiveis.map((alerta) => (
                     <tr key={alerta.id_alerta}>
                       <td className="celula-titulo">
                         <Link href={`/turmas/${alerta.id_aluno}`} className="link-aluno">
@@ -233,6 +235,7 @@ export default function AlertasPage() {
                   ))}
                 </tbody>
               </table>
+              <MostrarMais lista={listaAlertas} nome="alertas" />
             </div>
           )}
         </>
