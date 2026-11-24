@@ -25,6 +25,8 @@ export function problemaDaPlanilha(arquivo: { name: string; size: number }): str
 export const SELO_SITUACAO: Record<string, { classe: string; texto: string }> = {
   nova: { classe: "badge badge--regular", texto: "Nova" },
   novo: { classe: "badge badge--regular", texto: "Novo" },
+  cadastro: { classe: "badge badge--regular", texto: "Cadastro" },
+  completar: { classe: "badge badge--regular", texto: "Completar" },
   existente: { classe: "badge badge--neutral", texto: "Já existe" },
   erro: { classe: "badge badge--erro", texto: "Erro" },
 };
@@ -40,19 +42,31 @@ export function juntarComE(partes: string[]): string {
   return `${partes.slice(0, -1).join(", ")} e ${partes[partes.length - 1]}`;
 }
 
-/** O que a confirmação de turmas e alunos cadastra, em palavras ("2 turmas e 15 alunos"). */
-export function oQueEntraTurmas(resumo: { turmas_novas: number; alunos_novos: number }): string {
+/** O que a confirmação de turmas e alunos cadastra, em palavras ("2 turmas, 15 alunos e 3 alunos completados"). */
+export function oQueEntraTurmas(resumo: { turmas_novas: number; alunos_novos: number; alunos_completados?: number }): string {
   const partes: string[] = [];
   if (resumo.turmas_novas > 0) partes.push(quantidade(resumo.turmas_novas, "turma", "turmas"));
   if (resumo.alunos_novos > 0) partes.push(quantidade(resumo.alunos_novos, "aluno", "alunos"));
+  const completados = resumo.alunos_completados ?? 0;
+  if (completados > 0) partes.push(quantidade(completados, "aluno completado", "alunos completados"));
   return juntarComE(partes);
 }
 
-/** O que a confirmação de entradas e saídas registra ("3 entradas atrasadas e 1 saída antecipada"). */
-export function oQueEntraOcorrencias(resumo: { atrasos_novos: number; saidas_novas: number }): string {
+/**
+ * O que a confirmação de entradas e saídas faz, em palavras
+ * ("3 entradas atrasadas, 2 alunos novos e 1 turma nova").
+ */
+export function oQueEntraOcorrencias(resumo: {
+  atrasos_novos: number;
+  saidas_novas: number;
+  alunos_novos?: number;
+  turmas_novas?: number;
+}): string {
   const partes: string[] = [];
   if (resumo.atrasos_novos > 0) partes.push(quantidade(resumo.atrasos_novos, "entrada atrasada", "entradas atrasadas"));
   if (resumo.saidas_novas > 0) partes.push(quantidade(resumo.saidas_novas, "saída antecipada", "saídas antecipadas"));
+  if ((resumo.alunos_novos ?? 0) > 0) partes.push(quantidade(resumo.alunos_novos ?? 0, "aluno novo", "alunos novos"));
+  if ((resumo.turmas_novas ?? 0) > 0) partes.push(quantidade(resumo.turmas_novas ?? 0, "turma nova", "turmas novas"));
   return juntarComE(partes);
 }
 

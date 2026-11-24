@@ -91,6 +91,7 @@ export default function ImportarPlanilhaPage() {
                   <span className="card-resumo-rotulo">Alunos novos</span>
                   <span className="card-resumo-valor">
                     {previa.resumo.alunos_novos}
+                    {(previa.resumo.alunos_completados ?? 0) > 0 && <small> · {previa.resumo.alunos_completados} para completar</small>}
                     {previa.resumo.alunos_existentes > 0 && <small> · {previa.resumo.alunos_existentes} já existem</small>}
                   </span>
                 </div>
@@ -153,6 +154,12 @@ function ResultadoDaImportacao({ resultado }: { resultado: ResultadoImportacao }
         {alunos > 0 && (
           <li>
             <strong>{alunos}</strong> {alunos === 1 ? "aluno novo" : "alunos novos"}
+          </li>
+        )}
+        {(resultado.alunos_completados ?? 0) > 0 && (
+          <li>
+            <strong>{resultado.alunos_completados}</strong>{" "}
+            {resultado.alunos_completados === 1 ? "aluno completado (data de nascimento e gênero)" : "alunos completados (data de nascimento e gênero)"}
           </li>
         )}
         {responsaveis > 0 && (
