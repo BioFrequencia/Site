@@ -67,7 +67,8 @@ export default function ImportarPlanilhaPage() {
           <div className="importacao-passos">
             <PassoModelo baixar={Api.baixarModeloImportacao}>
               O modelo tem as abas Turmas e Alunos, com listas de período e gênero e as turmas que a sua escola já tem. Uma
-              linha por turma ou por aluno; o responsável é opcional.
+              linha por turma ou por aluno. Só o nome e a turma são obrigatórios: período, nascimento, gênero e responsável
+              podem ficar em branco e ser completados depois.
             </PassoModelo>
             <PassoArquivo etapa={etapa} nomeDaPrevia={previa?.arquivo.nome ?? null} erro={erro} onArquivo={lerArquivo} />
           </div>
