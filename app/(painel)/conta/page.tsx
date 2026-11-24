@@ -150,8 +150,8 @@ function AbaPerfil() {
         <div>
           <strong>{original.nome_coordenacao}</strong>
           <span>
-            {original.email_coordenacao} · {original.nome_escola}
-            {original.cargo && ` · ${ROTULOS_CARGO[original.cargo]}`}
+            {original.email_coordenacao} · {coordenacao?.administrador ? "Equipe BioFrequência" : original.nome_escola}
+            {!coordenacao?.administrador && original.cargo && ` · ${ROTULOS_CARGO[original.cargo]}`}
           </span>
         </div>
       </div>
@@ -199,48 +199,53 @@ function AbaPerfil() {
             </p>
           </div>
         )}
-        <div className="modal-field">
-          <label htmlFor="perfilCargo">Cargo na escola</label>
-          <select
-            id="perfilCargo"
-            value={form.cargo ?? ""}
-            onChange={(e) => setForm((atual) => ({ ...atual, cargo: (e.target.value || null) as CargoNaEscola | null }))}
-          >
-            <option value="" disabled>
-              Escolha
-            </option>
-            {CARGOS_NA_ESCOLA.map((opcao) => (
-              <option key={opcao} value={opcao}>
-                {ROTULOS_CARGO[opcao]}
-              </option>
-            ))}
-          </select>
-          <p className="dica-campo">
-            O cargo descreve a sua função. A permissão no sistema (
-            {original.papel === "gestor" ? "Gestão" : "Coordenação"}, no seu caso) é definida pela gestão da escola.
-          </p>
-        </div>
-        <div className="modal-field">
-          <label htmlFor="perfilEscola">Escola</label>
-          <input
-            id="perfilEscola"
-            value={form.nome_escola}
-            maxLength={150}
-            onChange={(e) => campo("nome_escola", e.target.value)}
-            // O nome de uma escola do catálogo é o oficial da SEDUC; fora
-            // do catálogo, só a gestão muda (vale para a escola inteira).
-            disabled={original.escola_do_catalogo || coordenacao?.papel !== "gestor"}
-            required
-          />
-          <p className="dica-campo">
-            {original.escola_do_catalogo
-              ? "Nome oficial do catálogo da Secretaria da Educação - não muda por aqui."
-              : coordenacao?.papel === "gestor"
-                ? "Aparece no app de biometria e vale para todas as contas desta escola."
-                : "Só a gestão da escola muda o nome."}{" "}
-            Você é {original.papel === "gestor" ? "da gestão" : "da coordenação"} desta escola.
-          </p>
-        </div>
+        {/* A equipe do sistema não é de uma escola: sem cargo nem escola. */}
+        {!coordenacao?.administrador && (
+          <>
+            <div className="modal-field">
+              <label htmlFor="perfilCargo">Cargo na escola</label>
+              <select
+                id="perfilCargo"
+                value={form.cargo ?? ""}
+                onChange={(e) => setForm((atual) => ({ ...atual, cargo: (e.target.value || null) as CargoNaEscola | null }))}
+              >
+                <option value="" disabled>
+                  Escolha
+                </option>
+                {CARGOS_NA_ESCOLA.map((opcao) => (
+                  <option key={opcao} value={opcao}>
+                    {ROTULOS_CARGO[opcao]}
+                  </option>
+                ))}
+              </select>
+              <p className="dica-campo">
+                O cargo descreve a sua função. A permissão no sistema (
+                {original.papel === "gestor" ? "Gestão" : "Coordenação"}, no seu caso) é definida pela gestão da escola.
+              </p>
+            </div>
+            <div className="modal-field">
+              <label htmlFor="perfilEscola">Escola</label>
+              <input
+                id="perfilEscola"
+                value={form.nome_escola}
+                maxLength={150}
+                onChange={(e) => campo("nome_escola", e.target.value)}
+                // O nome de uma escola do catálogo é o oficial da SEDUC; fora
+                // do catálogo, só a gestão muda (vale para a escola inteira).
+                disabled={original.escola_do_catalogo || coordenacao?.papel !== "gestor"}
+                required
+              />
+              <p className="dica-campo">
+                {original.escola_do_catalogo
+                  ? "Nome oficial do catálogo da Secretaria da Educação - não muda por aqui."
+                  : coordenacao?.papel === "gestor"
+                    ? "Aparece no app de biometria e vale para todas as contas desta escola."
+                    : "Só a gestão da escola muda o nome."}{" "}
+                Você é {original.papel === "gestor" ? "da gestão" : "da coordenação"} desta escola.
+              </p>
+            </div>
+          </>
+        )}
 
         {erro && <p className="field-error show">{erro}</p>}
         <div className="acoes-form">

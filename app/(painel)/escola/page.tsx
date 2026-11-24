@@ -9,20 +9,23 @@ import { Icon } from "@/components/Icon";
 import { Interruptor } from "@/components/Interruptor";
 import { useToast } from "@/components/Toast";
 import { ModalAprovacao } from "@/components/ModalAprovacao";
+import { AbaAnoLetivo } from "@/components/AnoLetivo";
 import { formatarData, formatarDataHora, iniciais } from "@/lib/format";
 import {
   PERIODOS_SALA,
   ROTULOS_CARGO,
+  ROTULOS_RESUMO,
   ROTULOS_PAPEL,
   type AcaoEquipe,
   type ConfiguracaoEscola,
   type DadosEscola,
+  type FrequenciaResumo,
   type MembroEquipe,
   type PapelConta,
   type TipoCalendario,
 } from "@/lib/types";
 
-type Aba = "escola" | "turmas" | "calendario" | "avisos" | "equipe";
+type Aba = "escola" | "turmas" | "calendario" | "avisos" | "equipe" | "ano";
 
 const ABAS: { id: Aba; rotulo: string; icone: string }[] = [
   { id: "escola", rotulo: "Escola", icone: "building" },
@@ -30,6 +33,8 @@ const ABAS: { id: Aba; rotulo: string; icone: string }[] = [
   { id: "calendario", rotulo: "Calendário", icone: "calendar" },
   { id: "avisos", rotulo: "Regras e avisos", icone: "bell" },
   { id: "equipe", rotulo: "Equipe", icone: "users" },
+  // Só a gestão (a aba some para a coordenação).
+  { id: "ano", rotulo: "Ano letivo", icone: "calendar" },
 ];
 
 const DIAS_DA_SEMANA = ["", "seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
@@ -87,7 +92,7 @@ export default function EscolaPage() {
       />
 
       <div className="abas-conta" role="tablist" aria-label="Seções da escola">
-        {ABAS.map((item) => (
+        {ABAS.filter((item) => item.id !== "ano" || podeEditar).map((item) => (
           <button
             key={item.id}
             type="button"
@@ -112,6 +117,7 @@ export default function EscolaPage() {
           {aba === "calendario" && <AbaCalendario dados={dados} podeEditar={podeEditar} aoMudar={carregar} trocarAno={setAno} />}
           {aba === "avisos" && <AbaAvisos dados={dados} podeEditar={podeEditar} aoMudar={carregar} />}
           {aba === "equipe" && <AbaEquipe />}
+          {aba === "ano" && podeEditar && <AbaAnoLetivo />}
         </div>
       )}
     </>
@@ -686,6 +692,30 @@ function AbaAvisos({ dados, podeEditar, aoMudar }: { dados: DadosEscola; podeEdi
         "Ao passar do limite de saídas antecipadas",
         "O mesmo aviso, para as saídas antecipadas."
       )}
+      <div className="linha-opcao">
+        <div>
+          <label htmlFor="resumoPeriodico">
+            <b>Resumo às famílias</b>
+          </label>
+          <p className="results-caption">
+            Cada responsável recebe quantas entradas atrasadas e saídas antecipadas o aluno teve no período. Quem não teve
+            nenhuma não recebe nada.
+          </p>
+        </div>
+        <select
+          id="resumoPeriodico"
+          className="filter-select"
+          value={config.resumo_periodico ?? "semanal"}
+          disabled={!podeEditar}
+          onChange={(e) => setConfig({ ...config, resumo_periodico: e.target.value as FrequenciaResumo })}
+        >
+          {(Object.keys(ROTULOS_RESUMO) as FrequenciaResumo[]).map((valor) => (
+            <option key={valor} value={valor}>
+              {ROTULOS_RESUMO[valor]}
+            </option>
+          ))}
+        </select>
+      </div>
       <h3 className="titulo-grupo-opcoes">Presença pelo app</h3>
       {opcao(
         "atraso_pela_presenca",

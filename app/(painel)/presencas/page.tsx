@@ -10,6 +10,7 @@ import { useToast } from "@/components/Toast";
 import { ModalCorrecaoRegistro, type AlvoCorrecao } from "@/components/ModalCorrecaoRegistro";
 import { formatarData, formatarHora, hojeNaEscola, iniciais, plural } from "@/lib/format";
 import { ROTULOS_METODO_PRESENCA, type PresencasDoDia, type Sala } from "@/lib/types";
+import { MostrarMais, useListaParcial } from "@/components/MostrarMais";
 
 /**
  * Presenças registradas pelo app de biometria da coordenação: o aluno é
@@ -28,6 +29,9 @@ export default function PresencasPage() {
   const [carregando, setCarregando] = useState(true);
   const [registrando, setRegistrando] = useState<number | null>(null);
   const [alvo, setAlvo] = useState<AlvoCorrecao | null>(null);
+  const chaveDaLista = `${data}|${idSala}`;
+  const listaPresentes = useListaParcial(dia?.presentes ?? [], chaveDaLista);
+  const listaAusentes = useListaParcial(dia?.ausentes ?? [], chaveDaLista);
 
   useEffect(() => {
     Api.listarSalas().then((resposta) => {
@@ -133,60 +137,63 @@ export default function PresencasPage() {
                 </p>
               </div>
             ) : (
-              <table className="data-table tabela-cartoes">
-                <thead>
-                  <tr>
-                    <th>Hora</th>
-                    <th>Aluno</th>
-                    <th>Turma</th>
-                    <th>Registro</th>
-                    {podeCancelarAlguma && <th><span className="sr-only">Ações</span></th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {dia.presentes.map((presenca) => (
-                    <tr key={presenca.id_presenca}>
-                      <td data-label="Hora" className="tabular">{formatarHora(presenca.registrada_em)}</td>
-                      <td className="celula-titulo">
-                        <div className="student-cell">
-                          <div className="avatar" aria-hidden="true">{iniciais(presenca.nome_aluno)}</div>
-                          <Link href={`/turmas/${presenca.id_aluno}`} className="student-name">
-                            {presenca.nome_aluno}
-                          </Link>
-                        </div>
-                      </td>
-                      <td data-label="Turma">{presenca.nome_sala}</td>
-                      <td data-label="Registro">
-                        <span className={`badge ${presenca.metodo === "manual" ? "badge--neutral" : "badge--regular"}`}>
-                          {ROTULOS_METODO_PRESENCA[presenca.metodo]}
-                        </span>
-                        {presenca.registrado_por && <div className="panel-meta">por {presenca.registrado_por}</div>}
-                      </td>
-                      {podeCancelarAlguma && (
-                        <td className="celula-acoes">
-                          {presenca.pode_cancelar && (
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-danger"
-                              onClick={() =>
-                                setAlvo({
-                                  acao: "cancelar",
-                                  tipo: "presenca",
-                                  id: presenca.id_presenca,
-                                  descricao: `${presenca.nome_aluno} (${presenca.nome_sala}) · presença às ${formatarHora(presenca.registrada_em)} de ${formatarData(presenca.registrada_em)}`,
-                                })
-                              }
-                            >
-                              <Icon name="x" />
-                              Cancelar<span className="sr-only"> a presença de {presenca.nome_aluno}</span>
-                            </button>
-                          )}
-                        </td>
-                      )}
+              <>
+                <table className="data-table tabela-cartoes">
+                  <thead>
+                    <tr>
+                      <th>Hora</th>
+                      <th>Aluno</th>
+                      <th>Turma</th>
+                      <th>Registro</th>
+                      {podeCancelarAlguma && <th><span className="sr-only">Ações</span></th>}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {listaPresentes.visiveis.map((presenca) => (
+                      <tr key={presenca.id_presenca}>
+                        <td data-label="Hora" className="tabular">{formatarHora(presenca.registrada_em)}</td>
+                        <td className="celula-titulo">
+                          <div className="student-cell">
+                            <div className="avatar" aria-hidden="true">{iniciais(presenca.nome_aluno)}</div>
+                            <Link href={`/turmas/${presenca.id_aluno}`} className="student-name">
+                              {presenca.nome_aluno}
+                            </Link>
+                          </div>
+                        </td>
+                        <td data-label="Turma">{presenca.nome_sala}</td>
+                        <td data-label="Registro">
+                          <span className={`badge ${presenca.metodo === "manual" ? "badge--neutral" : "badge--regular"}`}>
+                            {ROTULOS_METODO_PRESENCA[presenca.metodo]}
+                          </span>
+                          {presenca.registrado_por && <div className="panel-meta">por {presenca.registrado_por}</div>}
+                        </td>
+                        {podeCancelarAlguma && (
+                          <td className="celula-acoes">
+                            {presenca.pode_cancelar && (
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-danger"
+                                onClick={() =>
+                                  setAlvo({
+                                    acao: "cancelar",
+                                    tipo: "presenca",
+                                    id: presenca.id_presenca,
+                                    descricao: `${presenca.nome_aluno} (${presenca.nome_sala}) · presença às ${formatarHora(presenca.registrada_em)} de ${formatarData(presenca.registrada_em)}`,
+                                  })
+                                }
+                              >
+                                <Icon name="x" />
+                                Cancelar<span className="sr-only"> a presença de {presenca.nome_aluno}</span>
+                              </button>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <MostrarMais lista={listaPresentes} nome="presenças" />
+              </>
             )}
           </div>
 
@@ -202,45 +209,48 @@ export default function PresencasPage() {
                 <p>Todos os alunos foram registrados.</p>
               </div>
             ) : (
-              <table className="data-table tabela-cartoes">
-                <thead>
-                  <tr>
-                    <th>Aluno</th>
-                    <th>Turma</th>
-                    <th>
-                      <span className="sr-only">Ação</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dia.ausentes.map((aluno) => (
-                    <tr key={aluno.id_aluno}>
-                      <td className="celula-titulo">
-                        <div className="student-cell">
-                          <div className="avatar" aria-hidden="true">{iniciais(aluno.nome_aluno)}</div>
-                          <Link href={`/turmas/${aluno.id_aluno}`} className="student-name">
-                            {aluno.nome_aluno}
-                          </Link>
-                        </div>
-                      </td>
-                      <td data-label="Turma">{aluno.nome_sala}</td>
-                      <td className="celula-acoes" style={{ textAlign: "right" }}>
-                        {ehHoje && (
-                          <button
-                            type="button"
-                            className="btn btn-sm"
-                            onClick={() => registrar(aluno.id_aluno, aluno.nome_aluno)}
-                            disabled={registrando !== null}
-                          >
-                            {registrando === aluno.id_aluno ? "Registrando…" : "Registrar presença"}
-                            <span className="sr-only"> de {aluno.nome_aluno}</span>
-                          </button>
-                        )}
-                      </td>
+              <>
+                <table className="data-table tabela-cartoes">
+                  <thead>
+                    <tr>
+                      <th>Aluno</th>
+                      <th>Turma</th>
+                      <th>
+                        <span className="sr-only">Ação</span>
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {listaAusentes.visiveis.map((aluno) => (
+                      <tr key={aluno.id_aluno}>
+                        <td className="celula-titulo">
+                          <div className="student-cell">
+                            <div className="avatar" aria-hidden="true">{iniciais(aluno.nome_aluno)}</div>
+                            <Link href={`/turmas/${aluno.id_aluno}`} className="student-name">
+                              {aluno.nome_aluno}
+                            </Link>
+                          </div>
+                        </td>
+                        <td data-label="Turma">{aluno.nome_sala}</td>
+                        <td className="celula-acoes" style={{ textAlign: "right" }}>
+                          {ehHoje && (
+                            <button
+                              type="button"
+                              className="btn btn-sm"
+                              onClick={() => registrar(aluno.id_aluno, aluno.nome_aluno)}
+                              disabled={registrando !== null}
+                            >
+                              {registrando === aluno.id_aluno ? "Registrando…" : "Registrar presença"}
+                              <span className="sr-only"> de {aluno.nome_aluno}</span>
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <MostrarMais lista={listaAusentes} nome="alunos" />
+              </>
             )}
           </div>
         </div>

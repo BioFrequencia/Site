@@ -7,10 +7,11 @@ import { Topbar } from "@/components/Topbar";
 import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
-import { ModalRegistro } from "@/components/ModalRegistro";
+import { ModalRegistro, useAvisoDoRegistro } from "@/components/ModalRegistro";
 import { ModalCorrecaoRegistro, type AlvoCorrecao } from "@/components/ModalCorrecaoRegistro";
 import { formatarData, formatarHora, hojeNaEscola, iniciais, rotuloOrigemAtraso } from "@/lib/format";
 import type { AlunoFiltro, RegistrosDoDia, Sala, TipoRegistro } from "@/lib/types";
+import { MostrarMais, useListaParcial } from "@/components/MostrarMais";
 
 /**
  * Entradas e saídas: a tela da portaria. Registra a entrada atrasada ou a
@@ -21,7 +22,7 @@ import type { AlunoFiltro, RegistrosDoDia, Sala, TipoRegistro } from "@/lib/type
  *
  * Registro feito por engano é CANCELADO, com motivo (migração 012): não
  * some, sai das contas e fica no histórico de correções. Cancela a gestão,
- * ou quem registrou nos primeiros minutos (a API diz em pode_cancelar).
+ * ou quem registrou, no mesmo dia (a API diz em pode_cancelar).
  */
 export default function RegistrosPage() {
   const { mostrarToast } = useToast();
@@ -36,6 +37,7 @@ export default function RegistrosPage() {
   const [modal, setModal] = useState<TipoRegistro | null>(null);
   const [mostrarCancelados, setMostrarCancelados] = useState(false);
   const [alvo, setAlvo] = useState<AlvoCorrecao | null>(null);
+  const listaRegistros = useListaParcial(dia?.registros ?? [], `${data}|${idSala}|${mostrarCancelados}`);
 
   useEffect(() => {
     let ativo = true;
@@ -62,6 +64,7 @@ export default function RegistrosPage() {
     }
     setCarregando(false);
   }, [data, idSala, mostrarCancelados]);
+  const avisoDoRegistro = useAvisoDoRegistro(carregar);
 
   useEffect(() => {
     carregar();
@@ -209,79 +212,82 @@ export default function RegistrosPage() {
                 <p>Nenhuma entrada atrasada ou saída antecipada {hoje ? "hoje" : "neste dia"}.</p>
               </div>
             ) : (
-              <table className="data-table tabela-cartoes">
-                <thead>
-                  <tr>
-                    <th>Horário</th>
-                    <th>Aluno</th>
-                    <th>Tipo</th>
-                    <th>Motivo</th>
-                    <th>Registro</th>
-                    {temAcoes && <th><span className="sr-only">Ações</span></th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {dia.registros.map((registro) => (
-                    <tr key={`${registro.tipo}-${registro.id}`} className={registro.cancelado ? "linha-cancelada" : undefined}>
-                      <td data-label="Horário" className="tabular">{formatarHora(registro.momento)}</td>
-                      <td className="celula-titulo">
-                        <Link href={`/turmas/${registro.id_aluno}`} className="student-cell">
-                          <div className="avatar">{iniciais(registro.nome_aluno)}</div>
-                          <div>
-                            <div className="student-name">{registro.nome_aluno}</div>
-                            <div className="student-turma">{registro.nome_sala}</div>
-                          </div>
-                        </Link>
-                      </td>
-                      <td data-label="Tipo">
-                        <span className={`badge ${registro.tipo === "atraso" ? "badge--atraso" : "badge--saida"}`}>
-                          {registro.tipo === "atraso" ? "Entrada atrasada" : "Saída antecipada"}
-                        </span>
-                        {registro.justificado && <span className="badge badge--regular">Justificado</span>}
-                        {registro.cancelado && <span className="badge badge--cancelado">Cancelado</span>}
-                      </td>
-                      <td data-label="Motivo">
-                        {registro.motivo ?? "-"}
-                        {registro.retirado_por && <div className="panel-meta">Buscou: {registro.retirado_por}</div>}
-                      </td>
-                      <td data-label="Registro" className="panel-meta">
-                        {registro.tipo === "atraso" ? rotuloOrigemAtraso(registro.origem) : "Lançada pela coordenação"}
-                        {registro.registrado_por && <div>por {registro.registrado_por}</div>}
-                        {registro.cancelado && (
-                          <div className="info-cancelamento">
-                            Cancelado{registro.cancelado_por ? ` por ${registro.cancelado_por}` : ""}
-                            {registro.motivo_cancelamento ? `: ${registro.motivo_cancelamento}` : ""}
-                          </div>
-                        )}
-                      </td>
-                      {temAcoes && (
-                        <td className="celula-acoes">
-                          {registro.pode_cancelar && (
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-danger"
-                              onClick={() => setAlvo({ acao: "cancelar", tipo: registro.tipo, id: registro.id, descricao: descrever(registro) })}
-                            >
-                              <Icon name="x" />
-                              Cancelar<span className="sr-only"> {descrever(registro)}</span>
-                            </button>
-                          )}
-                          {registro.cancelado && dia.pode_restaurar && (
-                            <button
-                              type="button"
-                              className="btn btn-sm"
-                              onClick={() => setAlvo({ acao: "restaurar", tipo: registro.tipo, id: registro.id, descricao: descrever(registro) })}
-                            >
-                              <Icon name="refresh" />
-                              Restaurar<span className="sr-only"> {descrever(registro)}</span>
-                            </button>
+              <>
+                <table className="data-table tabela-cartoes">
+                  <thead>
+                    <tr>
+                      <th>Horário</th>
+                      <th>Aluno</th>
+                      <th>Tipo</th>
+                      <th>Motivo</th>
+                      <th>Registro</th>
+                      {temAcoes && <th><span className="sr-only">Ações</span></th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {listaRegistros.visiveis.map((registro) => (
+                      <tr key={`${registro.tipo}-${registro.id}`} className={registro.cancelado ? "linha-cancelada" : undefined}>
+                        <td data-label="Horário" className="tabular">{formatarHora(registro.momento)}</td>
+                        <td className="celula-titulo">
+                          <Link href={`/turmas/${registro.id_aluno}`} className="student-cell">
+                            <div className="avatar">{iniciais(registro.nome_aluno)}</div>
+                            <div>
+                              <div className="student-name">{registro.nome_aluno}</div>
+                              <div className="student-turma">{registro.nome_sala}</div>
+                            </div>
+                          </Link>
+                        </td>
+                        <td data-label="Tipo">
+                          <span className={`badge ${registro.tipo === "atraso" ? "badge--atraso" : "badge--saida"}`}>
+                            {registro.tipo === "atraso" ? "Entrada atrasada" : "Saída antecipada"}
+                          </span>
+                          {registro.justificado && <span className="badge badge--regular">Justificado</span>}
+                          {registro.cancelado && <span className="badge badge--cancelado">Cancelado</span>}
+                        </td>
+                        <td data-label="Motivo">
+                          {registro.motivo ?? "-"}
+                          {registro.retirado_por && <div className="panel-meta">Buscou: {registro.retirado_por}</div>}
+                        </td>
+                        <td data-label="Registro" className="panel-meta">
+                          {registro.tipo === "atraso" ? rotuloOrigemAtraso(registro.origem) : "Lançada pela coordenação"}
+                          {registro.registrado_por && <div>por {registro.registrado_por}</div>}
+                          {registro.cancelado && (
+                            <div className="info-cancelamento">
+                              Cancelado{registro.cancelado_por ? ` por ${registro.cancelado_por}` : ""}
+                              {registro.motivo_cancelamento ? `: ${registro.motivo_cancelamento}` : ""}
+                            </div>
                           )}
                         </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        {temAcoes && (
+                          <td className="celula-acoes">
+                            {registro.pode_cancelar && (
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-danger"
+                                onClick={() => setAlvo({ acao: "cancelar", tipo: registro.tipo, id: registro.id, descricao: descrever(registro) })}
+                              >
+                                <Icon name="x" />
+                                Cancelar<span className="sr-only"> {descrever(registro)}</span>
+                              </button>
+                            )}
+                            {registro.cancelado && dia.pode_restaurar && (
+                              <button
+                                type="button"
+                                className="btn btn-sm"
+                                onClick={() => setAlvo({ acao: "restaurar", tipo: registro.tipo, id: registro.id, descricao: descrever(registro) })}
+                              >
+                                <Icon name="refresh" />
+                                Restaurar<span className="sr-only"> {descrever(registro)}</span>
+                              </button>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <MostrarMais lista={listaRegistros} nome="registros" />
+              </>
             )}
           </div>
         </div>
@@ -301,9 +307,9 @@ export default function RegistrosPage() {
         tipo={modal}
         alunos={alunos.filter((a) => idSala === null || a.id_sala === idSala).map((a) => ({ id_aluno: a.id_aluno, nome_aluno: a.nome_aluno, turma: a.turma }))}
         onFechar={() => setModal(null)}
-        onConfirmado={(mensagem) => {
+        onConfirmado={(mensagem, registro) => {
           setModal(null);
-          mostrarToast(mensagem);
+          avisoDoRegistro(mensagem, registro);
           carregar();
         }}
       />

@@ -16,6 +16,7 @@ import {
   type ChamadoSuporte,
   type StatusChamado,
 } from "@/lib/types";
+import { MostrarMais, useListaParcial } from "@/components/MostrarMais";
 
 const PERGUNTAS: { pergunta: string; resposta: ReactNode }[] = [
   {
@@ -138,6 +139,7 @@ export default function SuportePage() {
   const [mensagem, setMensagem] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const listaChamados = useListaParcial(chamados ?? []);
 
   async function carregar() {
     const resposta = await Api.listarChamados();
@@ -270,31 +272,34 @@ export default function SuportePage() {
           </div>
         )}
         {chamados && chamados.length > 0 && (
-          <ul className="lista-chamados">
-            {chamados.map((chamado) => (
-              <li key={chamado.id_chamado} className="chamado">
-                <div className="chamado-topo">
-                  <div>
-                    <strong>{chamado.assunto}</strong>
-                    <div className="chamado-meta">
-                      #{chamado.id_chamado} · {ROTULOS_CATEGORIA_CHAMADO[chamado.categoria]} · aberto em{" "}
-                      {formatarDataHora(chamado.criado_em)}
+          <>
+            <ul className="lista-chamados">
+              {listaChamados.visiveis.map((chamado) => (
+                <li key={chamado.id_chamado} className="chamado">
+                  <div className="chamado-topo">
+                    <div>
+                      <strong>{chamado.assunto}</strong>
+                      <div className="chamado-meta">
+                        #{chamado.id_chamado} · {ROTULOS_CATEGORIA_CHAMADO[chamado.categoria]} · aberto em{" "}
+                        {formatarDataHora(chamado.criado_em)}
+                      </div>
                     </div>
+                    <span className={`badge ${CLASSE_STATUS[chamado.status]}`}>{ROTULOS_STATUS_CHAMADO[chamado.status]}</span>
                   </div>
-                  <span className={`badge ${CLASSE_STATUS[chamado.status]}`}>{ROTULOS_STATUS_CHAMADO[chamado.status]}</span>
-                </div>
-                <p className="chamado-mensagem">{chamado.mensagem}</p>
-                {chamado.resposta && (
-                  <div className="chamado-resposta">
-                    <span>
-                      Resposta da equipe{chamado.respondido_em ? ` · ${formatarDataHora(chamado.respondido_em)}` : ""}
-                    </span>
-                    <p>{chamado.resposta}</p>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
+                  <p className="chamado-mensagem">{chamado.mensagem}</p>
+                  {chamado.resposta && (
+                    <div className="chamado-resposta">
+                      <span>
+                        Resposta da equipe{chamado.respondido_em ? ` · ${formatarDataHora(chamado.respondido_em)}` : ""}
+                      </span>
+                      <p>{chamado.resposta}</p>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <MostrarMais lista={listaChamados} nome="chamados" />
+          </>
         )}
       </div>
     </>

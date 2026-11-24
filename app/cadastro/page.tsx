@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { telaInicial } from "@/lib/equipe";
 import { Logo } from "@/components/Logo";
 import { IconesEscola } from "@/components/IconesEscola";
 import { AlternarTema } from "@/components/AlternarTema";
@@ -26,7 +27,7 @@ function emTitulo(texto: string | null): string {
 }
 
 export default function CadastroPage() {
-  const { autenticado, carregando } = useAuth();
+  const { autenticado, carregando, coordenacao } = useAuth();
   const router = useRouter();
 
   const [nome, setNome] = useState("");
@@ -49,8 +50,8 @@ export default function CadastroPage() {
   const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
-    if (!carregando && autenticado) router.replace("/dashboard");
-  }, [carregando, autenticado, router]);
+    if (!carregando && autenticado) router.replace(telaInicial(coordenacao));
+  }, [carregando, autenticado, coordenacao, router]);
 
   useEffect(() => {
     const termo = buscaEscola.trim();

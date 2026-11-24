@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { telaInicial } from "@/lib/equipe";
 import { Icon } from "@/components/Icon";
 import { Logo } from "@/components/Logo";
 import { IconesEscola } from "@/components/IconesEscola";
@@ -14,7 +15,7 @@ import { ReenviarLink } from "@/components/ReenviarLink";
 import type { LoginRecusado } from "@/lib/types";
 
 export default function LoginPage() {
-  const { autenticado, carregando, login } = useAuth();
+  const { autenticado, carregando, coordenacao, login } = useAuth();
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -43,8 +44,8 @@ export default function LoginPage() {
   }, []);
 
   useEffect(() => {
-    if (!carregando && autenticado) router.replace("/dashboard");
-  }, [carregando, autenticado, router]);
+    if (!carregando && autenticado) router.replace(telaInicial(coordenacao));
+  }, [carregando, autenticado, coordenacao, router]);
 
   async function aoEnviar(evento: FormEvent) {
     evento.preventDefault();
@@ -73,7 +74,7 @@ export default function LoginPage() {
     }
 
     login(resposta.dados);
-    router.replace("/dashboard");
+    router.replace(telaInicial(resposta.dados));
   }
 
   return (

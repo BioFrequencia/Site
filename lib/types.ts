@@ -338,6 +338,9 @@ export interface HistoricoAluno {
     facial_atualizada_em: string | null;
     facial_amostras: number | null;
     digitais: number;
+    /** Migração 014: quem saiu da escola continua com a ficha aberta. */
+    situacao_aluno?: SituacaoAluno;
+    saiu_em?: string | null;
   };
   periodo: { inicio: string; fim: string };
   atrasos: RegistroEvento[];
@@ -444,7 +447,7 @@ export interface PresencasDoDia {
     registrada_em: string;
     metodo: MetodoPresenca;
     registrado_por?: string | null;
-    /** A gestão, ou quem registrou nos primeiros minutos, pode cancelar (migração 012). */
+    /** A gestão, ou quem registrou (no mesmo dia), pode cancelar (migração 012). */
     pode_cancelar?: boolean;
   }[];
   ausentes: { id_aluno: number; nome_aluno: string; id_sala: number; nome_sala: string }[];
@@ -700,6 +703,62 @@ export interface ConfiguracaoEscola {
   aviso_automatico: boolean;
   aviso_cada_registro: boolean;
   atraso_pela_presenca: boolean;
+  /** Resumo às famílias (migração 014): toda segunda (semanal), todo dia 1º (mensal) ou nenhum. */
+  resumo_periodico?: FrequenciaResumo;
+}
+
+export type FrequenciaResumo = "desligado" | "semanal" | "mensal";
+
+export const ROTULOS_RESUMO: Record<FrequenciaResumo, string> = {
+  semanal: "Toda semana (segunda-feira, da semana anterior)",
+  mensal: "Todo mês (dia 1º, do mês anterior)",
+  desligado: "Não mandar resumo",
+};
+
+/** Situação do aluno na escola (migração 014): quem saiu some das listas, com o histórico guardado. */
+export type SituacaoAluno = "ativo" | "concluiu" | "transferido";
+
+export const ROTULOS_SITUACAO_ALUNO: Record<SituacaoAluno, string> = {
+  ativo: "Na escola",
+  concluiu: "Concluiu",
+  transferido: "Transferido(a)",
+};
+
+/** escola/anoLetivo.php: as turmas com os alunos ativos, para encerrar o ano. */
+export interface TurmaDoAnoLetivo {
+  id_sala: number;
+  nome_sala: string;
+  periodo_sala: string | null;
+  alunos: { id_aluno: number; nome_aluno: string }[];
+}
+
+export interface DadosAnoLetivo {
+  turmas: TurmaDoAnoLetivo[];
+  ex_alunos: number;
+}
+
+/** O que acontece com uma turma ou um aluno no fim do ano: fica, passa para outra turma ou sai. */
+export type DestinoAnoLetivo = "manter" | "concluiu" | "transferido" | number;
+
+export interface ResultadoAnoLetivo {
+  movidos: number;
+  sairam: number;
+  biometrias_apagadas: number;
+}
+
+export interface ExAluno {
+  id_aluno: number;
+  nome_aluno: string;
+  turma: string | null;
+  situacao: Exclude<SituacaoAluno, "ativo">;
+  saiu_em: string | null;
+}
+
+export interface ListaExAlunos {
+  alunos: ExAluno[];
+  pagina_atual: number;
+  total_paginas: number;
+  total_registros: number;
 }
 
 export type TipoCalendario = "sem_aula" | "aula_extra";

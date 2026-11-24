@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "./Icon";
-import { GRUPOS } from "./Sidebar";
+import { gruposDoMenu } from "./Sidebar";
 import { Api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { ehEquipeDoSistema } from "@/lib/equipe";
 
 /** Evento que o botão "Buscar" do topo dispara para abrir a busca. */
 export const EVENTO_ABRIR_BUSCA = "biofrequencia:abrir-busca";
@@ -58,6 +59,8 @@ export function BuscaRapida() {
   const campo = useRef<HTMLInputElement>(null);
   const focoAnterior = useRef<HTMLElement | null>(null);
   const idLista = useId();
+  // A equipe do sistema não vê alunos de nenhuma escola: a busca fica só nas telas dela.
+  const buscaAlunos = !ehEquipeDoSistema(coordenacao);
 
   const abrir = useCallback(() => {
     focoAnterior.current = document.activeElement as HTMLElement | null;
@@ -101,7 +104,7 @@ export function BuscaRapida() {
   useEffect(() => {
     if (!aberta) return;
     const busca = termo.trim();
-    if (busca.length < 2) {
+    if (!buscaAlunos || busca.length < 2) {
       setAlunos([]);
       setBuscandoAlunos(false);
       return;
@@ -127,15 +130,12 @@ export function BuscaRapida() {
       valida = false;
       clearTimeout(espera);
     };
-  }, [termo, aberta]);
+  }, [termo, aberta, buscaAlunos]);
 
   const telas = useMemo<Resultado[]>(() => {
-    const visivel = (so?: "gestao" | "equipe") =>
-      !so || (so === "equipe" ? !!coordenacao?.administrador : coordenacao?.papel === "gestor");
     const busca = normalizar(termo);
-    return GRUPOS.flatMap((grupo) =>
+    return gruposDoMenu(coordenacao).flatMap((grupo) =>
       grupo.itens
-        .filter((item) => visivel(item.so))
         .map((item) => ({
           id: `tela-${item.href}`,
           titulo: item.label,
@@ -197,7 +197,7 @@ export function BuscaRapida() {
               setIndice(0);
             }}
             onKeyDown={aoTeclarNoCampo}
-            placeholder="Buscar uma tela ou um aluno pelo nome…"
+            placeholder={buscaAlunos ? "Buscar uma tela ou um aluno pelo nome…" : "Buscar uma tela…"}
             role="combobox"
             aria-expanded="true"
             aria-controls={idLista}

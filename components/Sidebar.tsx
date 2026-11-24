@@ -7,15 +7,17 @@ import { Icon } from "./Icon";
 import { Logo } from "./Logo";
 import { iniciais } from "@/lib/format";
 import { useAuth } from "@/lib/auth";
+import { ehEquipeDoSistema } from "@/lib/equipe";
 import type { Contadores } from "@/lib/contadores";
+import type { Coordenacao } from "@/lib/types";
 
 export interface Item {
   href: string;
   label: string;
   icone: string;
   badge?: keyof Contadores;
-  /** Só para a gestão da escola ou só para a equipe do sistema. */
-  so?: "gestao" | "equipe";
+  /** Só para a gestão da escola. */
+  so?: "gestao";
   /** Fica na barra de baixo do celular; os outros vão para o "Mais". */
   principal?: boolean;
   /** Nome mais curto na barra do celular, onde cada item tem uns 70px. */
@@ -55,7 +57,6 @@ export const GRUPOS: { titulo: string; itens: Item[] }[] = [
     titulo: "Escola",
     itens: [
       { href: "/escola", label: "Escola", icone: "building", badge: "equipe" },
-      { href: "/admin", label: "Administração", icone: "settings", badge: "admin", so: "equipe" },
     ],
   },
   {
@@ -70,6 +71,28 @@ export const GRUPOS: { titulo: string; itens: Item[] }[] = [
 ];
 
 /**
+ * Menu da equipe do sistema (ADMIN_EMAILS): separada das escolas, só a
+ * Administração e a própria conta - nada de turmas, alunos ou registros.
+ */
+export const GRUPOS_DA_EQUIPE: { titulo: string; itens: Item[] }[] = [
+  {
+    titulo: "Sistema",
+    itens: [{ href: "/admin", label: "Administração", icone: "settings", badge: "admin", principal: true, curto: "Admin" }],
+  },
+  {
+    titulo: "Conta",
+    itens: [{ href: "/conta", label: "Minha conta", icone: "userCircle", principal: true, curto: "Conta" }],
+  },
+];
+
+/** Os grupos do menu que esta conta vê (os da escola, conforme o papel, ou os da equipe do sistema). */
+export function gruposDoMenu(coordenacao: Coordenacao | null): { titulo: string; itens: Item[] }[] {
+  if (ehEquipeDoSistema(coordenacao)) return GRUPOS_DA_EQUIPE;
+  const visivel = (item: Item) => !item.so || (item.so === "gestao" && coordenacao?.papel === "gestor");
+  return GRUPOS.map((grupo) => ({ ...grupo, itens: grupo.itens.filter(visivel) })).filter((grupo) => grupo.itens.length > 0);
+}
+
+/**
  * Menu do painel. No computador, a coluna da esquerda com todos os grupos;
  * no tablet, só os ícones (o nome aparece ao passar o mouse e é lido pelo
  * leitor de tela); no celular, uma barra embaixo com as quatro telas do dia
@@ -81,10 +104,9 @@ export function Sidebar({ contadores }: { contadores: Contadores }) {
   const [menuAberto, setMenuAberto] = useState(false);
   const botaoMais = useRef<HTMLButtonElement>(null);
   const botaoFechar = useRef<HTMLButtonElement>(null);
-  const visivel = (item: Item) =>
-    !item.so || (item.so === "equipe" ? !!coordenacao?.administrador : coordenacao?.papel === "gestor");
+  const equipeDoSistema = ehEquipeDoSistema(coordenacao);
   const ativo = (item: Item) => pathname === item.href || pathname.startsWith(item.href + "/");
-  const grupos = GRUPOS.map((grupo) => ({ ...grupo, itens: grupo.itens.filter(visivel) })).filter((grupo) => grupo.itens.length > 0);
+  const grupos = gruposDoMenu(coordenacao);
   const escondidos = grupos.flatMap((grupo) => grupo.itens).filter((item) => !item.principal);
   // O "Mais" se destaca quando a tela aberta está dentro dele, e ganha um
   // ponto quando algo lá dentro tem contador (equipe, notificações).
@@ -126,7 +148,7 @@ export function Sidebar({ contadores }: { contadores: Contadores }) {
           <Logo tamanho={34} />
           <div>
             <div className="brand-name">BioFrequência</div>
-            <div className="brand-sub">Coordenação escolar</div>
+            <div className="brand-sub">{equipeDoSistema ? "Equipe do sistema" : "Coordenação escolar"}</div>
           </div>
         </div>
 
@@ -175,8 +197,8 @@ export function Sidebar({ contadores }: { contadores: Contadores }) {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div className="user-name">{coordenacao?.nome_coordenacao}</div>
               <div className="user-role">
-                {coordenacao?.nome_escola || "Coordenação"}
-                {coordenacao?.papel === "gestor" && " · gestão"}
+                {equipeDoSistema ? "Equipe BioFrequência" : coordenacao?.nome_escola || "Coordenação"}
+                {!equipeDoSistema && coordenacao?.papel === "gestor" && " · gestão"}
               </div>
             </div>
           </Link>
@@ -227,8 +249,8 @@ export function Sidebar({ contadores }: { contadores: Contadores }) {
               <div className="menu-celular-quem">
                 <strong>{coordenacao?.nome_coordenacao}</strong>
                 <span>
-                  {coordenacao?.nome_escola || "Coordenação"}
-                  {coordenacao?.papel === "gestor" && " · gestão"}
+                  {equipeDoSistema ? "Equipe BioFrequência" : coordenacao?.nome_escola || "Coordenação"}
+                  {!equipeDoSistema && coordenacao?.papel === "gestor" && " · gestão"}
                 </span>
               </div>
               <button type="button" className="btn" onClick={logout}>

@@ -10,6 +10,7 @@ import { useToast } from "@/components/Toast";
 import { ModalEditarResponsavel, ModalResponsavel } from "@/components/ModalResponsavel";
 import { formatarCpf, formatarTelefone } from "@/lib/format";
 import { ROTULOS_CANAL_RESPONSAVEL, type AlunoFiltro, type ResponsaveisDaEscola, type ResponsavelDaEscola } from "@/lib/types";
+import { MostrarMais, useListaParcial } from "@/components/MostrarMais";
 
 /**
  * Responsáveis da escola: quem recebe os avisos quando um aluno passa do
@@ -54,6 +55,8 @@ export default function ResponsaveisPage() {
   }, []);
 
   const semResponsavel = dados?.sem_responsavel ?? [];
+  const listaResponsaveis = useListaParcial(dados?.responsaveis ?? [], busca);
+  const listaSemResponsavel = useListaParcial(semResponsavel, busca);
   // Com um aluno só, o parentesco com ele também é editável. Memorizado: um
   // objeto novo a cada render reiniciaria o formulário enquanto se digita.
   const responsavelEditado = useMemo(
@@ -127,52 +130,58 @@ export default function ResponsaveisPage() {
             </div>
           ) : (
             <div className="tabela-rolavel">
+              <>
+                <>
               <table className="data-table tabela-cartoes">
-                <thead>
-                  <tr>
-                    <th>Responsável</th>
-                    <th>Contato</th>
-                    <th>Avisos por</th>
-                    <th>Alunos</th>
-                    <th><span className="sr-only">Ações</span></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dados.responsaveis.map((r) => (
-                    <tr key={r.id_responsavel}>
-                      <td className="celula-titulo">
-                        <b>{r.nome_responsavel}</b>
-                        <div className="panel-meta">CPF {formatarCpf(r.cpf_responsavel)}</div>
-                      </td>
-                      <td data-label="Contato">
-                        {formatarTelefone(r.telefone_responsavel)}
-                        {r.email_responsavel && <div className="panel-meta">{r.email_responsavel}</div>}
-                      </td>
-                      <td data-label="Avisos por">{ROTULOS_CANAL_RESPONSAVEL[r.canal_preferido ?? "whatsapp"]}</td>
-                      <td data-label="Alunos">
-                        <ul className="lista-responsaveis">
-                          {r.alunos.map((a) => (
-                            <li key={a.id_aluno}>
-                              <Link href={`/turmas/${a.id_aluno}`} className="link-forte">
-                                {a.nome_aluno}
-                              </Link>
-                              <span>
-                                {a.nome_sala}
-                                {a.parentesco && ` · ${a.parentesco}`}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      </td>
-                      <td className="celula-acoes" style={{ textAlign: "right" }}>
-                        <button type="button" className="btn btn-sm" onClick={() => setEditando(r)}>
-                          Editar<span className="sr-only"> {r.nome_responsavel}</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                    <thead>
+                      <tr>
+                        <th>Responsável</th>
+                        <th>Contato</th>
+                        <th>Avisos por</th>
+                        <th>Alunos</th>
+                        <th><span className="sr-only">Ações</span></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {listaResponsaveis.visiveis.map((r) => (
+                        <tr key={r.id_responsavel}>
+                          <td className="celula-titulo">
+                            <b>{r.nome_responsavel}</b>
+                            <div className="panel-meta">CPF {formatarCpf(r.cpf_responsavel)}</div>
+                          </td>
+                          <td data-label="Contato">
+                            {formatarTelefone(r.telefone_responsavel)}
+                            {r.email_responsavel && <div className="panel-meta">{r.email_responsavel}</div>}
+                          </td>
+                          <td data-label="Avisos por">{ROTULOS_CANAL_RESPONSAVEL[r.canal_preferido ?? "whatsapp"]}</td>
+                          <td data-label="Alunos">
+                            <ul className="lista-responsaveis">
+                              {r.alunos.map((a) => (
+                                <li key={a.id_aluno}>
+                                  <Link href={`/turmas/${a.id_aluno}`} className="link-forte">
+                                    {a.nome_aluno}
+                                  </Link>
+                                  <span>
+                                    {a.nome_sala}
+                                    {a.parentesco && ` · ${a.parentesco}`}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </td>
+                          <td className="celula-acoes" style={{ textAlign: "right" }}>
+                            <button type="button" className="btn btn-sm" onClick={() => setEditando(r)}>
+                              Editar<span className="sr-only"> {r.nome_responsavel}</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+              <MostrarMais lista={listaSemResponsavel} nome="alunos" />
+            </>
+                <MostrarMais lista={listaResponsaveis} nome="responsáveis" />
+              </>
             </div>
           )
         )}
@@ -193,7 +202,7 @@ export default function ResponsaveisPage() {
                 </tr>
               </thead>
               <tbody>
-                {semResponsavel.map((a) => (
+                {listaSemResponsavel.visiveis.map((a) => (
                   <tr key={a.id_aluno}>
                     <td className="celula-titulo">
                       <Link href={`/turmas/${a.id_aluno}`} className="link-forte">

@@ -4,12 +4,13 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
 import { Esqueleto } from "@/components/Esqueleto";
 import { Modal } from "@/components/Modal";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
-import { ModalRegistro } from "@/components/ModalRegistro";
+import { ModalRegistro, useAvisoDoRegistro } from "@/components/ModalRegistro";
 import { ModalCorrecaoRegistro, type AlvoCorrecao } from "@/components/ModalCorrecaoRegistro";
 import { ModalEditarResponsavel, ModalResponsavel } from "@/components/ModalResponsavel";
 import {
@@ -30,6 +31,8 @@ import {
   type HistoricoAluno,
   type Responsavel,
   type TipoRegistro,
+  ROTULOS_SITUACAO_ALUNO,
+  type SituacaoAluno,
 } from "@/lib/types";
 
 /** Quantas entradas e saídas a ficha mostra antes de "Ver todos". */
@@ -58,6 +61,11 @@ export default function AlunoDetalhePage() {
   const [modalAcompanhamento, setModalAcompanhamento] = useState(false);
   const [apagandoBiometria, setApagandoBiometria] = useState<"facial" | "consentimento" | null>(null);
   const [alvo, setAlvo] = useState<AlvoCorrecao | null>(null);
+  const avisoDoRegistro = useAvisoDoRegistro(() => void carregarTudo());
+  const { coordenacao } = useAuth();
+  const gestao = coordenacao?.papel === "gestor";
+  const [retirando, setRetirando] = useState(false);
+  const [mudandoSituacao, setMudandoSituacao] = useState(false);
 
   async function carregarTudo() {
     setCarregando(true);
@@ -157,6 +165,17 @@ export default function AlunoDetalhePage() {
       : null;
   const alunoDoModal = historico ? { id_aluno: idAluno, nome_aluno: historico.aluno.nome_aluno, turma: historico.aluno.nome_sala } : undefined;
 
+  async function mudarSituacao(situacao: SituacaoAluno) {
+    setMudandoSituacao(true);
+    const resposta = await Api.mudarSituacaoAluno(idAluno, situacao);
+    setMudandoSituacao(false);
+    setRetirando(false);
+    mostrarToast(resposta.mensagem || (resposta.sucesso ? "Situação do aluno atualizada." : "Não foi possível mudar."), !resposta.sucesso);
+    if (resposta.sucesso) carregarTudo();
+  }
+
+  const saiuDaEscola = !!historico?.aluno.situacao_aluno && historico.aluno.situacao_aluno !== "ativo";
+
   return (
     <>
       <Link href="/turmas" className="link-voltar">
@@ -173,19 +192,42 @@ export default function AlunoDetalhePage() {
             titulo={historico.aluno.nome_aluno}
             subtitulo={[historico.aluno.nome_sala ?? "Sem turma", historico.aluno.periodo_sala, horario].filter(Boolean).join(" · ")}
             acoes={
-              <>
-                <Link href={`/notificacoes/enviar?aluno=${idAluno}`} className="btn">
-                  <Icon name="send" /> Mensagem aos responsáveis
-                </Link>
-                <button type="button" className="btn" onClick={() => setModalRegistro("saida")}>
-                  <Icon name="logout" /> Saída antecipada
-                </button>
-                <button type="button" className="btn btn-primary" onClick={() => setModalRegistro("atraso")}>
-                  <Icon name="clock" /> Entrada atrasada
-                </button>
-              </>
+              saiuDaEscola ? undefined : (
+                <>
+                  {gestao && (
+                    <button type="button" className="btn btn-text" onClick={() => setRetirando(true)}>
+                      <Icon name="logout" /> Retirar da escola
+                    </button>
+                  )}
+                  <Link href={`/notificacoes/enviar?aluno=${idAluno}`} className="btn">
+                    <Icon name="send" /> Mensagem aos responsáveis
+                  </Link>
+                  <button type="button" className="btn" onClick={() => setModalRegistro("saida")}>
+                    <Icon name="logout" /> Saída antecipada
+                  </button>
+                  <button type="button" className="btn btn-primary" onClick={() => setModalRegistro("atraso")}>
+                    <Icon name="clock" /> Entrada atrasada
+                  </button>
+                </>
+              )
             }
           />
+
+          {saiuDaEscola && historico.aluno.situacao_aluno && (
+            <div className="aviso-saiu" role="status">
+              <Icon name="info" />
+              <span>
+                <b>{ROTULOS_SITUACAO_ALUNO[historico.aluno.situacao_aluno]}</b>
+                {historico.aluno.saiu_em && <> em {formatarData(historico.aluno.saiu_em)}</>}. Este aluno saiu da escola: não
+                aparece nas listas nem no app, e o histórico abaixo continua guardado.
+              </span>
+              {gestao && (
+                <button type="button" className="btn btn-sm" onClick={() => mudarSituacao("ativo")} disabled={mudandoSituacao}>
+                  <Icon name="refresh" /> Trazer de volta
+                </button>
+              )}
+            </div>
+          )}
 
           {indicador && (
             <div className="indicador-aluno">
@@ -493,13 +535,31 @@ export default function AlunoDetalhePage() {
         }}
       />
 
+      <Modal titulo="Retirar o aluno da escola?" aberto={retirando} onFechar={() => setRetirando(false)}>
+        <p>
+          <b>{historico?.aluno.nome_aluno}</b> sai das listas, do app de biometria e dos alertas. O histórico continua guardado e a
+          biometria dele é apagada. Dá para trazer de volta depois, por esta ficha.
+        </p>
+        <div className="modal-actions">
+          <button type="button" className="btn" onClick={() => setRetirando(false)}>
+            Voltar
+          </button>
+          <button type="button" className="btn" onClick={() => mudarSituacao("concluiu")} disabled={mudandoSituacao}>
+            Concluiu
+          </button>
+          <button type="button" className="btn btn-primary" onClick={() => mudarSituacao("transferido")} disabled={mudandoSituacao}>
+            Foi transferido(a)
+          </button>
+        </div>
+      </Modal>
+
       <ModalRegistro
         tipo={modalRegistro}
         aluno={alunoDoModal}
         onFechar={() => setModalRegistro(null)}
-        onConfirmado={(mensagem) => {
+        onConfirmado={(mensagem, registro) => {
           setModalRegistro(null);
-          mostrarToast(mensagem);
+          avisoDoRegistro(mensagem, registro);
           carregarTudo();
         }}
       />

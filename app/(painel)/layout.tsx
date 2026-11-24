@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Api } from "@/lib/api";
 import { Sidebar } from "@/components/Sidebar";
@@ -9,6 +9,7 @@ import { BuscaRapida } from "@/components/BuscaRapida";
 import { BarraProgresso } from "@/components/BarraProgresso";
 import { Carregando } from "@/components/Carregando";
 import { tocarSom } from "@/lib/sons";
+import { telaPermitida } from "@/lib/equipe";
 import { CONTADORES_ZERADOS, temNovidade, type Contadores } from "@/lib/contadores";
 
 // Os contadores do menu se atualizam sozinhos: sem a barra de carregamento.
@@ -17,6 +18,7 @@ const SEGUNDO_PLANO = { segundoPlano: true };
 export default function PainelLayout({ children }: { children: ReactNode }) {
   const { autenticado, carregando, coordenacao } = useAuth();
   const router = useRouter();
+  const caminho = usePathname();
   const [contadores, setContadores] = useState<Contadores>(CONTADORES_ZERADOS);
   const gestao = coordenacao?.papel === "gestor";
   const equipeDoSistema = !!coordenacao?.administrador;
@@ -38,6 +40,13 @@ export default function PainelLayout({ children }: { children: ReactNode }) {
     if (!carregando && !autenticado && !jaEsteveAutenticado.current) router.replace("/login");
   }, [carregando, autenticado, router]);
 
+  // A equipe do sistema fica separada das escolas: uma tela da escola
+  // (link antigo, favorito) leva para a Administração.
+  const foraDaConta = autenticado && !telaPermitida(coordenacao, caminho);
+  useEffect(() => {
+    if (foraDaConta) router.replace("/admin");
+  }, [foraDaConta, router]);
+
   useEffect(() => {
     if (!autenticado) return;
 
@@ -49,17 +58,18 @@ export default function PainelLayout({ children }: { children: ReactNode }) {
       // chamadas quando disparadas juntas, exatamente junto com as
       // chamadas próprias de cada tela - resultado real observado:
       // dashboard.php/filtroAluno.php falhando de forma intermitente.
-      const dashboard = await Api.dashboard(SEGUNDO_PLANO);
+      // A equipe do sistema não tem escola: só a fila da Administração.
+      const dashboard = equipeDoSistema ? null : await Api.dashboard(SEGUNDO_PLANO);
       if (!ativo) return;
-      const notificacoes = await Api.listarNotificacoes("pendente", 1, SEGUNDO_PLANO);
+      const notificacoes = equipeDoSistema ? null : await Api.listarNotificacoes("pendente", 1, SEGUNDO_PLANO);
       if (!ativo) return;
       const equipe = gestao ? await Api.equipe(SEGUNDO_PLANO) : null;
       if (!ativo) return;
       const resumo = equipeDoSistema ? await Api.adminResumo(SEGUNDO_PLANO) : null;
       if (!ativo) return;
       const novos: Contadores = {
-        alertas: dashboard.dados?.alertas_ativos ?? 0,
-        notificacoes: notificacoes.dados?.total_registros ?? 0,
+        alertas: dashboard?.dados?.alertas_ativos ?? 0,
+        notificacoes: notificacoes?.dados?.total_registros ?? 0,
         equipe: equipe?.dados?.pendentes ?? 0,
         admin: (resumo?.dados?.contas_pendentes ?? 0) + (resumo?.dados?.chamados_abertos ?? 0),
       };
@@ -81,6 +91,9 @@ export default function PainelLayout({ children }: { children: ReactNode }) {
 
   if (carregando || !autenticado) {
     return <Carregando tela texto="Conferindo a sua sessão…" />;
+  }
+  if (foraDaConta) {
+    return <Carregando tela texto="Abrindo a Administração…" />;
   }
 
   return (
