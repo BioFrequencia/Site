@@ -851,9 +851,13 @@ export interface ListaPaginada {
 // ---------------------------------------------------------------------------
 // Importação de turmas e alunos por planilha (importacao/*.php na API)
 
-/** nova/novo: vai ser cadastrada; existente: a escola já tem (fica como está); erro: não entra. */
+/**
+ * nova/novo: vai ser cadastrada; completar: o aluno já existe na turma sem data
+ * de nascimento (veio da planilha de entradas e saídas) e ganha a data e o gênero;
+ * existente: a escola já tem (fica como está); erro: não entra.
+ */
 export type SituacaoTurmaImportada = "nova" | "existente" | "erro";
-export type SituacaoAlunoImportado = "novo" | "existente" | "erro";
+export type SituacaoAlunoImportado = "novo" | "completar" | "existente" | "erro";
 
 export interface TurmaImportada {
   linha: number;
@@ -895,6 +899,7 @@ export interface ResumoImportacao {
   turmas_existentes: number;
   turmas_com_erro: number;
   alunos_novos: number;
+  alunos_completados: number;
   alunos_existentes: number;
   alunos_com_erro: number;
   responsaveis_novos: number;
@@ -912,6 +917,7 @@ export interface PreviaImportacao {
 export interface ResultadoImportacao {
   turmas_criadas: number;
   alunos_criados: number;
+  alunos_completados: number;
   responsaveis_criados: number;
   vinculos_criados: number;
   resumo: ResumoImportacao;
@@ -921,15 +927,25 @@ export interface ResultadoImportacao {
 // Entradas atrasadas e saídas antecipadas anotadas no Excel sem internet
 // (registro/previaImportacao.php e confirmarImportacao.php).
 
-/** nova: vai ser registrada; existente: já está no sistema (fica como está); erro: não entra. */
-export type SituacaoOcorrenciaImportada = "nova" | "existente" | "erro";
+/**
+ * nova: vai ser registrada; cadastro: linha só com o nome e a turma de um aluno que a
+ * escola ainda não tem (cadastra o aluno); existente: já está no sistema (fica como
+ * está); erro: não entra.
+ */
+export type SituacaoOcorrenciaImportada = "nova" | "cadastro" | "existente" | "erro";
 
 export interface OcorrenciaImportada {
   linha: number;
+  /** A aba da planilha (a importação lê a aba Ocorrências e a aba Alunos). */
+  aba: string | null;
   situacao: SituacaoOcorrenciaImportada;
   id_aluno: number | null;
   aluno: string;
   turma: string;
+  /** O aluno não existe na escola: é cadastrado (sem data de nascimento). */
+  aluno_novo: boolean;
+  /** A turma do aluno novo também é nova. */
+  turma_nova: boolean;
   data: string | null;
   hora: string | null;
   tipo: "atraso" | "saida" | null;
@@ -947,6 +963,10 @@ export interface ResumoOcorrenciasImportadas {
   com_erro: number;
   atrasos_novos: number;
   saidas_novas: number;
+  alunos_novos: number;
+  turmas_novas: number;
+  /** Linhas de alunos que já existem, sem entrada ou saída: nada a fazer (não aparecem na lista). */
+  ja_cadastrados: number;
 }
 
 export interface PreviaOcorrencias {
@@ -959,6 +979,8 @@ export interface PreviaOcorrencias {
 export interface ResultadoOcorrencias {
   atrasos_criados: number;
   saidas_criadas: number;
+  alunos_criados: number;
+  turmas_criadas: number;
   /** Alunos que passaram do limite e cujos responsáveis receberam o aviso. */
   avisos_de_limite: number;
   resumo: ResumoOcorrenciasImportadas;

@@ -28,6 +28,13 @@ test("textos da importação com plural e 'e' antes do último", () => {
   assert.equal(oQueEntraTurmas({ turmas_novas: 0, alunos_novos: 0 }), "");
   assert.equal(oQueEntraOcorrencias({ atrasos_novos: 3, saidas_novas: 1 }), "3 entradas atrasadas e 1 saída antecipada");
   assert.equal(oQueEntraOcorrencias({ atrasos_novos: 0, saidas_novas: 2 }), "2 saídas antecipadas");
+  assert.equal(
+    oQueEntraOcorrencias({ atrasos_novos: 1, saidas_novas: 0, alunos_novos: 710, turmas_novas: 18 }),
+    "1 entrada atrasada, 710 alunos novos e 18 turmas novas",
+  );
+  assert.equal(oQueEntraOcorrencias({ atrasos_novos: 0, saidas_novas: 0, alunos_novos: 1, turmas_novas: 0 }), "1 aluno novo");
+  assert.equal(oQueEntraTurmas({ turmas_novas: 0, alunos_novos: 2, alunos_completados: 1 }), "2 alunos e 1 aluno completado");
+  assert.equal(oQueEntraTurmas({ turmas_novas: 0, alunos_novos: 0, alunos_completados: 3 }), "3 alunos completados");
   assert.equal(foraPorErro(0), "");
   assert.equal(foraPorErro(1), "; a linha com erro fica de fora");
   assert.equal(foraPorErro(4), "; as 4 linhas com erro ficam de fora");
