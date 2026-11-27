@@ -5715,3 +5715,12 @@ button.card-resumo .card-resumo-rotulo {
     min-height: 44px;
   }
 }
+
+/* Turmas e alunos: a busca da coluna de turmas e o "Mostrar mais" dentro
+   de um painel com respiro (não encosta nas bordas como nas tabelas). */
+.busca-turma {
+  margin-bottom: 8px;
+}
+.panel:not(.panel-tabela) > .mostrar-mais {
+  margin: 12px -20px -20px;
+}

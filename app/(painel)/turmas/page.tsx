@@ -9,10 +9,14 @@ import { Paginacao } from "@/components/Paginacao";
 import { Esqueleto } from "@/components/Esqueleto";
 import { Modal } from "@/components/Modal";
 import { Icon } from "@/components/Icon";
+import { MostrarMais, useListaParcial } from "@/components/MostrarMais";
 import { useToast } from "@/components/Toast";
 import { classeBadgeStatus, formatarPercentual, plural } from "@/lib/format";
 import { barraPontualidade } from "@/lib/graficos";
 import { GENEROS_ALUNO, PERIODOS_SALA, STATUS_ALUNO, type AlunoFiltro, type Dashboard, type Sala } from "@/lib/types";
+
+/** Quantas turmas a coluna da esquerda mostra de cada vez. */
+const TURMAS_POR_VEZ = 12;
 
 /** Horário padrão de cada período - o mesmo de helpers/calendario.php na API. */
 const HORARIO_PADRAO: Record<string, { inicio: string; fim: string }> = {
@@ -32,6 +36,7 @@ export default function TurmasPage() {
   const [limite, setLimite] = useState(20);
   const [janelaDias, setJanelaDias] = useState(30);
   const [turmaSelecionada, setTurmaSelecionada] = useState<string | null>(null);
+  const [buscaTurma, setBuscaTurma] = useState("");
 
   const [busca, setBusca] = useState("");
   const [status, setStatus] = useState("");
@@ -60,6 +65,13 @@ export default function TurmasPage() {
   useEffect(() => {
     carregarTurmas();
   }, []);
+
+  // Escola com muitas turmas: a coluna mostra 12 de cada vez e tem busca.
+  const termoTurma = buscaTurma.trim().toLocaleLowerCase("pt-BR");
+  const turmasFiltradas = termoTurma
+    ? turmasResumo.filter((turma) => turma.nome_sala.toLocaleLowerCase("pt-BR").includes(termoTurma))
+    : turmasResumo;
+  const listaTurmas = useListaParcial(turmasFiltradas, termoTurma, TURMAS_POR_VEZ);
 
   const idSalaSelecionada = turmaSelecionada
     ? salas.find((s) => s.nome_sala === turmaSelecionada)?.id_sala ?? null
@@ -122,7 +134,20 @@ export default function TurmasPage() {
         <div className="panel">
           <div className="panel-head">
             <h2>Turmas</h2>
+            <span className="panel-meta">{plural(turmasResumo.length, "turma", "turmas")}</span>
           </div>
+          {turmasResumo.length > TURMAS_POR_VEZ && (
+            <div className="search-box busca-turma">
+              <Icon name="search" />
+              <input
+                type="search"
+                placeholder="Buscar turma"
+                aria-label="Buscar turma"
+                value={buscaTurma}
+                onChange={(e) => setBuscaTurma(e.target.value)}
+              />
+            </div>
+          )}
           <button
             type="button"
             className={`turma-summary-item${turmaSelecionada === null ? " selected" : ""}`}
@@ -136,7 +161,7 @@ export default function TurmasPage() {
               <div className="ts-count">{plural(totalRegistros, "aluno", "alunos")}</div>
             </div>
           </button>
-          {turmasResumo.map((turma) => {
+          {listaTurmas.visiveis.map((turma) => {
             const barra = barraPontualidade(turma.pontualidade, limite);
             const sala = salas.find((s) => s.id_sala === turma.id_sala);
             return (
@@ -164,6 +189,8 @@ export default function TurmasPage() {
               </button>
             );
           })}
+          {termoTurma && turmasFiltradas.length === 0 && <p className="results-caption">Nenhuma turma com esse nome.</p>}
+          <MostrarMais lista={listaTurmas} nome="turmas" />
         </div>
 
         <div className="panel">

@@ -7,6 +7,7 @@ import { Topbar } from "@/components/Topbar";
 import { Esqueleto } from "@/components/Esqueleto";
 import { Icon } from "@/components/Icon";
 import { Interruptor } from "@/components/Interruptor";
+import { MostrarMais, useListaParcial } from "@/components/MostrarMais";
 import { useToast } from "@/components/Toast";
 import { ModalAprovacao } from "@/components/ModalAprovacao";
 import { AbaAnoLetivo } from "@/components/AnoLetivo";
@@ -317,6 +318,7 @@ function PainelContato({
 
 function AbaTurmas({ dados, podeEditar, aoMudar }: { dados: DadosEscola; podeEditar: boolean; aoMudar: () => void }) {
   const { mostrarToast } = useToast();
+  const listaTurmas = useListaParcial(dados.turmas);
   const [editando, setEditando] = useState<number | null>(null);
   const [periodo, setPeriodo] = useState("Matutino");
   const [inicio, setInicio] = useState("");
@@ -382,7 +384,7 @@ function AbaTurmas({ dados, podeEditar, aoMudar }: { dados: DadosEscola; podeEdi
             </tr>
           </thead>
           <tbody>
-            {dados.turmas.map((turma) =>
+            {listaTurmas.visiveis.map((turma) =>
               editando === turma.id_sala ? (
                 <tr key={turma.id_sala} className="linha-editando">
                   <td className="celula-titulo">{turma.nome_sala}</td>
@@ -445,6 +447,7 @@ function AbaTurmas({ dados, podeEditar, aoMudar }: { dados: DadosEscola; podeEdi
           </tbody>
         </table>
       )}
+      <MostrarMais lista={listaTurmas} nome="turmas" />
     </div>
   );
 }
