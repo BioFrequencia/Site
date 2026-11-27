@@ -13,17 +13,9 @@ import { useToast } from "@/components/Toast";
 import { ModalRegistro, useAvisoDoRegistro } from "@/components/ModalRegistro";
 import { ModalCorrecaoRegistro, type AlvoCorrecao } from "@/components/ModalCorrecaoRegistro";
 import { ModalEditarResponsavel, ModalResponsavel } from "@/components/ModalResponsavel";
-import {
-  classeBadgeStatus,
-  formatarCpf,
-  formatarData,
-  formatarDataHora,
-  formatarHora,
-  formatarPercentual,
-  formatarTelefone,
-  plural,
-  rotuloOrigemAtraso,
-} from "@/lib/format";
+import { EntradasESaidasDoAluno } from "@/components/EntradasESaidasDoAluno";
+import { classeBadgeStatus, formatarCpf, formatarData, formatarDataHora, formatarPercentual, formatarTelefone, plural } from "@/lib/format";
+import { inicioDoPeriodo, type PeriodoDaLista } from "@/lib/listas";
 import {
   CANAIS_ACOMPANHAMENTO,
   ROTULOS_CANAL_RESPONSAVEL,
@@ -35,19 +27,13 @@ import {
   type SituacaoAluno,
 } from "@/lib/types";
 
-/** Quantas entradas e saídas a ficha mostra antes de "Ver todos". */
-const EVENTOS_VISIVEIS = 5;
-
 export default function AlunoDetalhePage() {
   const params = useParams<{ id: string }>();
   const idAluno = Number(params.id);
   const { mostrarToast } = useToast();
 
-  // A lista de entradas e saídas cresce o ano inteiro: abre com as mais
-  // recentes e pode ser recolhida a uma linha de resumo.
-  const [verTodosEventos, setVerTodosEventos] = useState(false);
-  const [eventosRecolhidos, setEventosRecolhidos] = useState(false);
-
+  // Entradas e saídas do ano, paginadas (components/EntradasESaidasDoAluno).
+  const [periodo, setPeriodo] = useState<PeriodoDaLista>("ano");
   const [historico, setHistorico] = useState<HistoricoAluno | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -67,30 +53,38 @@ export default function AlunoDetalhePage() {
   const [retirando, setRetirando] = useState(false);
   const [mudandoSituacao, setMudandoSituacao] = useState(false);
 
-  async function carregarTudo() {
+  /** O histórico do período, com os cancelados (a lista os mostra à parte): o histórico não perde nada. */
+  async function carregarHistorico(periodoDoHistorico: PeriodoDaLista = periodo) {
     setCarregando(true);
-    // Sequencial, não Promise.all - ver o comentário em (painel)/layout.tsx
-    // sobre limite de conexões simultâneas do banco. Histórico dos últimos
-    // 90 dias, com os cancelados (marcados): o histórico não perde nada.
-    const inicio = new Date(Date.now() - 89 * 86400000).toISOString().slice(0, 10);
-    const respHistorico = await Api.historicoAluno(idAluno, inicio, undefined, true);
-    const respResponsaveis = await Api.listarResponsaveis(idAluno);
-    const respAcompanhamento = await Api.listarAcompanhamento(idAluno, 1);
-    if (respHistorico.sucesso && respHistorico.dados) {
-      setHistorico(respHistorico.dados);
+    const resposta = await Api.historicoAluno(idAluno, inicioDoPeriodo(periodoDoHistorico), undefined, true);
+    if (resposta.sucesso && resposta.dados) {
+      setHistorico(resposta.dados);
       setErro(null);
     } else {
-      setErro(respHistorico.mensagem);
+      setErro(resposta.mensagem);
     }
+    setCarregando(false);
+  }
+
+  async function carregarTudo() {
+    // Sequencial, não Promise.all - ver o comentário em (painel)/layout.tsx
+    // sobre limite de conexões simultâneas do banco.
+    await carregarHistorico();
+    const respResponsaveis = await Api.listarResponsaveis(idAluno);
+    const respAcompanhamento = await Api.listarAcompanhamento(idAluno, 1);
     if (respResponsaveis.sucesso && respResponsaveis.dados) setResponsaveis(respResponsaveis.dados);
     if (respAcompanhamento.sucesso && respAcompanhamento.dados) setAcompanhamentos(respAcompanhamento.dados.registros);
-    setCarregando(false);
   }
 
   useEffect(() => {
     if (Number.isFinite(idAluno)) carregarTudo();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idAluno]);
+
+  function mudarPeriodo(novo: PeriodoDaLista) {
+    setPeriodo(novo);
+    void carregarHistorico(novo);
+  }
 
   // LGPD: a coordenação pode apagar a biometria a pedido da família, ou
   // revogar o consentimento (apaga tudo). O cadastro é feito no app.
@@ -134,30 +128,10 @@ export default function AlunoDetalhePage() {
     );
   }
 
-  /** "Ana Lima · entrada atrasada às 07:31 de 19/11/2026" (no modal e para o leitor de tela). */
-  function descreverEvento(tipo: TipoRegistro, data: string): string {
-    const nome = tipo === "atraso" ? "entrada atrasada" : "saída antecipada";
-    return `${historico?.aluno.nome_aluno ?? "Aluno"} · ${nome} às ${formatarHora(data)} de ${formatarData(data)}`;
-  }
-
   if (!Number.isFinite(idAluno)) {
     return <div className="error-block">Aluno inválido.</div>;
   }
 
-  const eventos = historico
-    ? [
-        ...historico.atrasos.map((a) => ({ ...a, tipo: "atraso" as const })),
-        ...historico.saidas.map((s) => ({ ...s, tipo: "saida" as const })),
-      ].sort((a, b) => (a.data < b.data ? 1 : -1))
-    : [];
-  const eventosVisiveis = verTodosEventos ? eventos : eventos.slice(0, EVENTOS_VISIVEIS);
-  const temAcoes = eventosVisiveis.some((e) => e.pode_cancelar || (e.cancelado && historico?.pode_restaurar));
-  const validos = eventos.filter((e) => !e.cancelado);
-  const cancelados = eventos.length - validos.length;
-  const resumoEventos =
-    `${plural(validos.filter((e) => e.tipo === "atraso").length, "entrada atrasada", "entradas atrasadas")} e ` +
-    `${plural(validos.filter((e) => e.tipo === "saida").length, "saída antecipada", "saídas antecipadas")} no período` +
-    (cancelados > 0 ? ` (${plural(cancelados, "registro cancelado", "registros cancelados")} à parte).` : ".");
   const indicador = historico?.indicador ?? null;
   const horario =
     historico?.aluno.horario_inicio && historico.aluno.horario_fim
@@ -256,125 +230,13 @@ export default function AlunoDetalhePage() {
             </div>
           )}
 
-          <div className="panel panel-tabela secao">
-            <div className="panel-head">
-              <h2>Entradas e saídas</h2>
-              <span className="panel-links">
-                <span className="panel-meta">
-                  {formatarData(historico.periodo.inicio)} – {formatarData(historico.periodo.fim)}
-                </span>
-                {historico.pode_restaurar && (
-                  <Link href={`/registros/correcoes?aluno=${idAluno}`} className="panel-meta">
-                    Correções deste aluno
-                  </Link>
-                )}
-                {eventos.length > 0 && (
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-text btn-recolher"
-                    aria-expanded={!eventosRecolhidos}
-                    aria-controls="eventos-do-aluno"
-                    onClick={() => setEventosRecolhidos((atual) => !atual)}
-                  >
-                    <Icon name="chevronDown" />
-                    {eventosRecolhidos ? "Mostrar" : "Recolher"}
-                    <span className="sr-only"> as entradas e saídas</span>
-                  </button>
-                )}
-              </span>
-            </div>
-            {eventos.length === 0 ? (
-              <div className="empty-state">
-                <Icon name="check" />
-                <p>Nenhuma entrada atrasada ou saída antecipada nos últimos 90 dias.</p>
-              </div>
-            ) : eventosRecolhidos ? (
-              <p className="historico-resumo" id="eventos-do-aluno">
-                {resumoEventos}
-              </p>
-            ) : (
-              <div id="eventos-do-aluno">
-                <table className="data-table tabela-cartoes">
-                  <thead>
-                    <tr>
-                      <th>Data</th>
-                      <th>Tipo</th>
-                      <th>Motivo</th>
-                      <th>Registro</th>
-                      {temAcoes && <th><span className="sr-only">Ações</span></th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {eventosVisiveis.map((evento) => (
-                      <tr key={`${evento.tipo}-${evento.id}`} className={evento.cancelado ? "linha-cancelada" : undefined}>
-                        <td className="celula-titulo">
-                          {formatarData(evento.data)} <span className="panel-meta">{formatarHora(evento.data)}</span>
-                        </td>
-                        <td data-label="Tipo">
-                          <span className={`badge ${evento.tipo === "atraso" ? "badge--atraso" : "badge--saida"}`}>
-                            {evento.tipo === "atraso" ? "Entrada atrasada" : "Saída antecipada"}
-                          </span>
-                          {evento.justificado && <span className="badge badge--regular">Justificado</span>}
-                          {evento.cancelado && <span className="badge badge--cancelado">Cancelado</span>}
-                        </td>
-                        <td data-label="Motivo">
-                          {evento.motivo ?? "-"}
-                          {evento.retirado_por && <div className="panel-meta">Buscou: {evento.retirado_por}</div>}
-                        </td>
-                        <td data-label="Registro" className="panel-meta">
-                          {evento.tipo === "atraso" ? rotuloOrigemAtraso(evento.origem) : "Lançada pela coordenação"}
-                          {evento.registrado_por && <div>por {evento.registrado_por}</div>}
-                          {evento.cancelado && (
-                            <div className="info-cancelamento">
-                              Cancelado{evento.cancelado_por ? ` por ${evento.cancelado_por}` : ""}
-                              {evento.cancelado_em ? ` em ${formatarDataHora(evento.cancelado_em)}` : ""}
-                              {evento.motivo_cancelamento ? `: ${evento.motivo_cancelamento}` : ""}
-                            </div>
-                          )}
-                        </td>
-                        {temAcoes && (
-                          <td className="celula-acoes">
-                            {evento.pode_cancelar && (
-                              <button
-                                type="button"
-                                className="btn btn-sm btn-danger"
-                                onClick={() => setAlvo({ acao: "cancelar", tipo: evento.tipo, id: evento.id, descricao: descreverEvento(evento.tipo, evento.data) })}
-                              >
-                                <Icon name="x" />
-                                Cancelar<span className="sr-only"> {descreverEvento(evento.tipo, evento.data)}</span>
-                              </button>
-                            )}
-                            {evento.cancelado && historico.pode_restaurar && (
-                              <button
-                                type="button"
-                                className="btn btn-sm"
-                                onClick={() => setAlvo({ acao: "restaurar", tipo: evento.tipo, id: evento.id, descricao: descreverEvento(evento.tipo, evento.data) })}
-                              >
-                                <Icon name="refresh" />
-                                Restaurar<span className="sr-only"> {descreverEvento(evento.tipo, evento.data)}</span>
-                              </button>
-                            )}
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {eventos.length > EVENTOS_VISIVEIS && (
-                  <div className="historico-rodape">
-                    <span>
-                      {verTodosEventos
-                        ? `Todos os ${eventos.length} registros do período.`
-                        : `Os ${EVENTOS_VISIVEIS} mais recentes de ${eventos.length}.`}
-                    </span>
-                    <button type="button" className="btn btn-sm" onClick={() => setVerTodosEventos((atual) => !atual)}>
-                      {verTodosEventos ? `Mostrar só os ${EVENTOS_VISIVEIS} mais recentes` : `Ver todos os ${eventos.length}`}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <EntradasESaidasDoAluno
+            historico={historico}
+            periodo={periodo}
+            onMudarPeriodo={mudarPeriodo}
+            carregando={carregando}
+            onCorrigir={setAlvo}
+          />
 
           <div className="panel panel-tabela secao">
             <div className="panel-head">
