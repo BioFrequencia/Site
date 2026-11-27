@@ -7,6 +7,8 @@
 export interface OpcaoSegmentada<T extends string> {
   valor: T;
   rotulo: string;
+  /** Rótulo para telas estreitas (celular), quando o normal não cabe. */
+  rotuloCurto?: string;
   contagem?: number;
 }
 
@@ -31,7 +33,16 @@ export function Segmentado<T extends string>({
           className={valor === opcao.valor ? "ativa" : ""}
           onClick={() => onMudar(opcao.valor)}
         >
-          {opcao.rotulo}
+          {opcao.rotuloCurto ? (
+            <>
+              <span className="rotulo-longo">{opcao.rotulo}</span>
+              <span className="rotulo-curto" aria-hidden="true">
+                {opcao.rotuloCurto}
+              </span>
+            </>
+          ) : (
+            opcao.rotulo
+          )}
           {opcao.contagem !== undefined && <span className="segmentado-contagem">{opcao.contagem}</span>}
         </button>
       ))}

@@ -102,8 +102,8 @@ export function EntradasESaidasDoAluno({
           rotulo="Tipo de registro"
           opcoes={[
             { valor: "todos", rotulo: "Todos", contagem: validos.length },
-            { valor: "atraso", rotulo: "Entradas atrasadas", contagem: atrasos },
-            { valor: "saida", rotulo: "Saídas antecipadas", contagem: saidas },
+            { valor: "atraso", rotulo: "Entradas atrasadas", rotuloCurto: "Entradas", contagem: atrasos },
+            { valor: "saida", rotulo: "Saídas antecipadas", rotuloCurto: "Saídas", contagem: saidas },
           ]}
           valor={tipo}
           onMudar={mudar(setTipo)}

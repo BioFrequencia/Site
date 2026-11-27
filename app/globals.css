@@ -3647,6 +3647,34 @@ button.card-resumo .card-resumo-rotulo {
 .segmentado {
   flex-wrap: wrap;
 }
+.segmentado .rotulo-curto {
+  display: none;
+}
+/* Celular: cada grupo ocupa a largura toda, em colunas iguais, e os
+   rótulos longos dão lugar aos curtos (o leitor de tela lê o longo). */
+@media (max-width: 600px) {
+  .historico-filtros .segmentado {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+  .historico-filtros .segmentado button {
+    padding: 0 6px;
+    font-size: 14px;
+  }
+  .segmentado .rotulo-longo:has(+ .rotulo-curto) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .segmentado .rotulo-curto {
+    display: inline;
+  }
+}
 .segmentado-contagem {
   display: inline-block;
   min-width: 20px;
